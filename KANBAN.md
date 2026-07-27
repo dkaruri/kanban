@@ -105,6 +105,26 @@ Optimize Route in My Permit List (`docs/list.html`) should optimize across every
 **Log:**
 - 2026-07-27 15:55 CT — created (Divyam)
 
+### FIX-005 · Share on My Permit List hangs when a link is already generated
+
+- **Priority:** P1-High
+- **Status:** todo
+- **Created:** 2026-07-27 16:00 CT
+- **Updated:** 2026-07-27 16:00 CT
+- **Tags:** Chicago Permit Search Tool
+
+Share in My Permit List (`docs/list.html`) appears to get stuck when a share link has already been generated — a second Share attempt hangs instead of reusing or regenerating the existing link.
+
+**Checklist:**
+- [ ] Reproduce: generate a share link, then invoke Share again in the same session
+- [ ] Identify the stuck state (unreset in-flight/"generating" flag, an unresolved promise, or a modal left open behind the scenes)
+- [ ] Make repeat Share reuse the existing link, or regenerate cleanly when the list has changed since
+- [ ] Reset share state on failure so it can never latch permanently
+- [ ] Verify repeated Share on desktop and mobile, including after editing the list between shares
+
+**Log:**
+- 2026-07-27 16:00 CT — created (Divyam)
+
 ### FIX-003 · Speed up permit removal in My Permit List and stop accidental opens
 
 - **Priority:** P2-Medium
