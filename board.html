@@ -44,6 +44,27 @@
   .chip:active{transform:scale(.96)}
   .chip.on{background:var(--accent-deep); border-color:var(--accent-deep); color:#fff}
   .chip:focus-visible,.controls input:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+  .ico{background:transparent; border:1px solid transparent; color:var(--ink-3); font-size:.82rem;
+    width:30px; height:30px; border-radius:8px; cursor:pointer; display:inline-flex; flex:none;
+    align-items:center; justify-content:center;
+    transition:background var(--t-fast) ease, color var(--t-fast) ease, border-color var(--t-fast) ease, transform var(--t-fast) var(--ease)}
+  .ico:hover{background:var(--card); color:var(--accent); border-color:var(--accent-deep)}
+  .ico:active{transform:scale(.9)}
+  .ico:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+  @media (hover:none),(max-width:600px){ .ico{width:44px; height:44px; font-size:.95rem} }
+  #globalSave{max-width:1200px; margin:0 auto 16px; display:none; gap:10px; align-items:center; flex-wrap:wrap;
+    border:1px solid var(--accent-deep); background:var(--surface); border-radius:var(--radius); padding:10px 14px;
+    animation:saveIn var(--t-mid) var(--ease) both}
+  #globalSave.on{display:flex}
+  #globalSave .gs-text{flex:1 1 240px; font-size:.8rem; color:var(--ink-2); line-height:1.5}
+  #globalSave .gs-text b{color:var(--accent)}
+  #globalSave button{min-height:38px; padding:8px 14px; font-size:.78rem; font-weight:600; border-radius:10px;
+    cursor:pointer; border:1px solid var(--line); background:var(--card); color:var(--ink);
+    transition:background var(--t-fast) ease, border-color var(--t-fast) ease, transform var(--t-fast) var(--ease)}
+  #globalSave button:hover{border-color:var(--accent-deep)}
+  #globalSave button.primary{background:var(--accent-deep); border-color:var(--accent-deep); color:#fff}
+  #globalSave button:active{transform:scale(.97)}
+  #globalSave button:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
   .board{max-width:1200px; margin:0 auto; display:grid; grid-template-columns:repeat(auto-fit,minmax(290px,1fr)); gap:14px; align-items:start}
   .col{background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow);
     transition:border-color var(--t-mid) ease}
@@ -56,8 +77,11 @@
     transition:transform var(--t-mid) var(--ease), color var(--t-fast) ease}
   .col.collapsed .chev{transform:rotate(-90deg)}
   .col.collapsed .col-head{border-bottom-color:var(--line); border-radius:var(--radius)}
+  .col.edited{border-color:var(--accent-deep)}
+  .col.edited .col-head{background:rgba(139,92,246,.12)}
+  .col-head .ico{margin-left:auto}
   .col-head .count{font-size:.7rem; font-weight:700; color:var(--ink-2); background:var(--bg);
-    border-radius:999px; padding:2px 8px; margin-left:auto}
+    border-radius:999px; padding:2px 8px}
   /* collapse/expand: grid-row trick animates to real content height */
   .cards-wrap{display:grid; grid-template-rows:1fr; transition:grid-template-rows var(--t-slow) var(--ease)}
   .col.collapsed .cards-wrap{grid-template-rows:0fr}
@@ -184,6 +208,7 @@
 <body>
 <header>
   <h1 id="title">Kanban Board</h1>
+  <button class="ico" id="editTitle" title="Edit board title" aria-label="Edit board title">✎</button>
   <button class="chip" id="addTask" style="background:var(--accent-deep);border-color:var(--accent-deep);color:#fff">＋ Add task</button>
   <button class="chip" id="refresh">↻ Refresh</button>
   <div class="meta" id="meta"></div>
@@ -201,6 +226,13 @@
   <span class="chip sorter on" data-s="smart">Active first</span>
   <span class="chip sorter" data-s="priority">Priority</span>
   <span class="chip sorter" data-s="updated">Recently updated</span>
+</div>
+
+<div id="globalSave">
+  <div class="gs-text" id="gs-text"></div>
+  <button class="primary" id="gs-copy">Copy save prompt for all</button>
+  <button id="gs-github">GitHub</button>
+  <button id="gs-revert">Revert all</button>
 </div>
 
 <div class="board" id="board"></div>
@@ -369,11 +401,10 @@
     clone.log.push(ts + ' — ' + summary + ' (edited on board by Divyam)');
     var md = serializeTask(clone);
     var moved = t._orig && t._orig.list !== listOf(t);
-    var prompt = 'In the ' + REPO + ' repo, update KANBAN.md: replace the entire ' + t.id +
-      ' task card with exactly this' +
+    var instruction = 'Replace the entire ' + t.id + ' task card with exactly this' +
       (moved ? ', and move it from the "' + t._orig.list + '" list to the "' + listOf(t) + '" list (keep its ID)' : '') +
-      '. Follow the CLAUDE CODE PROTOCOL, then commit and push.\n\n' + md;
-    return { md: md, prompt: prompt, summary: summary };
+      ':\n\n' + md;
+    return { md: md, instruction: instruction, prompt: wrapPrompt([instruction]), summary: summary };
   }
 
   function revert(t){
@@ -396,6 +427,60 @@
       }
     });
     state.lists.forEach(function(l){ if (l.name === toName) l.tasks.push(t); });
+  }
+
+  // ── board-level edits: title + list purposes ───────────────────────────────
+  function descBody(l){ return (l.desc || '').replace(/^Purpose:\s*/i, '').trim(); }
+  function titleDirty(){ return state._origTitle !== undefined && state._origTitle !== state.title; }
+  function listDirty(l){ return l._origDesc !== undefined && l._origDesc !== l.desc; }
+
+  function wrapPrompt(instructions){
+    var body = instructions.length === 1 ? instructions[0]
+      : instructions.map(function(s, i){ return (i + 1) + '. ' + s; }).join('\n\n');
+    return 'In the ' + REPO + ' repo, update KANBAN.md as follows, then commit and push. ' +
+           'Follow the CLAUDE CODE PROTOCOL.\n\n' + body;
+  }
+
+  function titleInstruction(){
+    return 'Change the top-level H1 on the first line to exactly:\n\n# ' + state.title;
+  }
+
+  function listInstruction(l){
+    return 'Replace the purpose blockquote directly under the "## ' + l.name +
+           '" heading with exactly this line:\n\n> **Purpose:** ' + descBody(l);
+  }
+
+  function allChanges(){
+    var out = [];
+    if (titleDirty()) out.push({ label:'board title', instruction: titleInstruction() });
+    state.lists.forEach(function(l){
+      if (listDirty(l)) out.push({ label: l.name.replace(/^[^\w]+\s*/, '') + ' purpose',
+                                   instruction: listInstruction(l) });
+    });
+    state.lists.forEach(function(l){ l.tasks.forEach(function(t){
+      if (isDirty(t)) out.push({ label: t.id, instruction: buildSave(t).instruction });
+    }); });
+    return out;
+  }
+
+  function renderGlobal(){
+    var ch = allChanges();
+    var bar = document.getElementById('globalSave');
+    bar.classList.toggle('on', ch.length > 0);
+    if (!ch.length) return;
+    document.getElementById('gs-text').innerHTML =
+      '<b>' + ch.length + ' unsaved change' + (ch.length > 1 ? 's' : '') + '</b> — ' +
+      esc(ch.map(function(c){ return c.label; }).join(', ')) +
+      '. Send the save prompt to Claude and it commits everything in one push.';
+  }
+
+  function revertAll(){
+    if (state._origTitle !== undefined) state.title = state._origTitle;
+    state.lists.forEach(function(l){
+      if (l._origDesc !== undefined) l.desc = l._origDesc;
+      l.tasks.slice().forEach(function(t){ if (t._orig) revert(t); });
+    });
+    render();
   }
 
   // ── helpers ────────────────────────────────────────────────────────────────
@@ -434,12 +519,13 @@
   // ── board render ───────────────────────────────────────────────────────────
   function render(){
     document.getElementById('title').textContent = state.title || 'Kanban Board';
+    document.title = (state.title || 'Kanban Board');
     var board = document.getElementById('board');
     board.innerHTML = '';
     var q = state.q.toLowerCase();
     state.lists.forEach(function(l){
       var col = document.createElement('div');
-      col.className = 'col' + (state.collapsed[l.name] ? ' collapsed' : '');
+      col.className = 'col' + (state.collapsed[l.name] ? ' collapsed' : '') + (listDirty(l) ? ' edited' : '');
       var tasks = l.tasks.slice().sort(function(a,b){
         if (state.sort === 'priority'){
           var dp = priKey(a) - priKey(b);
@@ -461,6 +547,7 @@
       col.innerHTML =
         '<div class="col-head" tabindex="0" role="button" aria-expanded="' + !state.collapsed[l.name] + '">' +
           '<h2><span class="chev">▼</span>' + esc(l.name) +
+          '<button class="ico col-edit" title="Edit list purpose" aria-label="Edit purpose of ' + esc(l.name) + '">✎</button>' +
           '<span class="count">' + tasks.length + '</span></h2></div>' +
         '<div class="cards-wrap"><div class="cards"><div class="cards-inner">' +
           (l.desc ? '<p class="col-desc">' + esc(l.desc.replace(/^Purpose:\s*/i,'')) + '</p>' : '') +
@@ -478,6 +565,12 @@
         if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); flip(); }
       });
 
+      var colEdit = col.querySelector('.col-edit');
+      colEdit.addEventListener('click', function(e){ e.stopPropagation(); openListEdit(l); });
+      colEdit.addEventListener('keydown', function(e){
+        if (e.key === 'Enter' || e.key === ' ') e.stopPropagation();   // don't also toggle collapse
+      });
+
       var inner = col.querySelector('.cards-inner');
       if (!tasks.length){
         var em = document.createElement('div');
@@ -491,6 +584,7 @@
       });
       board.appendChild(col);
     });
+    renderGlobal();
   }
 
   function card(t, listName){
@@ -698,6 +792,53 @@
     document.getElementById('e-title').focus();
   }
 
+  // ── title / list-purpose edit forms ────────────────────────────────────────
+  function openTitleEdit(){
+    modal.innerHTML =
+      '<div class="m-top"><h3 id="m-title" style="margin:0">Edit board title</h3>' +
+        '<button class="m-close" aria-label="Close">✕</button></div>' +
+      '<label>Board title</label><input type="text" id="b-title" value="' + esc(state.title || '') + '">' +
+      '<div class="m-hint">This is the <code>#</code> heading on the first line of KANBAN.md — it names the board ' +
+        'on this page, in the browser tab, and in the file itself.</div>' +
+      '<div class="m-actions">' +
+        '<button class="primary" data-act="apply">Apply changes</button>' +
+        '<button data-act="close">Cancel</button></div>';
+    showModal();
+    modal.querySelector('.m-close').addEventListener('click', closeModal);
+    modal.querySelector('[data-act="close"]').addEventListener('click', closeModal);
+    modal.querySelector('[data-act="apply"]').addEventListener('click', function(){
+      var v = document.getElementById('b-title').value.trim().replace(/\s*\n\s*/g, ' ');
+      if (!v){ document.getElementById('b-title').focus(); return; }
+      state.title = v;
+      render(); closeModal();
+    });
+    document.getElementById('b-title').focus();
+  }
+
+  function openListEdit(l){
+    modal.innerHTML =
+      '<div class="m-top"><h3 id="m-title" style="margin:0">Edit list</h3>' +
+        '<button class="m-close" aria-label="Close">✕</button></div>' +
+      '<div class="m-list">' + esc(l.name) + '</div>' +
+      '<label>Purpose — what belongs in this list</label>' +
+      '<textarea id="l-desc" rows="5">' + esc(descBody(l)) + '</textarea>' +
+      '<div class="m-hint">Saved as the <code>&gt; **Purpose:**</code> line under the list heading. Claude Code reads ' +
+        'these to decide what belongs where, so be specific about scope and about anything it should never touch.</div>' +
+      '<div class="m-actions">' +
+        '<button class="primary" data-act="apply">Apply changes</button>' +
+        '<button data-act="close">Cancel</button></div>';
+    showModal();
+    modal.querySelector('.m-close').addEventListener('click', closeModal);
+    modal.querySelector('[data-act="close"]').addEventListener('click', closeModal);
+    modal.querySelector('[data-act="apply"]').addEventListener('click', function(){
+      var v = document.getElementById('l-desc').value.trim().replace(/\s*\n\s*/g, ' ');
+      if (!v){ document.getElementById('l-desc').focus(); return; }
+      l.desc = 'Purpose: ' + v;
+      render(); closeModal();
+    });
+    document.getElementById('l-desc').focus();
+  }
+
   // ── add-task form ──────────────────────────────────────────────────────────
   function idPrefix(listName){
     if (/fix/i.test(listName)) return 'FIX';
@@ -780,6 +921,15 @@
   }
 
   document.getElementById('addTask').addEventListener('click', openAdd);
+  document.getElementById('editTitle').addEventListener('click', openTitleEdit);
+  document.getElementById('gs-copy').addEventListener('click', function(){
+    copyText(wrapPrompt(allChanges().map(function(c){ return c.instruction; })), this);
+  });
+  document.getElementById('gs-github').addEventListener('click', function(){ window.open(EDIT_URL, '_blank'); });
+  document.getElementById('gs-revert').addEventListener('click', revertAll);
+  window.addEventListener('beforeunload', function(e){
+    if (allChanges().length){ e.preventDefault(); e.returnValue = ''; }
+  });
   overlay.addEventListener('click', function(e){ if (e.target === overlay) closeModal(); });
   document.addEventListener('keydown', function(e){
     if (e.key === 'Escape' && overlay.classList.contains('show')) closeModal();
@@ -808,7 +958,9 @@
   function load(md, sourceNote){
     var parsed = parse(md);
     state.title = parsed.title;
+    state._origTitle = parsed.title;
     state.lists = parsed.lists;
+    state.lists.forEach(function(l){ l._origDesc = l.desc; });
     document.getElementById('fallback').style.display = 'none';
     document.getElementById('controls').style.display = 'flex';
     document.getElementById('meta').textContent =
@@ -836,7 +988,12 @@
     });
   }
 
-  document.getElementById('refresh').addEventListener('click', fetchBoard);
+  document.getElementById('refresh').addEventListener('click', function(){
+    var n = allChanges().length;
+    if (n && !confirm(n + ' unsaved change' + (n > 1 ? 's' : '') +
+        ' will be discarded by reloading from KANBAN.md. Continue?')) return;
+    fetchBoard();
+  });
   document.getElementById('renderPaste').addEventListener('click', function(){
     var md = document.getElementById('paste').value;
     if (md.trim()) load(md, 'pasted');
