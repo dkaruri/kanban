@@ -85,6 +85,26 @@ NEVER
 
 > **Purpose:** Things to fix on current projects — currently the Chicago Permit Search tool. Bugs, regressions, broken behavior, and cleanup on what already exists. This is Claude Code's default work queue.
 
+### FIX-004 · Scope Optimize Route to the full permit list
+
+- **Priority:** P1-High
+- **Status:** todo
+- **Created:** 2026-07-27 15:55 CT
+- **Updated:** 2026-07-27 15:55 CT
+- **Tags:** Chicago Permit Search Tool
+
+Optimize Route in My Permit List (`docs/list.html`) should optimize across every permit in the saved list, not a subset. Google Maps caps waypoints per link, so the list is chunked for export — that export chunking must not also cap what the optimizer considers.
+
+**Checklist:**
+- [ ] Find where the current optimize-route scope is bounded (export chunking, visible rows, or a hard waypoint cap)
+- [ ] Run the optimization across the entire saved list, independent of export chunking
+- [ ] Keep Google Maps chunk generation as a presentation step applied after optimization
+- [ ] Verify the resulting order and total drive time improve on a long list
+- [ ] Check OSRM request count and runtime on a large list; note any practical ceiling in this task's Log
+
+**Log:**
+- 2026-07-27 15:55 CT — created (Divyam)
+
 ### FIX-003 · Speed up permit removal in My Permit List and stop accidental opens
 
 - **Priority:** P2-Medium
