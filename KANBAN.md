@@ -85,6 +85,25 @@ NEVER
 
 > **Purpose:** Things to fix on current projects — currently the Chicago Permit Search tool. Bugs, regressions, broken behavior, and cleanup on what already exists. This is Claude Code's default work queue.
 
+### FIX-003 · Speed up permit removal in My Permit List and stop accidental opens
+
+- **Priority:** P2-Medium
+- **Status:** todo
+- **Created:** 2026-07-27 15:53 CT
+- **Updated:** 2026-07-27 15:53 CT
+- **Tags:** Chicago Permit Search Tool
+
+Removing a permit from My Permit List (`docs/list.html`) is slow because of the confirmation step, and the remove tap sometimes opens the permit instead — the click appears to fall through to the row's open/detail handler.
+
+**Checklist:**
+- [ ] Replace the blocking confirmation with immediate removal plus a short-lived undo
+- [ ] Stop the remove control from triggering the row's open action (stop event propagation on click and touch)
+- [ ] Verify rapid successive removals stay in sync with saved-list storage
+- [ ] Test on desktop and on a phone viewport, including the visited-checkmark and reorder controls nearby
+
+**Log:**
+- 2026-07-27 15:53 CT — created (Divyam)
+
 ### FIX-001 · General bug and compatibility fixes
 
 - **Priority:** P2-Medium
@@ -147,6 +166,26 @@ Filter/search by permit (reported cost) value range in both the Search tool and 
 
 **Log:**
 - 2026-07-27 10:09 CT — created (Divyam)
+
+### FEAT-024 · Map Search: filter out work types and filter to residential only
+
+- **Priority:** P2-Medium
+- **Status:** todo
+- **Created:** 2026-07-27 15:53 CT
+- **Updated:** 2026-07-27 15:53 CT
+- **Tags:** Chicago Permit Search Tool
+
+In Map Search (`docs/map.html`), let the user exclude certain types of work and narrow results to residential properties only. FEAT-013 (building type) already supplies the residential signal; this exposes it as a map filter.
+
+**Checklist:**
+- [ ] Enumerate the work types present in the permit data and pick the filterable set
+- [ ] Add a work-type exclude control to Map Search
+- [ ] Add a residential-only toggle, defining which building types count as residential
+- [ ] Verify both combine correctly with the existing month and value-range filters
+- [ ] Check performance with filters applied across the monthly map shards
+
+**Log:**
+- 2026-07-27 15:53 CT — created (Divyam)
 
 ### FEAT-017 · Address search for permits
 
