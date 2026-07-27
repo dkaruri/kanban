@@ -125,6 +125,27 @@ Share in My Permit List (`docs/list.html`) appears to get stuck when a share lin
 **Log:**
 - 2026-07-27 16:00 CT — created (Divyam)
 
+### FIX-006 · Shared permit-list link should layer over the directory with a back button
+
+- **Priority:** P2-Medium
+- **Status:** todo
+- **Created:** 2026-07-27 16:12 CT
+- **Updated:** 2026-07-27 16:12 CT
+- **Tags:** Chicago Permit Search Tool
+
+When My Permit List is opened from a shared link, the Search Directory renders above the permit list instead of the list taking over the view. Arriving via a link should land directly on the permit list as its own layer, with a Back control returning to the directory — matching how the list behaves during normal in-app navigation.
+
+**Checklist:**
+- [ ] Reproduce by opening a generated share link in a fresh session (and in a new browser/incognito)
+- [ ] Determine why the directory renders above the list on link entry (initial view state, render order, or restored last-viewed list from FEAT-016)
+- [ ] Make link entry open the permit list as the active layer, directory hidden behind it
+- [ ] Add a Back control to the directory, consistent with normal navigation
+- [ ] Ensure browser back also returns to the directory rather than leaving the site
+- [ ] Verify on desktop and mobile, and confirm normal (non-link) navigation is unchanged
+
+**Log:**
+- 2026-07-27 16:12 CT — created (Divyam)
+
 ### FIX-003 · Speed up permit removal in My Permit List and stop accidental opens
 
 - **Priority:** P2-Medium
