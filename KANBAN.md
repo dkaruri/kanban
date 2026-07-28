@@ -1,4 +1,4 @@
-# Chicago Permit Search — Kanban Board
+# Divyam's Kanban Board
 
 <!-- kanban-board: v1 | timezone: America/Chicago | ids: FIX|FEAT|FUT -->
 
