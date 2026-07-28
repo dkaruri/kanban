@@ -125,6 +125,46 @@ Share in My Permit List (`docs/list.html`) appears to get stuck when a share lin
 **Log:**
 - 2026-07-27 16:00 CT — created (Divyam)
 
+### FIX-007 · Zoning data: include what can and can't be built
+
+- **Priority:** P1-High
+- **Status:** todo
+- **Created:** 2026-07-28 14:06 CT
+- **Updated:** 2026-07-28 14:06 CT
+- **Tags:** Chicago Permit Search Tool
+
+The zoning data shown with a permit/parcel should say what the zoning district actually allows and prohibits — permitted uses, prohibited uses, and key limits (units, height/FAR where available) — not just the district code.
+
+**Checklist:**
+- [ ] Source Chicago zoning district boundaries and an allowed/prohibited-use table per district (City data portal / zoning ordinance)
+- [ ] Map each permit/parcel's district code to its permitted and prohibited uses
+- [ ] Display "can build / can't build" summary wherever zoning is shown (permit detail, map popup)
+- [ ] Note data vintage and add a disclaimer that the ordinance governs, mirroring existing data caveats
+- [ ] Verify a sample of districts (RS-3, RT-4, RM-5, B, C, M) against the published ordinance
+
+**Log:**
+- 2026-07-28 14:06 CT — created (Divyam)
+
+### FIX-008 · Remember map layers and filters across page reload
+
+- **Priority:** P1-High
+- **Status:** todo
+- **Created:** 2026-07-28 14:06 CT
+- **Updated:** 2026-07-28 14:06 CT
+- **Tags:** Chicago Permit Search Tool
+
+Map Search (`docs/map.html`) should persist the user's selected layers and filters (month, date range, GC job-count range, and future work-type/residential/value filters) so reloading the page restores the same view.
+
+**Checklist:**
+- [ ] Inventory every layer toggle and filter setting on the map page
+- [ ] Persist them client-side (localStorage, consistent with the existing chi_permit_theme pattern) on every change
+- [ ] Restore persisted state on load before first render; fall back to defaults when absent or invalid
+- [ ] Handle stale state gracefully when saved filters reference months/shards that no longer exist
+- [ ] Verify across reloads, new tabs, and after a daily data refresh
+
+**Log:**
+- 2026-07-28 14:06 CT — created (Divyam)
+
 ### FIX-006 · Shared permit-list link should layer over the directory with a back button
 
 - **Priority:** P2-Medium
@@ -266,6 +306,27 @@ Filter/search by permit (reported cost) value range in both the Search tool and 
 **Log:**
 - 2026-07-27 10:09 CT — created (Divyam)
 
+### FEAT-027 · Integrate HighLevel CRM
+
+- **Priority:** P1-High
+- **Status:** todo
+- **Created:** 2026-07-28 14:06 CT
+- **Updated:** 2026-07-28 14:06 CT
+- **Tags:** Chicago Permit Search Tool
+
+Connect the Search Tool to HighLevel (GoHighLevel) CRM so contractor/sub profiles and permit-derived leads can flow into CRM pipelines. Context for humans, not a Claude Code deliverable: the larger plan this enables is identifying general contractors / open subs running 20+ simultaneous jobs as candidates for business buy/sell outreach — this task covers only the CRM integration groundwork.
+
+**Checklist:**
+- [ ] Review HighLevel API (auth model, contacts, opportunities/pipelines, custom fields, rate limits)
+- [ ] Decide sync direction and scope: push GC/sub profiles and selected permits as CRM contacts/opportunities with custom fields (open jobs, specializations, license match)
+- [ ] Design where the integration runs (the site is static — likely an export/sync script, scheduled workflow, or the Worker rather than in-browser)
+- [ ] Implement an export path for a filtered set (e.g., GCs with ≥ N open jobs) into HighLevel
+- [ ] Handle credentials safely — no API keys in the public repo or client-side code
+- [ ] Verify a test batch lands correctly in a HighLevel pipeline
+
+**Log:**
+- 2026-07-28 14:06 CT — created (Divyam)
+
 ### FEAT-024 · Map Search: filter out work types and filter to residential only
 
 - **Priority:** P2-Medium
@@ -285,6 +346,89 @@ In Map Search (`docs/map.html`), let the user exclude certain types of work and 
 
 **Log:**
 - 2026-07-27 15:53 CT — created (Divyam)
+
+### FEAT-026 · Enrich profiles with deed/title, MLS, LLC, VA loan, and licensing data sources
+
+- **Priority:** P2-Medium
+- **Status:** todo
+- **Created:** 2026-07-28 14:06 CT
+- **Updated:** 2026-07-28 14:06 CT
+- **Tags:** Chicago Permit Search Tool
+
+Cross-reference and enrich permit, property, and contractor profiles with additional data sources: deed/title records (mortgages, liens), MLS data, Illinois LLC registrations (Secretary of State), VA loan data, licensing bodies, and IDFPR (Illinois Department of Financial and Professional Regulation).
+
+**Checklist:**
+- [ ] Evaluate each source: access method, coverage for Chicago, licensing/cost, and terms of use (Cook County Recorder of Deeds for mortgages/liens; MLS access rules; IL SoS LLC data; VA loan records; IDFPR license lookup)
+- [ ] Rank sources by enrichment value vs. effort and note findings in this task's Log
+- [ ] Design join keys per source (address/PIN for deeds and MLS, name-normalization for LLC/IDFPR, mirroring the licensed-contractor match)
+- [ ] Ingest the first approved source(s) into the pipeline and export enriched fields into the JSON indexes
+- [ ] Surface enrichments on profiles and permit detail with per-source data caveats
+- [ ] Verify sample records against each source of record
+
+**Log:**
+- 2026-07-28 14:06 CT — created (Divyam)
+
+### FEAT-028 · Classify permit lenders: private/small lender vs small, medium, or large bank
+
+- **Priority:** P2-Medium
+- **Status:** todo
+- **Created:** 2026-07-28 14:06 CT
+- **Updated:** 2026-07-28 14:06 CT
+- **Tags:** Chicago Permit Search Tool
+
+For the lender recorded on a permit (builds on FEAT-023), determine whether it is a private mortgage or small lender, and label it as a private/small lender or a small, medium, or large bank.
+
+**Checklist:**
+- [ ] Pick a classification source (FDIC/NCUA institution data for banks/credit unions by asset size; NMLS for non-bank lenders; unmatched → private/small)
+- [ ] Define the size thresholds for small / medium / large bank and document them
+- [ ] Normalize and match lender names against the classification source
+- [ ] Add the lender-size label wherever lenders are displayed (FEAT-023 surfaces)
+- [ ] Verify a sample of known lenders classifies correctly, including private-money edge cases
+
+**Log:**
+- 2026-07-28 14:06 CT — created (Divyam)
+
+### FEAT-029 · Airbnb licensees layer: density map and management-outreach view
+
+- **Priority:** P2-Medium
+- **Status:** todo
+- **Created:** 2026-07-28 14:06 CT
+- **Updated:** 2026-07-28 14:06 CT
+- **Tags:** Chicago Permit Search Tool
+
+Include Chicago short-term rental / Airbnb licensees, shown as a Map Search layer, with the goals of seeing where Airbnb density is concentrated and identifying hosts who may want property management.
+
+**Checklist:**
+- [ ] Source the City of Chicago shared housing / short-term rental registration data
+- [ ] Ingest licensees with locations into the pipeline and export a map-ready index
+- [ ] Add an Airbnb layer to Map Search with a density view (clusters or heat) and per-license markers
+- [ ] Show available license details in the marker popup for outreach use
+- [ ] Make the layer respect existing filters where sensible and persist with FIX-008's remembered map state
+- [ ] Verify density hotspots against known short-term-rental neighborhoods
+
+**Log:**
+- 2026-07-28 14:06 CT — created (Divyam)
+
+### FEAT-030 · HOA data: locations vs permits, fees, MLS cross-reference, rental rules
+
+- **Priority:** P2-Medium
+- **Status:** todo
+- **Created:** 2026-07-28 14:06 CT
+- **Updated:** 2026-07-28 14:06 CT
+- **Tags:** Chicago Permit Search Tool
+
+Include HOA data: where HOAs sit relative to permits, what their fees are, cross-referenced with MLS data (see FEAT-026 for the MLS source). When pulling a list for a building permit, check whether the HOA allows rentals.
+
+**Checklist:**
+- [ ] Identify HOA data sources (MLS fee/association fields, county records, condo declarations) and their coverage/terms
+- [ ] Associate permits/addresses with an HOA where one exists
+- [ ] Show HOA presence and fee amount on permit detail and list pulls
+- [ ] Add a rentals-allowed check to permit list pulls where the data supports it; show unknown honestly otherwise
+- [ ] Cross-reference against MLS data once FEAT-026's MLS source lands
+- [ ] Verify a sample of known condo/HOA buildings for fee and rental-rule accuracy
+
+**Log:**
+- 2026-07-28 14:06 CT — created (Divyam)
 
 ### FEAT-017 · Address search for permits
 
