@@ -254,7 +254,7 @@ General UI polish plus accessibility on small screens.
 - **Priority:** P1-High
 - **Status:** done
 - **Created:** 2026-07-27 14:27 CT
-- **Updated:** 2026-07-28 18:59 CT
+- **Updated:** 2026-07-28 19:34 CT
 - **Tags:** Chicago Permit Search Tool
 
 Tap a general contractor or open sub inside a permit detail overlay to open that
@@ -264,9 +264,8 @@ profile: stat pills, License, Specialties, Associations, and the contractor's
 open permits with a Call action and "Add all N to list". Browser Back steps the
 stack and only closes at the bottom. Both index.html and list.html.
 
-Phase 1 of three. Phase 2 (Worker-side matching ladder, `matched_as`,
-`seeded_at`) and Phase 3 (last-view persistence) are not started — Phase 2
-requires deploying the Worker BEFORE Pages.
+Phases 1 and 2 of three are shipped. Phase 3 (last-view persistence) is not
+started.
 
 **Checklist:**
 - [x] Card stack core: typed descriptors, one history entry per card, focus restore
@@ -278,14 +277,17 @@ requires deploying the Worker BEFORE Pages.
 - [x] Push/back motion, interruptible, reduced-motion respected
 - [x] ui-ux-pro-max pass: 44px targets, 8px spacing, contrast, 12px type floor, landscape
 - [x] Full-suite verification: 111 client + 99 Worker + 11 browser suites
-- [ ] Phase 2: Worker matching ladder (separate task)
-- [ ] Phase 3: last-view persistence (separate task)
+- [x] Phase 2: Worker matching ladder — exact / cross-category / normalized
+- [x] Phase 2: `matched as <name>` and `Profile data as of <date>` on the card
+- [ ] Phase 3: last-view persistence
+- [ ] Re-run `node seed-kv.js` so `seeded_at` exists and the staleness line shows
 
 **Log:**
 - 2026-07-27 14:27 CT — design spec written, accessibility audit at design time (Claude Code)
 - 2026-07-27 16:23 CT — tasks 1-4 built on branch, task 4 held for review (Claude Code)
 - 2026-07-28 18:20 CT — task 4 reviewed; keyboard-dead contractor rows fixed; bulk add now offers the list picker; tasks 1-4 merged to main `d608b38` (Claude Code)
 - 2026-07-28 18:55 CT — tasks 5-6 complete; ui-ux-pro-max pass fixed mid-number wrapping and a sub-12px type floor that also rendered differently on the two pages; merged to main `1a96736`; Phase 1 done (Claude Code)
+- 2026-07-28 19:34 CT — Phase 2: Worker matching ladder + matched_as/matched_category/seeded_at, 18 new Worker tests (117 total). Worker deployed and all three rungs verified in production, then merged to main `24d6537`. seeded_at pending a seed-kv.js re-run (Claude Code)
 
 ### FEAT-021 · Add permit value range to Search and Map Search
 
