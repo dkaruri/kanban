@@ -209,6 +209,44 @@ General UI polish plus accessibility on small screens.
 
 > **Purpose:** New features and ideas to be added to the existing Chicago Permit Search tool. Enhancements that extend the current project rather than repair it.
 
+### FEAT-025 · Contractor detail view in the permit overlay
+
+- **Priority:** P1-High
+- **Status:** done
+- **Created:** 2026-07-27 14:27 CT
+- **Updated:** 2026-07-28 18:59 CT
+- **Tags:** Chicago Permit Search Tool
+
+Tap a general contractor or open sub inside a permit detail overlay to open that
+contractor's profile as a card in the same overlay, with a navigable card stack
+(permit → contractor → permit → …). Full parity with the directory pane's
+profile: stat pills, License, Specialties, Associations, and the contractor's
+open permits with a Call action and "Add all N to list". Browser Back steps the
+stack and only closes at the bottom. Both index.html and list.html.
+
+Phase 1 of three. Phase 2 (Worker-side matching ladder, `matched_as`,
+`seeded_at`) and Phase 3 (last-view persistence) are not started — Phase 2
+requires deploying the Worker BEFORE Pages.
+
+**Checklist:**
+- [x] Card stack core: typed descriptors, one history entry per card, focus restore
+- [x] Contractor card renderer: pills, License, Specialties, Associations, permits table
+- [x] Data layer: parallel fetch, skeleton, error + Retry, aria-busy lifecycle
+- [x] Bidirectional wiring: contractor rows open cards, permit rows open permits
+- [x] "Add all N to list" goes through the list picker
+- [x] Focus moves and card is announced on every navigation
+- [x] Push/back motion, interruptible, reduced-motion respected
+- [x] ui-ux-pro-max pass: 44px targets, 8px spacing, contrast, 12px type floor, landscape
+- [x] Full-suite verification: 111 client + 99 Worker + 11 browser suites
+- [ ] Phase 2: Worker matching ladder (separate task)
+- [ ] Phase 3: last-view persistence (separate task)
+
+**Log:**
+- 2026-07-27 14:27 CT — design spec written, accessibility audit at design time (Claude Code)
+- 2026-07-27 16:23 CT — tasks 1-4 built on branch, task 4 held for review (Claude Code)
+- 2026-07-28 18:20 CT — task 4 reviewed; keyboard-dead contractor rows fixed; bulk add now offers the list picker; tasks 1-4 merged to main `d608b38` (Claude Code)
+- 2026-07-28 18:55 CT — tasks 5-6 complete; ui-ux-pro-max pass fixed mid-number wrapping and a sub-12px type floor that also rendered differently on the two pages; merged to main `1a96736`; Phase 1 done (Claude Code)
+
 ### FEAT-021 · Add permit value range to Search and Map Search
 
 - **Priority:** P1-High
