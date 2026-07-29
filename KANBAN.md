@@ -165,6 +165,26 @@ Map Search (`docs/map.html`) should persist the user's selected layers and filte
 **Log:**
 - 2026-07-28 14:06 CT — created (Divyam)
 
+### FIX-010 · Mobile: permit list scrolling locks up after opening permit details
+
+- **Priority:** P1-High
+- **Status:** todo
+- **Created:** 2026-07-29 11:28 CT
+- **Updated:** 2026-07-29 11:28 CT
+- **Tags:** Chicago Permit Search Tool
+
+On mobile, after tapping into permit details from My Permit List, scrolling the list gets locked up. Likely the detail overlay's body scroll-lock is not being released on every close path — worth checking all of them, including swipe/back-gesture closes and the new FEAT-025 card-stack navigation.
+
+**Checklist:**
+- [ ] Reproduce on a phone: open permit details from the list, close it each possible way (close button, backdrop, browser back, gesture), then try scrolling
+- [ ] Audit how the overlay locks body scroll (overflow hidden, position:fixed, touchmove handlers) and every path that must release it
+- [ ] Release the lock on all close paths, including card-stack navigation and history popstate
+- [ ] Guard so a re-entrant open/close (fast taps) can never leave the lock latched
+- [ ] Verify on iOS Safari and Android Chrome viewports, and desktop regression
+
+**Log:**
+- 2026-07-29 11:28 CT — created (Divyam)
+
 ### FIX-006 · Shared permit-list link should layer over the directory with a back button
 
 - **Priority:** P2-Medium
@@ -185,6 +205,26 @@ When My Permit List is opened from a shared link, the Search Directory renders a
 
 **Log:**
 - 2026-07-27 16:12 CT — created (Divyam)
+
+### FIX-009 · Viewer count on a list is inaccurate across reloads and mobile app switches
+
+- **Priority:** P2-Medium
+- **Status:** todo
+- **Created:** 2026-07-29 11:28 CT
+- **Updated:** 2026-07-29 11:28 CT
+- **Tags:** Chicago Permit Search Tool
+
+The number of people viewing a shared list can be wrong after reloading the page or moving between apps on mobile — reloads appear to double-count, and backgrounded mobile sessions appear to linger (or drop) incorrectly.
+
+**Checklist:**
+- [ ] Reproduce both cases: rapid reloads inflating the count, and app-switching on mobile leaving a stale viewer
+- [ ] Review how presence is tracked (Worker-side) — connection lifetime, heartbeat, TTL
+- [ ] Key presence to a stable per-browser session id so a reload replaces rather than adds a viewer
+- [ ] Handle visibilitychange/pagehide/bfcache so backgrounded and restored tabs update presence correctly, with a TTL sweep for clients that vanish without notice
+- [ ] Verify count stability across reloads, app switches, tab closes, and multiple real viewers
+
+**Log:**
+- 2026-07-29 11:28 CT — created (Divyam)
 
 ### FIX-003 · Speed up permit removal in My Permit List and stop accidental opens
 
@@ -333,6 +373,26 @@ Connect the Search Tool to HighLevel (GoHighLevel) CRM so contractor/sub profile
 **Log:**
 - 2026-07-28 14:06 CT — created (Divyam)
 
+### FEAT-031 · My Permit List: filter by visited / called
+
+- **Priority:** P1-High
+- **Status:** todo
+- **Created:** 2026-07-29 11:28 CT
+- **Updated:** 2026-07-29 11:28 CT
+- **Tags:** Chicago Permit Search Tool
+
+In a list in My Permit List (`docs/list.html`), let people filter permits by whether someone has visited or called them. The visited checkmark (FEAT-008) and the Call action (FEAT-025 cards) already exist — this adds a tracked "called" state alongside visited and exposes both as list filters.
+
+**Checklist:**
+- [ ] Track a "called" state per permit, set when the Call action is used and manually togglable like the visited checkmark
+- [ ] Add filter controls to the list view: all / visited / not visited / called / not called (combinable)
+- [ ] On shared lists, reflect visit/call state consistently for everyone viewing the list; show who acted where the data allows
+- [ ] Make filters play well with reordering, route optimization, and exports (filtered view should not silently change export scope without saying so)
+- [ ] Verify on desktop and mobile, including a shared list with multiple viewers
+
+**Log:**
+- 2026-07-29 11:28 CT — created (Divyam)
+
 ### FEAT-024 · Map Search: filter out work types and filter to residential only
 
 - **Priority:** P2-Medium
@@ -352,6 +412,26 @@ In Map Search (`docs/map.html`), let the user exclude certain types of work and 
 
 **Log:**
 - 2026-07-27 15:53 CT — created (Divyam)
+
+### FEAT-032 · Feed the search conditions/filters into the list description
+
+- **Priority:** P2-Medium
+- **Status:** todo
+- **Created:** 2026-07-29 11:28 CT
+- **Updated:** 2026-07-29 11:28 CT
+- **Tags:** Chicago Permit Search Tool
+
+When permits are pulled into a list from Search or Map Search, record the conditions and filters that produced them (ward, date range, work types, value range, etc.) in the list's description, so anyone opening the list later can see how it was built.
+
+**Checklist:**
+- [ ] Capture the active filters/conditions at the moment permits are added or a list is pulled
+- [ ] Render them as a compact human-readable summary in the list description (e.g. "Ward 47 · Jun–Jul 2026 · renovation excluded · $50k–$250k")
+- [ ] Append rather than overwrite when adds come from different searches; keep the description editable by hand
+- [ ] Show the summary on shared/opened lists too
+- [ ] Verify with adds from both Search and Map Search, and with manually added permits (which should note no filters)
+
+**Log:**
+- 2026-07-29 11:28 CT — created (Divyam)
 
 ### FEAT-026 · Enrich profiles with deed/title, MLS, LLC, VA loan, and licensing data sources
 
