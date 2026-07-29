@@ -788,28 +788,30 @@ When a shared permit-list link is posted in Slack, a text message, or social app
 **Log:**
 - 2026-07-29 13:18 CT — created (Divyam)
 
-### FEAT-034 · Notes feed: searchable, timestamped notes linked to their permits
+### FEAT-034 · Per-list notes feed: searchable, timestamped notes inside each permit list
 
 - **Priority:** P1-High
 - **Status:** todo
 - **Created:** 2026-07-29 13:27 CT
-- **Updated:** 2026-07-29 13:27 CT
+- **Updated:** 2026-07-29 14:11 CT
 - **Tags:** Chicago Permit Search Tool
 
-Make my notes searchable in one place: a notes feed, opened from a control at the top of the site, that lays out all notes as a timestamped list (newest first) with search. Each entry shows its note text, timestamp, and the permit it belongs to. Clicking a note jumps to its associated permit, and from a permit you can jump back into the feed — navigation works to and from in both directions without losing your place in the feed.
+Make notes searchable within each permit list — NOT one overall site-wide tab. Inside a specific list in My Permit List (`docs/list.html`), a notes feed opened from a control at the top of that list lays out that list's notes as a timestamped feed (newest first) with search. Each entry shows its note text, timestamp, and the permit (in this list) it belongs to. Clicking a note jumps to its associated permit, and from a permit you can jump back into the feed — navigation works to and from in both directions without losing your place in the feed. The feed's scope is always the list you're in; different lists have separate feeds.
 
 **Checklist:**
-- [ ] Inventory where notes are stored today (per-permit) and expose them as one aggregated, queryable collection
-- [ ] Add a notes feed entry point at the top of the site (own clickable feed/tab)
-- [ ] Feed view: timestamped entries, newest first, each showing note text + linked permit summary
+- [ ] Inventory where notes are stored today (per-permit) and expose them as a queryable collection scoped per permit list
+- [ ] Add a notes feed entry point at the top of each permit list view (inside the list, not a global tab)
+- [ ] Feed view: timestamped entries for this list only, newest first, each showing note text + linked permit summary
 - [ ] Search within the feed (note text, permit address/number); instant filter as you type
 - [ ] Click a note → open its associated permit; back returns to the feed at the same scroll/search state
-- [ ] From a permit, link into the feed filtered to that permit's notes
+- [ ] From a permit in the list, link into the feed filtered to that permit's notes
+- [ ] Decide behavior on shared lists (do viewers see the feed? consistent with how notes themselves are shared)
 - [ ] Mobile: 44px touch targets, feed usable on small screens
-- [ ] Verify round-trip navigation and search on mobile and desktop
+- [ ] Verify round-trip navigation and search on mobile and desktop, across multiple lists (feeds stay separate)
 
 **Log:**
 - 2026-07-29 13:27 CT — created (Divyam)
+- 2026-07-29 14:11 CT — scope clarified by Divyam: the feed lives INSIDE each specific permit list, not as an overall site tab; description, title, and checklist updated (Claude)
 
 ### FEAT-035 · Permit lists: 1000-permit cap with 100-per-page pagination that remembers your page
 
