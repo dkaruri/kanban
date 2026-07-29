@@ -170,7 +170,7 @@ Map Search (`docs/map.html`) should persist the user's selected layers and filte
 - **Priority:** P1-High
 - **Status:** done
 - **Created:** 2026-07-29 11:28 CT
-- **Updated:** 2026-07-29 18:00 CT
+- **Updated:** 2026-07-29 18:05 CT
 - **Tags:** Chicago Permit Search Tool
 
 On mobile, after tapping into permit details from My Permit List, scrolling the list gets locked up. Likely the detail overlay's body scroll-lock is not being released on every close path — worth checking all of them, including swipe/back-gesture closes and the new FEAT-025 card-stack navigation.
@@ -191,6 +191,7 @@ Root cause was upstream of the release paths: the lock never locked. `body.modal
 - 2026-07-29 17:30 CT — root cause found: the lock was inert, not un-released. `html { overflow-x: hidden }` propagates to the viewport, so `body { overflow: hidden }` never reached the page scroller — with the overlay open, `window.scrollY` still moved freely and `document.scrollingElement` was HTML/overflow-y:auto on both pages (Claude Code)
 - 2026-07-29 18:00 CT — fixed on branch `fix-010-scroll-lock` (`fc6b181`, pushed, NOT merged — awaiting approval). position:fixed body lock pinned at scrollY; idempotent lock/release; release moved before `closePermitModal`'s early return; `scrollbar-gutter: stable` on html. New guards `t27-scrolllock.js` (24 cases, fails 24/24 against the bug) and `t28-uiux-lock.js` (ui-ux-pro-max pass). 111 client + 117 Worker unit tests and 17 browser suites green; shared overlay block byte-identical (Claude Code)
 - 2026-07-29 18:00 CT — caveat carried forward: the iOS-Safari-only reproduction could not be confirmed on a real device; the headless build uses overlay scrollbars, so the desktop scrollbar-shift case is covered by CSS rather than by a test (Claude Code)
+- 2026-07-29 18:05 CT — merged to main (`07469cd`, --no-ff) at Divyam's request and pushed; branch deleted, live on GitHub Pages. Client-only, no Worker deploy needed. Still wants a confirming pass on a real iPhone (Claude Code)
 
 ### FIX-006 · Shared permit-list link should layer over the directory with a back button
 
