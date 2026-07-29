@@ -246,6 +246,27 @@ The neighborhood shown in the permit view is a bare number — most likely the d
 **Log:**
 - 2026-07-29 12:11 CT — created (Divyam)
 
+### FIX-012 · GC "average processing days" should measure average time to close a permit
+
+- **Priority:** P2-Medium
+- **Status:** todo
+- **Created:** 2026-07-29 12:44 CT
+- **Updated:** 2026-07-29 12:44 CT
+- **Tags:** Chicago Permit Search Tool
+
+For General Contractors, the "average processing days" stat currently measures application-to-issuance time (the dataset's processing_time). What Divyam wants shown is how long the GC takes to CLOSE a permit on average — issuance to completion/closure. This is a metric definition change, not just a relabel.
+
+**Checklist:**
+- [ ] Identify the right closure signal in the permit data (completion/closed date, status transition out of ACTIVE) and note coverage/quality in this task's Log
+- [ ] Compute average issuance→closure days per GC in the pipeline, excluding still-open permits, and export it
+- [ ] Replace the processing-days stat on GC profiles/cards with the new metric, labeled clearly (e.g. "Avg time to close a permit")
+- [ ] Decide whether app→issuance processing days stays as a secondary stat or is dropped; keep sort options consistent
+- [ ] Handle GCs with no closed permits (show n/a, never 0)
+- [ ] Verify a sample of GCs by hand against their permit histories
+
+**Log:**
+- 2026-07-29 12:44 CT — created (Divyam)
+
 ### FIX-003 · Speed up permit removal in My Permit List and stop accidental opens
 
 - **Priority:** P2-Medium
