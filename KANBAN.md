@@ -108,22 +108,30 @@ Optimize Route in My Permit List (`docs/list.html`) should optimize across every
 ### FIX-005 · Share on My Permit List hangs when a link is already generated
 
 - **Priority:** P1-High
-- **Status:** todo
+- **Status:** done
 - **Created:** 2026-07-27 16:00 CT
-- **Updated:** 2026-07-27 16:00 CT
+- **Updated:** 2026-07-29 18:18 CT
 - **Tags:** Chicago Permit Search Tool
 
 Share in My Permit List (`docs/list.html`) appears to get stuck when a share link has already been generated — a second Share attempt hangs instead of reusing or regenerating the existing link.
 
+Two separate defects. The hang was `await navigator.share()` sitting inside `withListAction`, which has no timeout: a share sheet dismissed without a choice can leave that promise pending forever, and `setListActionBusy(true)` disables *every* `[data-list-action]` button — so Share, CSV export, drive distances and sort all died together for the rest of the session. Separately, the first Share minted a share id but never joined the live room it points at, so edits made after sharing never reached the shared copy.
+
 **Checklist:**
-- [ ] Reproduce: generate a share link, then invoke Share again in the same session
-- [ ] Identify the stuck state (unreset in-flight/"generating" flag, an unresolved promise, or a modal left open behind the scenes)
-- [ ] Make repeat Share reuse the existing link, or regenerate cleanly when the list has changed since
-- [ ] Reset share state on failure so it can never latch permanently
-- [ ] Verify repeated Share on desktop and mobile, including after editing the list between shares
+- [x] Reproduce: generate a share link, then invoke Share again in the same session
+- [x] Identify the stuck state (unreset in-flight/"generating" flag, an unresolved promise, or a modal left open behind the scenes)
+- [x] Make repeat Share reuse the existing link, or regenerate cleanly when the list has changed since
+- [x] Reset share state on failure so it can never latch permanently
+- [x] Verify repeated Share on desktop and mobile, including after editing the list between shares
+- [x] Connect to the live room when a share id is first minted, so post-share edits reach the shared copy
 
 **Log:**
 - 2026-07-27 16:00 CT — created (Divyam)
+- 2026-07-29 18:05 CT — in-progress (Claude Code)
+- 2026-07-29 18:10 CT — reproduced: a non-settling `navigator.share()` leaves 7/7 toolbar buttons disabled and `state.listActionBusy` true permanently; every later Share then returns silently at `withListAction`'s busy guard. Note the board's "when a link is already generated" framing is a correlation — the hang is reachable on any Share that opens the sheet (Claude Code)
+- 2026-07-29 18:14 CT — found a second defect while checking the "list has changed since" item: the first Share never called `liveConnect`, so the publisher sat disconnected from its own room and `sendListOp` dropped every subsequent edit (measured 0 sockets, 0 ops). Shared copies went stale while the same link kept being handed out (Claude Code)
+- 2026-07-29 18:18 CT — fixed on branch `fix-005-share-hang` (`d64c586`, pushed, NOT merged — awaiting approval). `navigator.share` raced against a 20s bound; `liveConnect(id)` on mint. New guards `t29-share-hang.js` (desktop + 390px, also asserts no stale `aria-busy`) and `t30-share-live.js`; both proven to fail against the bugs. 111 client + 117 Worker unit tests and 20 browser suites green. Client-only, no Worker deploy (Claude Code)
+- 2026-07-29 18:18 CT — caveat: the never-settling share sheet is a real desktop-Chrome behaviour that cannot be reproduced in the headless build, so it is simulated. The 20s bound means a dismissed sheet can still hold the toolbar for up to 20s — better than forever, not instant; a focus-based release would be the follow-up if that proves annoying (Claude Code)
 
 ### FIX-007 · Zoning data: include what can and can't be built
 
