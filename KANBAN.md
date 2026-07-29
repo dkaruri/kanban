@@ -110,7 +110,7 @@ Optimize Route in My Permit List (`docs/list.html`) should optimize across every
 - **Priority:** P1-High
 - **Status:** done
 - **Created:** 2026-07-27 16:00 CT
-- **Updated:** 2026-07-29 18:18 CT
+- **Updated:** 2026-07-29 18:28 CT
 - **Tags:** Chicago Permit Search Tool
 
 Share in My Permit List (`docs/list.html`) appears to get stuck when a share link has already been generated — a second Share attempt hangs instead of reusing or regenerating the existing link.
@@ -132,6 +132,7 @@ Two separate defects. The hang was `await navigator.share()` sitting inside `wit
 - 2026-07-29 18:14 CT — found a second defect while checking the "list has changed since" item: the first Share never called `liveConnect`, so the publisher sat disconnected from its own room and `sendListOp` dropped every subsequent edit (measured 0 sockets, 0 ops). Shared copies went stale while the same link kept being handed out (Claude Code)
 - 2026-07-29 18:18 CT — fixed on branch `fix-005-share-hang` (`d64c586`, pushed, NOT merged — awaiting approval). `navigator.share` raced against a 20s bound; `liveConnect(id)` on mint. New guards `t29-share-hang.js` (desktop + 390px, also asserts no stale `aria-busy`) and `t30-share-live.js`; both proven to fail against the bugs. 111 client + 117 Worker unit tests and 20 browser suites green. Client-only, no Worker deploy (Claude Code)
 - 2026-07-29 18:18 CT — caveat: the never-settling share sheet is a real desktop-Chrome behaviour that cannot be reproduced in the headless build, so it is simulated. The 20s bound means a dismissed sheet can still hold the toolbar for up to 20s — better than forever, not instant; a focus-based release would be the follow-up if that proves annoying (Claude Code)
+- 2026-07-29 18:28 CT — merged to main (`fbf7f29`, --no-ff) at Divyam's request and pushed; branch deleted, live on GitHub Pages. Client-only, no Worker deploy needed (Claude Code)
 
 ### FIX-007 · Zoning data: include what can and can't be built
 
