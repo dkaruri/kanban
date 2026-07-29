@@ -726,6 +726,27 @@ Surface lender information on projects and connect lenders to the GCs they work 
 **Log:**
 - 2026-07-27 10:09 CT — created (Divyam)
 
+### FEAT-033 · Rich link previews for shared permit lists (Slack, texts, social embeds)
+
+- **Priority:** P3-Low
+- **Status:** todo
+- **Created:** 2026-07-29 13:18 CT
+- **Updated:** 2026-07-29 13:18 CT
+- **Tags:** Chicago Permit Search Tool
+
+When a shared permit-list link is posted in Slack, a text message, or social apps, the unfurled preview should show the list's relevant information (name, permit count, description) instead of a generic page title. Key constraint: link crawlers don't run JavaScript, so per-list Open Graph tags can't come from the static page — the share URL needs to be served (or pre-rendered) by the Worker, which already holds shared-list data.
+
+**Checklist:**
+- [ ] Inventory what a share link looks like today and what Slack/iMessage currently unfurl for it
+- [ ] Serve share URLs through the Worker: inject per-list OG/Twitter meta (og:title = list name, og:description = permit count + list description from FEAT-032, og:url) into the HTML for crawlers and users alike
+- [ ] Add a sensible default OG card (site name + logo image) for all other pages
+- [ ] Consider a generated preview image (permit count / area summary) as a stretch; plain text card is the baseline
+- [ ] Validate with Slack unfurl, iMessage, and an OG debugger; confirm normal browsers still load the list exactly as before
+- [ ] Respect privacy: only unfurl data the shared link already exposes
+
+**Log:**
+- 2026-07-29 13:18 CT — created (Divyam)
+
 ### FEAT-001 · Build searchable directory of permits, contractors, and subs
 
 - **Priority:** P1-High
