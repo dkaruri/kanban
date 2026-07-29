@@ -275,6 +275,26 @@ For General Contractors, the "average processing days" stat currently measures a
 **Log:**
 - 2026-07-29 12:44 CT — created (Divyam)
 
+### FIX-013 · Desktop: tag chips at the top should size to their text, not the list width
+
+- **Priority:** P2-Medium
+- **Status:** todo
+- **Created:** 2026-07-29 13:11 CT
+- **Updated:** 2026-07-29 13:11 CT
+- **Tags:** Chicago Permit Search Tool
+
+On desktop, the tags listed at the top stretch to the width of the list/container instead of hugging their text. Each tag should be an inline pill sized to its content (fit-content / inline-flex), wrapping naturally as a row of chips — not full-width blocks.
+
+**Checklist:**
+- [ ] Locate the tag elements and identify why they expand (block-level display, width:100%, or a stretched flex/grid item)
+- [ ] Size each tag to its text with appropriate padding; lay the group out as a wrapping chip row
+- [ ] Confirm mobile/narrow layout is unchanged (or improved) by the change
+- [ ] Check hover/focus states and touch targets still meet the ui-ux-pro-max standard after resizing
+- [ ] Verify on desktop widths across the pages where these tags appear
+
+**Log:**
+- 2026-07-29 13:11 CT — created (Divyam)
+
 ### FIX-003 · Speed up permit removal in My Permit List and stop accidental opens
 
 - **Priority:** P2-Medium
@@ -312,6 +332,25 @@ Sweep the tool for general bugs and browser/device compatibility issues.
 
 **Log:**
 - 2026-07-27 10:09 CT — created (Divyam)
+
+### FIX-014 · GC view: Specialties counts hang outside their bubbles — keep the number inside like Associations
+
+- **Priority:** P3-Low
+- **Status:** todo
+- **Created:** 2026-07-29 13:11 CT
+- **Updated:** 2026-07-29 13:11 CT
+- **Tags:** Chicago Permit Search Tool
+
+In the General Contractor view, the numbers on Specialties bubbles overflow past the edge of the pill, while Associations renders its counts contained correctly. Make Specialties display its count inside the bubble the same way Associations does.
+
+**Checklist:**
+- [ ] Compare the Specialties and Associations bubble markup/CSS and identify why one contains its count and the other overflows (absolute positioning, white-space, min-width, or padding differences)
+- [ ] Align Specialties to the Associations pattern — ideally share one bubble component/style for both
+- [ ] Check long specialty names and 3+ digit counts wrap or truncate gracefully
+- [ ] Verify on desktop and mobile in the GC overlay card, and anywhere else Specialties bubbles render
+
+**Log:**
+- 2026-07-29 13:11 CT — created (Divyam)
 
 ### FIX-002 · UI cleanup and mobile accessibility
 
