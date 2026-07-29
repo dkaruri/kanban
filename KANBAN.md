@@ -90,7 +90,7 @@ NEVER
 - **Priority:** P1-High
 - **Status:** done
 - **Created:** 2026-07-27 15:55 CT
-- **Updated:** 2026-07-29 18:49 CT
+- **Updated:** 2026-07-29 19:19 CT
 - **Tags:** Chicago Permit Search Tool
 
 Optimize Route in My Permit List (`docs/list.html`) should optimize across every permit in the saved list, not a subset. Google Maps caps waypoints per link, so the list is chunked for export — that export chunking must not also cap what the optimizer considers.
@@ -103,6 +103,7 @@ The bound turned out to be neither export chunking nor visible rows: it was a fl
 - [ ] Keep Google Maps chunk generation as a presentation step applied after optimization — *skipped at Divyam's request ("ignore the Google Maps step"); export chunking was already downstream of ordering and was not touched*
 - [x] Verify the resulting order and total drive time improve on a long list
 - [x] Check OSRM request count and runtime on a large list; note any practical ceiling in this task's Log
+- [x] Above the ceiling, make Optimize route unusable rather than clickable-then-failing (added at Divyam's request)
 
 **Log:**
 - 2026-07-27 15:55 CT — created (Divyam)
@@ -110,6 +111,9 @@ The bound turned out to be neither export chunking nor visible rows: it was a fl
 - 2026-07-29 18:35 CT — checklist item 1 answered: the scope was NOT bounded by export chunking or visible rows. `fetchRouteLegs` already batches at 50 and `routeRows` never slices. The only limit was `optimizeUserListRoute` refusing outright when the list exceeded OSRM's 100-coordinate Table cap (Claude Code)
 - 2026-07-29 18:40 CT — measured the local search before redesigning it, and the assumption that it needed rewriting was wrong: 82ms at 100 stops, 2.7s at 300. Left it alone (Claude Code)
 - 2026-07-29 18:49 CT — done on branch `fix-004-route-scope` (`5edbccb`, pushed, NOT merged — awaiting approval). Tiled matrix: two 50-blocks per request via `sources=`/`destinations=`, both directions fetched (driving durations are asymmetric), 4 requests in flight at a time (Claude Code)
+
+- 2026-07-29 19:19 CT — `cec087a` on the same branch: above the cap the Optimize route button is now `aria-disabled` with the reason in a note under the toolbar, rather than a button that accepts a click and then fails. `aria-disabled` not `disabled`, so keyboard/screen-reader users can still reach it and hear why. ui-ux-pro-max pass caught two defects in the first cut — `opacity: 0.5` dropped the label to 2.05:1 contrast (now muted tokens, 6.32:1 light / 8.51:1 dark), and the note inherited `.small` at 11.2px under the 12px floor — plus one only the screenshots showed: the note originally sat a full phone screen below the button it explains. Guards `t32-optimize-cap.js`, `t33-uiux-cap.js`; 23 browser suites green (Claude Code)
+- 2026-07-29 19:19 CT — discussed raising the ceiling. Divyam plans longer lists, so the agreed next step if 400 is hit is cluster-then-route: k-means the stops, optimize each cluster, then order the clusters. That cuts 1000 stops from 400 Table requests / ~115s to ~11 requests / ~0.8s and matches how a route is actually driven (finish a neighborhood before crossing town). NOT built — worth its own card if lists start exceeding 400 (Claude Code)
 
 **Request count and runtime (checklist item 5).** Requests are exactly `ceil(n/50)^2` — 50/50 is the optimal split of the 100-coordinate budget, giving the most cells (2500) per request:
 
