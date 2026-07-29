@@ -226,6 +226,26 @@ The number of people viewing a shared list can be wrong after reloading the page
 **Log:**
 - 2026-07-29 11:28 CT — created (Divyam)
 
+### FIX-011 · Permit view: show the actual neighborhood name, not just a number
+
+- **Priority:** P2-Medium
+- **Status:** todo
+- **Created:** 2026-07-29 12:11 CT
+- **Updated:** 2026-07-29 12:11 CT
+- **Tags:** Chicago Permit Search Tool
+
+The neighborhood shown in the permit view is a bare number — most likely the dataset's community area code. Chicago has 77 named community areas (e.g., 22 → Logan Square); the view should display the real name, with the number at most as secondary detail.
+
+**Checklist:**
+- [ ] Confirm which field the number comes from (community area vs. ward vs. census tract) in the permit data
+- [ ] Add the official community-area number → name mapping (77 areas, from the City data portal) to the pipeline or as a static lookup
+- [ ] Display the neighborhood name everywhere the number currently shows (permit view, list rows, map popups, exports)
+- [ ] Fall back gracefully when the code is missing or unrecognized (show the raw value, never blank)
+- [ ] Verify a sample of permits across different areas against the City's community area map
+
+**Log:**
+- 2026-07-29 12:11 CT — created (Divyam)
+
 ### FIX-003 · Speed up permit removal in My Permit List and stop accidental opens
 
 - **Priority:** P2-Medium
