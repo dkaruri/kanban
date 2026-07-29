@@ -225,6 +225,28 @@ Root cause was upstream of the release paths: the lock never locked. `body.modal
 - 2026-07-29 18:00 CT — caveat carried forward: the iOS-Safari-only reproduction could not be confirmed on a real device; the headless build uses overlay scrollbars, so the desktop scrollbar-shift case is covered by CSS rather than by a test (Claude Code)
 - 2026-07-29 18:05 CT — merged to main (`07469cd`, --no-ff) at Divyam's request and pushed; branch deleted, live on GitHub Pages. Client-only, no Worker deploy needed. Still wants a confirming pass on a real iPhone (Claude Code)
 
+### FIX-016 · "Posting as" name in permit notes cannot be changed
+
+- **Priority:** P1-High
+- **Status:** in-progress
+- **Created:** 2026-07-29 19:25 CT
+- **Updated:** 2026-07-29 19:25 CT
+- **Tags:** Chicago Permit Search Tool
+
+The "Posting as ___" line in the Notes area of a permit view (`docs/list.html`, `docs/index.html`) renders `localStorage.chi_permit_author` as plain text — no click handler, no input, no edit control. The value is captured by a one-time `prompt()` that only fires while the key is empty, so once it is set nothing in the permit view ever asks again. A typo in that name is permanent from that screen.
+
+Reported by Divyam after entering the wrong name. The only workarounds today are a console one-liner or the Author field on List Details (which only exists if you own a list) — and **neither is available on a phone**, where most of this posting happens.
+
+**Checklist:**
+- [ ] Make the name in "Posting as ___" an editable control in the permit view, on both pages
+- [ ] Update the label in place — re-rendering the card would discard an in-progress note draft
+- [ ] Keep the two pages identical; this markup is duplicated by design
+- [ ] Accessible: real control, named, keyboard-activatable, reachable on mobile
+- [ ] Decide what to do about posts already made under the wrong name (the Worker's PUT never reassigns `author`)
+
+**Log:**
+- 2026-07-29 19:25 CT — created and started at Divyam's request (Claude Code)
+
 ### FIX-006 · Shared permit-list link should layer over the directory with a back button
 
 - **Priority:** P2-Medium
