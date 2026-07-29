@@ -88,22 +88,41 @@ NEVER
 ### FIX-004 · Scope Optimize Route to the full permit list
 
 - **Priority:** P1-High
-- **Status:** todo
+- **Status:** done
 - **Created:** 2026-07-27 15:55 CT
-- **Updated:** 2026-07-27 15:55 CT
+- **Updated:** 2026-07-29 18:49 CT
 - **Tags:** Chicago Permit Search Tool
 
 Optimize Route in My Permit List (`docs/list.html`) should optimize across every permit in the saved list, not a subset. Google Maps caps waypoints per link, so the list is chunked for export — that export chunking must not also cap what the optimizer considers.
 
+The bound turned out to be neither export chunking nor visible rows: it was a flat refusal above OSRM's 100-coordinate Table limit, so a longer list got no sort at all. The matrix is now assembled from tiles and the sort covers the whole list.
+
 **Checklist:**
-- [ ] Find where the current optimize-route scope is bounded (export chunking, visible rows, or a hard waypoint cap)
-- [ ] Run the optimization across the entire saved list, independent of export chunking
-- [ ] Keep Google Maps chunk generation as a presentation step applied after optimization
-- [ ] Verify the resulting order and total drive time improve on a long list
-- [ ] Check OSRM request count and runtime on a large list; note any practical ceiling in this task's Log
+- [x] Find where the current optimize-route scope is bounded (export chunking, visible rows, or a hard waypoint cap)
+- [x] Run the optimization across the entire saved list, independent of export chunking
+- [ ] Keep Google Maps chunk generation as a presentation step applied after optimization — *skipped at Divyam's request ("ignore the Google Maps step"); export chunking was already downstream of ordering and was not touched*
+- [x] Verify the resulting order and total drive time improve on a long list
+- [x] Check OSRM request count and runtime on a large list; note any practical ceiling in this task's Log
 
 **Log:**
 - 2026-07-27 15:55 CT — created (Divyam)
+- 2026-07-29 18:30 CT — in-progress (Claude Code)
+- 2026-07-29 18:35 CT — checklist item 1 answered: the scope was NOT bounded by export chunking or visible rows. `fetchRouteLegs` already batches at 50 and `routeRows` never slices. The only limit was `optimizeUserListRoute` refusing outright when the list exceeded OSRM's 100-coordinate Table cap (Claude Code)
+- 2026-07-29 18:40 CT — measured the local search before redesigning it, and the assumption that it needed rewriting was wrong: 82ms at 100 stops, 2.7s at 300. Left it alone (Claude Code)
+- 2026-07-29 18:49 CT — done on branch `fix-004-route-scope` (`5edbccb`, pushed, NOT merged — awaiting approval). Tiled matrix: two 50-blocks per request via `sources=`/`destinations=`, both directions fetched (driving durations are asymmetric), 4 requests in flight at a time (Claude Code)
+
+**Request count and runtime (checklist item 5).** Requests are exactly `ceil(n/50)^2` — 50/50 is the optimal split of the 100-coordinate budget, giving the most cells (2500) per request:
+
+| stops | Table requests | local search |
+|---|---|---|
+| 100 | 1 (unchanged fast path) | 0.08s |
+| 150 | 9 | 0.18s |
+| 300 | 36 | 2.7s |
+| 400 | 64 | 6.2s |
+| 500 | 100 | 12.5s |
+| 600 | 144 | 25s |
+
+**Practical ceiling: 400 stops** (`MAX_SORT_STOPS`). The matrix itself tiles indefinitely — the ceiling is `greedyRouteOrder`'s ~O(n³) local search, which blocks the main thread. 400 also keeps requests at 64. `verify-tmp/bench/sort-scaling.mjs` reproduces the table against the shipped `docs/list.html`. Runtimes are CPU only; OSRM latency was NOT measured at scale, deliberately — hammering the public demo server to benchmark it would be abuse. At a rough 300ms/request with 4 in flight, 400 stops implies roughly 5s of fetching on top. If the sort is ever wanted above 400, the fix is incremental delta evaluation in the local search (2-opt on an asymmetric matrix needs prefix sums, not an O(1) delta), plus self-hosting OSRM.
 
 ### FIX-005 · Share on My Permit List hangs when a link is already generated
 
