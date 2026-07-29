@@ -380,6 +380,27 @@ In the General Contractor view, the numbers on Specialties bubbles overflow past
 **Log:**
 - 2026-07-29 13:11 CT — created (Divyam)
 
+### FIX-015 · Show the person in charge of a GC company (and Open Sub LLCs/companies) everywhere they appear
+
+- **Priority:** P1-High
+- **Status:** todo
+- **Created:** 2026-07-29 14:07 CT
+- **Updated:** 2026-07-29 14:07 CT
+- **Tags:** Chicago Permit Search Tool
+
+Wherever a General Contractor company shows up (directory rows, profile cards, permit detail, overlay cards, map popups, list rows, exports), display the name of the person in charge of that company. Same for Open Subs that are LLCs or companies: show the responsible person alongside the business name. Likely sources: the city contractor registry / licensing data already ingested (FEAT-004/FEAT-014 surfaced titles), and IL Secretary of State LLC registrations (manager/registered agent) — FEAT-026 covers deeper LLC ingestion; this task uses whatever fields are available now and leaves richer enrichment to FEAT-026.
+
+**Checklist:**
+- [ ] Identify where a "person in charge" name exists in current data (contractor registry contact/licensee name, permit contact fields) for GCs and for Open Sub companies; note coverage in this task's Log
+- [ ] Add the name to the pipeline exports so it rides the existing JSON indexes
+- [ ] Display it everywhere GCs appear: directory rows, GC profile/overlay card, permit detail contractor lines, map popups, CSV export
+- [ ] Same for Open Subs that are LLCs/companies, in all the same surfaces
+- [ ] Handle missing data honestly (omit the line rather than showing blank/unknown junk)
+- [ ] Verify a sample of well-known GCs and sub companies against the registry/SoS records
+
+**Log:**
+- 2026-07-29 14:07 CT — created (Divyam)
+
 ### FIX-002 · UI cleanup and mobile accessibility
 
 - **Priority:** P3-Low
