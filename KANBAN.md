@@ -90,7 +90,7 @@ NEVER
 - **Priority:** P1-High
 - **Status:** done
 - **Created:** 2026-07-27 15:55 CT
-- **Updated:** 2026-07-29 19:19 CT
+- **Updated:** 2026-07-29 19:51 CT
 - **Tags:** Chicago Permit Search Tool
 
 Optimize Route in My Permit List (`docs/list.html`) should optimize across every permit in the saved list, not a subset. Google Maps caps waypoints per link, so the list is chunked for export — that export chunking must not also cap what the optimizer considers.
@@ -113,6 +113,7 @@ The bound turned out to be neither export chunking nor visible rows: it was a fl
 - 2026-07-29 18:49 CT — done on branch `fix-004-route-scope` (`5edbccb`, pushed, NOT merged — awaiting approval). Tiled matrix: two 50-blocks per request via `sources=`/`destinations=`, both directions fetched (driving durations are asymmetric), 4 requests in flight at a time (Claude Code)
 
 - 2026-07-29 19:19 CT — `cec087a` on the same branch: above the cap the Optimize route button is now `aria-disabled` with the reason in a note under the toolbar, rather than a button that accepts a click and then fails. `aria-disabled` not `disabled`, so keyboard/screen-reader users can still reach it and hear why. ui-ux-pro-max pass caught two defects in the first cut — `opacity: 0.5` dropped the label to 2.05:1 contrast (now muted tokens, 6.32:1 light / 8.51:1 dark), and the note inherited `.small` at 11.2px under the 12px floor — plus one only the screenshots showed: the note originally sat a full phone screen below the button it explains. Guards `t32-optimize-cap.js`, `t33-uiux-cap.js`; 23 browser suites green (Claude Code)
+- 2026-07-29 19:51 CT — merged to main (`49d2526`, --no-ff) at Divyam's request and pushed; branch deleted, live on GitHub Pages. Verified on the merged tree alongside FIX-016: 111 client + 117 Worker unit tests and all 25 browser suites green, byte-identity held. Client-only, no Worker deploy needed (Claude Code)
 - 2026-07-29 19:19 CT — discussed raising the ceiling. Divyam plans longer lists, so the agreed next step if 400 is hit is cluster-then-route: k-means the stops, optimize each cluster, then order the clusters. That cuts 1000 stops from 400 Table requests / ~115s to ~11 requests / ~0.8s and matches how a route is actually driven (finish a neighborhood before crossing town). NOT built — worth its own card if lists start exceeding 400 (Claude Code)
 
 **Request count and runtime (checklist item 5).** Requests are exactly `ceil(n/50)^2` — 50/50 is the optimal split of the 100-coordinate budget, giving the most cells (2500) per request:
@@ -230,7 +231,7 @@ Root cause was upstream of the release paths: the lock never locked. `body.modal
 - **Priority:** P1-High
 - **Status:** done
 - **Created:** 2026-07-29 19:25 CT
-- **Updated:** 2026-07-29 19:41 CT
+- **Updated:** 2026-07-29 19:51 CT
 - **Tags:** Chicago Permit Search Tool
 
 The "Posting as ___" line in the Notes area of a permit view (`docs/list.html`, `docs/index.html`) renders `localStorage.chi_permit_author` as plain text — no click handler, no input, no edit control. The value is captured by a one-time `prompt()` that only fires while the key is empty, so once it is set nothing in the permit view ever asks again. A typo in that name is permanent from that screen.
@@ -248,6 +249,7 @@ Reported by Divyam after entering the wrong name. The only workarounds today are
 - 2026-07-29 19:25 CT — created and started at Divyam's request (Claude Code)
 - 2026-07-29 19:41 CT — done on branch `fix-016-posting-name` (`381a1c1`, pushed, NOT merged — awaiting approval). The name is now a real `<button>` that re-prompts; the label repaints IN PLACE because re-rendering the card would rebuild the note textarea and discard an unposted draft (guarded by `t34-posting-name.js`). Cancel and whitespace-only input change nothing; the value is trimmed and capped at 40 to match the Worker. `postingName()` centralises a read that was previously an inline expression duplicated on both pages. Guards `t34-posting-name.js` and `t35-uiux-author.js`; 111 client + 117 Worker unit tests and 22 browser suites green; byte-identity held (Claude Code)
 - 2026-07-29 19:41 CT — ui-ux-pro-max pass: 7.48:1 light / 8.96:1 dark, underlined so it does not rely on hue, Tab-reachable with a 2px focus ring, accessible name states the action and the current value. Inline-in-text targets are exempt from the 44px minimum (WCAG 2.5.8), so it overrides the global button sizing instead of growing a 44px box mid-sentence. **Three defects were invisible to the assertions and only showed in screenshots**: the focus ring sliced through the "Posting as" label, the label wrapped away from the name, and the global `button { width: 100% }` stretched it into a full-width block. All fixed (Claude Code)
+- 2026-07-29 19:51 CT — merged to main (`03f8961`, --no-ff) at Divyam's request and pushed; branch deleted, live on GitHub Pages. Merged after FIX-004 and re-verified together on the merged tree — no interaction between them. Client-only, no Worker deploy needed (Claude Code)
 - 2026-07-29 19:41 CT — last checklist item resolved as "leave them": posts already made keep the old name, because the Worker's PUT never reassigns `author`. Changing that would let anyone rewrite the byline on an existing post, which is worse than a stale name. Delete and repost is the intended route. If it becomes a nuisance, the narrow version is to allow it only for the post's own author within a short window — worth a separate card, not this one (Claude Code)
 
 ### FIX-006 · Shared permit-list link should layer over the directory with a back button
