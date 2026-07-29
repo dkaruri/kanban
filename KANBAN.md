@@ -392,6 +392,26 @@ Sweep the tool for general bugs and browser/device compatibility issues.
 **Log:**
 - 2026-07-27 10:09 CT — created (Divyam)
 
+### FIX-018 · Label the visited checkbox column "Visited/Called" on desktop and mobile
+
+- **Priority:** P2-Medium
+- **Status:** todo
+- **Created:** 2026-07-29 15:55 CT
+- **Updated:** 2026-07-29 15:55 CT
+- **Tags:** Chicago Permit Search Tool
+
+The visited checkbox on permits in My Permit List (`docs/list.html`) has no header label. Add a "Visited/Called" label at the top of the checkbox column so it is clear what checking it means, on both desktop and mobile layouts.
+
+**Checklist:**
+- [ ] Locate the visited-checkmark column (FEAT-008) in the list's desktop and mobile layouts
+- [ ] Add a "Visited/Called" header label above the checkbox column on desktop
+- [ ] Add the same label on the mobile layout, keeping it legible without breaking the row layout on small screens
+- [ ] Keep the label consistent with the column in any shared-list/read-only view if the checkbox appears there
+- [ ] Verify on desktop and phone viewports that the label renders, aligns with the checkboxes, and doesn't overflow
+
+**Log:**
+- 2026-07-29 15:55 CT — created (Divyam)
+
 ### FIX-014 · GC view: Specialties counts hang outside their bubbles — keep the number inside like Associations
 
 - **Priority:** P3-Low
