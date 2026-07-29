@@ -228,9 +228,9 @@ Root cause was upstream of the release paths: the lock never locked. `body.modal
 ### FIX-016 · "Posting as" name in permit notes cannot be changed
 
 - **Priority:** P1-High
-- **Status:** in-progress
+- **Status:** done
 - **Created:** 2026-07-29 19:25 CT
-- **Updated:** 2026-07-29 19:25 CT
+- **Updated:** 2026-07-29 19:41 CT
 - **Tags:** Chicago Permit Search Tool
 
 The "Posting as ___" line in the Notes area of a permit view (`docs/list.html`, `docs/index.html`) renders `localStorage.chi_permit_author` as plain text — no click handler, no input, no edit control. The value is captured by a one-time `prompt()` that only fires while the key is empty, so once it is set nothing in the permit view ever asks again. A typo in that name is permanent from that screen.
@@ -238,14 +238,17 @@ The "Posting as ___" line in the Notes area of a permit view (`docs/list.html`, 
 Reported by Divyam after entering the wrong name. The only workarounds today are a console one-liner or the Author field on List Details (which only exists if you own a list) — and **neither is available on a phone**, where most of this posting happens.
 
 **Checklist:**
-- [ ] Make the name in "Posting as ___" an editable control in the permit view, on both pages
-- [ ] Update the label in place — re-rendering the card would discard an in-progress note draft
-- [ ] Keep the two pages identical; this markup is duplicated by design
-- [ ] Accessible: real control, named, keyboard-activatable, reachable on mobile
-- [ ] Decide what to do about posts already made under the wrong name (the Worker's PUT never reassigns `author`)
+- [x] Make the name in "Posting as ___" an editable control in the permit view, on both pages
+- [x] Update the label in place — re-rendering the card would discard an in-progress note draft
+- [x] Keep the two pages identical; this markup is duplicated by design
+- [x] Accessible: real control, named, keyboard-activatable, reachable on mobile
+- [x] Decide what to do about posts already made under the wrong name (the Worker's PUT never reassigns `author`)
 
 **Log:**
 - 2026-07-29 19:25 CT — created and started at Divyam's request (Claude Code)
+- 2026-07-29 19:41 CT — done on branch `fix-016-posting-name` (`381a1c1`, pushed, NOT merged — awaiting approval). The name is now a real `<button>` that re-prompts; the label repaints IN PLACE because re-rendering the card would rebuild the note textarea and discard an unposted draft (guarded by `t34-posting-name.js`). Cancel and whitespace-only input change nothing; the value is trimmed and capped at 40 to match the Worker. `postingName()` centralises a read that was previously an inline expression duplicated on both pages. Guards `t34-posting-name.js` and `t35-uiux-author.js`; 111 client + 117 Worker unit tests and 22 browser suites green; byte-identity held (Claude Code)
+- 2026-07-29 19:41 CT — ui-ux-pro-max pass: 7.48:1 light / 8.96:1 dark, underlined so it does not rely on hue, Tab-reachable with a 2px focus ring, accessible name states the action and the current value. Inline-in-text targets are exempt from the 44px minimum (WCAG 2.5.8), so it overrides the global button sizing instead of growing a 44px box mid-sentence. **Three defects were invisible to the assertions and only showed in screenshots**: the focus ring sliced through the "Posting as" label, the label wrapped away from the name, and the global `button { width: 100% }` stretched it into a full-width block. All fixed (Claude Code)
+- 2026-07-29 19:41 CT — last checklist item resolved as "leave them": posts already made keep the old name, because the Worker's PUT never reassigns `author`. Changing that would let anyone rewrite the byline on an existing post, which is worse than a stale name. Delete and repost is the intended route. If it becomes a nuisance, the narrow version is to allow it only for the post's own author within a short window — worth a separate card, not this one (Claude Code)
 
 ### FIX-006 · Shared permit-list link should layer over the directory with a back button
 
