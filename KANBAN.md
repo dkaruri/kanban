@@ -432,6 +432,27 @@ Wherever a General Contractor company shows up (directory rows, profile cards, p
 **Log:**
 - 2026-07-29 14:07 CT — created (Divyam)
 
+### FIX-017 · Verify the GC and Open Subs counts at the top are accurate; document how they're computed
+
+- **Priority:** P3-Low
+- **Status:** todo
+- **Created:** 2026-07-29 15:39 CT
+- **Updated:** 2026-07-29 15:39 CT
+- **Tags:** Chicago Permit Search Tool
+
+Check whether the General Contractors and Open Subs counts shown at the top of the site are accurate, and explain the logic behind those numbers so Divyam can see exactly how they're arrived at. The explanation is a first-class deliverable: write it in this task's Log in plain language — what source rows are counted, how entities are deduplicated (name normalization? license id?), what "open" means (which permit statuses), the cutoff date/data vintage, and anything excluded (unlicensed, missing names, out-of-scope permit types).
+
+**Checklist:**
+- [ ] Trace where each headline count comes from (pipeline aggregation vs. client-side count of index entries)
+- [ ] Recompute both counts independently from the raw dataset (DuckDB query) and compare with what the site shows
+- [ ] Check dedup logic: the same company under name variants or multiple licenses should not double-count; note how the pipeline handles this today
+- [ ] Check the "open" definition: which permit statuses qualify a GC/sub as having open work, and whether stale permits inflate the count
+- [ ] Write the plain-language explanation of the counting logic in this task's Log (for Divyam)
+- [ ] If the counts are wrong, fix the aggregation and verify the corrected numbers against the raw-data recomputation; if right, say so explicitly
+
+**Log:**
+- 2026-07-29 15:39 CT — created (Divyam)
+
 ### FIX-002 · UI cleanup and mobile accessibility
 
 - **Priority:** P3-Low
