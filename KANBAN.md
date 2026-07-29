@@ -790,6 +790,29 @@ Make my notes searchable in one place: a notes feed, opened from a control at th
 **Log:**
 - 2026-07-29 13:27 CT — created (Divyam)
 
+### FEAT-035 · Permit lists: 1000-permit cap with 100-per-page pagination that remembers your page
+
+- **Priority:** P1-High
+- **Status:** todo
+- **Created:** 2026-07-29 13:50 CT
+- **Updated:** 2026-07-29 13:50 CT
+- **Tags:** Chicago Permit Search Tool
+
+In My Permit List (`docs/list.html`), cap each list at 1000 permits and paginate the list view at 100 permits per page with click-through page controls. Pagination must keep its memory: clicking into a permit and coming back returns you to the same page (and scroll position), consistent with the existing last-view persistence (FEAT-025 Phase 3). Critically, pagination is a presentation layer only — Optimize Route must account for the full scope of the list (all pages, up to 1000), not just the visible page; same for exports and drive distances. FIX-004 (done on branch `fix-004-route-scope`) already un-bounded the optimizer via a tiled OSRM matrix, but set a practical ceiling of 400 stops (`MAX_SORT_STOPS`, main-thread local-search cost) — this task must reconcile that ceiling with the 1000-permit cap (raise it per FIX-004's noted path: incremental delta evaluation and/or a worker thread, or clearly message the limit).
+
+**Checklist:**
+- [ ] Enforce a 1000-permit cap per list: block adds past the cap with a clear message (single adds and "Add all N" bulk adds — cap-aware partial add with a count of what was skipped)
+- [ ] Paginate the list view at 100 per page with page controls (prev/next + page numbers, current page and total count visible)
+- [ ] Persist the current page in last-view state: opening a permit and returning restores the same page and scroll position; reloads restore it too
+- [ ] Keep Optimize Route, drive distances, and exports (Google Maps/KML/CSV) scoped to the FULL list across all pages — verify with a multi-page list (FIX-004's tiled matrix)
+- [ ] Reconcile FIX-004's 400-stop optimizer ceiling with the 1000 cap: raise the ceiling (delta-evaluated local search, off-main-thread) or surface an honest limit message when a list exceeds it
+- [ ] Make pagination play well with reordering, visited/called state, and shared lists (viewers see consistent pages)
+- [ ] Check performance at the 1000-permit ceiling (render, OSRM request count, share/live sync)
+- [ ] Verify page memory and full-scope route optimization on desktop and mobile
+
+**Log:**
+- 2026-07-29 13:50 CT — created (Divyam)
+
 ### FEAT-001 · Build searchable directory of permits, contractors, and subs
 
 - **Priority:** P1-High
