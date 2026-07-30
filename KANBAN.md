@@ -945,6 +945,26 @@ In My Permit List (`docs/list.html`), cap each list at 1000 permits and paginate
 **Log:**
 - 2026-07-29 13:50 CT — created (Divyam)
 
+### FEAT-036 · My Permit List: stat tiles should reflect the currently viewed list
+
+- **Priority:** P3-Low
+- **Status:** todo
+- **Created:** 2026-07-30 10:42 CT
+- **Updated:** 2026-07-30 10:42 CT
+- **Tags:** Chicago Permit Search Tool
+
+On My Permit List (`docs/list.html`), the "Permits Loaded", "Open Permits", "Contractors", and "Open Subs" stat tiles should be computed from the currently viewed list — a live count gathered from the permits in that list — and update in step when the viewed list changes (switching lists, adding/removing permits). Today they don't correlate with what's on screen.
+
+**Checklist:**
+- [ ] Find where the four stat tiles get their numbers today and confirm what they currently count
+- [ ] Compute all four from the permits in the currently viewed list: total loaded, open (ACTIVE) permits, distinct contractors, distinct open subs
+- [ ] Recompute when the viewed list changes: list switch, permit add/remove, and shared/read-only list views
+- [ ] Keep counts consistent with pagination if FEAT-035 lands — count the full list, not just the visible page
+- [ ] Verify on desktop and mobile against a hand-counted sample list
+
+**Log:**
+- 2026-07-30 10:42 CT — created from Divyam's report (Claude)
+
 ### FEAT-001 · Build searchable directory of permits, contractors, and subs
 
 - **Priority:** P1-High
