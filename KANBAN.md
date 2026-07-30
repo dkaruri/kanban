@@ -533,6 +533,28 @@ General UI polish plus accessibility on small screens.
 **Log:**
 - 2026-07-27 10:09 CT — created (Divyam)
 
+### FIX-020 · The browser test suite is gitignored and exists on one machine only
+
+- **Priority:** P2-Medium
+- **Status:** todo
+- **Created:** 2026-07-30 15:55 CT
+- **Updated:** 2026-07-30 15:55 CT
+- **Tags:** Chicago Permit Search Tool
+
+`verify-tmp/` is in `.gitignore`, so the entire browser test suite — 43 Playwright suites plus the `.mjs` unit tests and the shared `_boot.js` launcher — is untracked and lives only on Divyam's machine. Nothing is backed up, nothing is reviewable in a diff, and a fresh clone has no way to check that a change to `docs/*.html` still works. This already cost real time: `t2`, `t6` and `t8b` sat permanently red for weeks because `_boot.js` drifted behind the multi-list and card-stack reworks, and nobody could see it happening in a commit. Done when the suites are versioned, the scratch output is not, and a fresh clone can run them.
+
+**Checklist:**
+- [ ] Separate the suite from the scratch: test sources, `_boot.js` and the `.mjs` unit tests get tracked; screenshots, `server.log`, `node_modules/`, and the `_dbg*`/`_shot*`/`_wheelprobe*` one-offs stay ignored
+- [ ] Decide the tracked location — keep `verify-tmp/` and narrow the ignore rule, or move the real suites to `tests/browser/` and leave `verify-tmp/` as pure scratch (prefer the second; the name currently lies about what is in it)
+- [ ] Commit `package.json` + a lockfile for the Playwright dependency so versions are pinned
+- [ ] Add a short runner (npm script or `run-tests.sh`) that starts the static server on 8791, runs every suite, and reports failures — right now the invocation is a shell loop retyped from memory each session
+- [ ] Document the browser prerequisites in the repo: the cached Chromium headless-shell path AND the manual WebKit install (the npm installer stalls; the build zip has to be fetched from the CDN)
+- [ ] Note the known-flaky suites so a red run is not ambiguous — `t14-live.js` reaches the real network
+- [ ] Verify from a clean clone: install, run the suite, and confirm it goes green without any file that only exists on the original machine
+
+**Log:**
+- 2026-07-30 15:55 CT — created (Claude Code, at Divyam's request after FIX-010)
+
 ---
 
 ## ✨ Features
