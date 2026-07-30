@@ -201,14 +201,18 @@ Map Search (`docs/map.html`) should persist the user's selected layers and filte
 ### FIX-010 · Mobile: permit list scrolling locks up after opening permit details
 
 - **Priority:** P1-High
-- **Status:** done
+- **Status:** in-progress
 - **Created:** 2026-07-29 11:28 CT
-- **Updated:** 2026-07-29 18:05 CT
+- **Updated:** 2026-07-30 15:10 CT
 - **Tags:** Chicago Permit Search Tool
 
-On mobile, after tapping into permit details from My Permit List, scrolling the list gets locked up. Likely the detail overlay's body scroll-lock is not being released on every close path — worth checking all of them, including swipe/back-gesture closes and the new FEAT-025 card-stack navigation.
+REOPENED 2026-07-30 — still happening on Divyam's phone after the first fix shipped. Exact steps: in a list under My Permit List, open the Permit View for the first permit; scroll down and back up inside the Permit View; close it. The list then will not scroll in either direction until the page is reloaded.
 
-Root cause was upstream of the release paths: the lock never locked. `body.modal-open { overflow: hidden }` could not reach the page scroller, because `html { overflow-x: hidden }` propagates to the viewport and makes html — not body — the document scroller. Replaced with a `position: fixed` lock on body pinned at the saved scroll offset, which behaves the same on every engine, plus an idempotent release that runs before `closePermitModal`'s early return so no path can leave it latched.
+Original report: on mobile, after tapping into permit details from My Permit List, scrolling the list gets locked up. Likely the detail overlay's body scroll-lock is not being released on every close path — worth checking all of them, including swipe/back-gesture closes and the new FEAT-025 card-stack navigation.
+
+First fix (shipped, did not resolve it): the lock never locked. `body.modal-open { overflow: hidden }` could not reach the page scroller, because `html { overflow-x: hidden }` propagates to the viewport and makes html — not body — the document scroller. Replaced with a `position: fixed` lock on body pinned at the saved scroll offset.
+
+Second fix (on branch): stop locking mobile at all. Below 641px the card is an opaque full-screen sheet, so there is nothing behind it to lock — and every mobile lock tried here has been the bug rather than the fix. Background panning is stopped at the input layer instead (`touch-action`), which removes nothing from the layout, so there is no scroller to tear down and none to restore. Desktop keeps a lock, moved onto `html` (the real page scroller).
 
 **Checklist:**
 - [x] Reproduce on a phone: open permit details from the list, close it each possible way (close button, backdrop, browser back, gesture), then try scrolling
@@ -217,6 +221,11 @@ Root cause was upstream of the release paths: the lock never locked. `body.modal
 - [x] Guard so a re-entrant open/close (fast taps) can never leave the lock latched
 - [x] Verify on iOS Safari and Android Chrome viewports, and desktop regression
 - [x] Reserve the scrollbar gutter so taking body out of flow does not shift desktop content sideways
+- [x] Round 2: re-test on a real browser engine, not just Chromium — WebKit 18.5 at an iPhone 13 viewport
+- [x] Round 2: prove what is NOT wrong after close (body static, no inline top, full document height, wheel and programmatic scrolling both work) to locate the failure outside the DOM
+- [x] Round 2: remove the mobile lock entirely and stop background panning at the input layer instead
+- [x] Round 2: keep pinch zoom working over the sheet (`touch-action: pinch-zoom`, not `none`)
+- [ ] Round 2: confirm on Divyam's iPhone — the failure is compositor-level and does not reproduce headlessly, so this cannot be closed from the test suite
 
 **Log:**
 - 2026-07-29 11:28 CT — created (Divyam)
@@ -225,6 +234,11 @@ Root cause was upstream of the release paths: the lock never locked. `body.modal
 - 2026-07-29 18:00 CT — fixed on branch `fix-010-scroll-lock` (`fc6b181`, pushed, NOT merged — awaiting approval). position:fixed body lock pinned at scrollY; idempotent lock/release; release moved before `closePermitModal`'s early return; `scrollbar-gutter: stable` on html. New guards `t27-scrolllock.js` (24 cases, fails 24/24 against the bug) and `t28-uiux-lock.js` (ui-ux-pro-max pass). 111 client + 117 Worker unit tests and 17 browser suites green; shared overlay block byte-identical (Claude Code)
 - 2026-07-29 18:00 CT — caveat carried forward: the iOS-Safari-only reproduction could not be confirmed on a real device; the headless build uses overlay scrollbars, so the desktop scrollbar-shift case is covered by CSS rather than by a test (Claude Code)
 - 2026-07-29 18:05 CT — merged to main (`07469cd`, --no-ff) at Divyam's request and pushed; branch deleted, live on GitHub Pages. Client-only, no Worker deploy needed. Still wants a confirming pass on a real iPhone (Claude Code)
+- 2026-07-30 14:35 CT — REOPENED by Divyam: still broken on his phone, with exact steps (scroll inside the Permit View, then close). Confirmed the fix is genuinely live — fetched `list.html` from GitHub Pages and it carries `body.modal-open { position: fixed ... }` — so this is a failed fix, not a stale deploy (Claude Code)
+- 2026-07-30 14:55 CT — installed Playwright WebKit 18.5 (the npm installer stalls; downloaded the build zip directly and extracted it into the ms-playwright cache) and reproduced the user's exact flow on Safari's engine at an iPhone 13 viewport. NOT reproduced: after every close path body is `static`, no inline `top`, the document is full height, and both programmatic and wheel scrolling work. Also ran the same flow against the pre-fix tree for comparison. Conclusion: nothing observable in the DOM is left wrong, so the surviving state is in WebKit's async scrolling tree — the root scroller torn down when body left the flow and never handed back to touch (Claude Code)
+- 2026-07-30 15:10 CT — fixed on branch `fix-010-mobile-scroll-2` (`062aa99`, pushed, NOT merged — awaiting approval). Mobile (<=640px) now has NO page lock: the card is already an opaque full-screen sheet, so there is nothing to lock, and background panning is stopped at the input layer with `touch-action: pinch-zoom` on the overlay / `pan-y pinch-zoom` on its scrollable body. Nothing leaves the layout, so there is no scroller to tear down. Desktop keeps a real lock, moved to `html`. Saved-scroll bookkeeping deleted. ui-ux-pro-max pass caught that a drag on the sticky card header would otherwise pan the page behind (state-preservation) — that is what the `touch-action` rules fix — and that `touch-action: none` would have killed pinch zoom (Claude Code)
+- 2026-07-30 15:10 CT — guards: `t27-scrolllock.js` reworked to drive a REAL wheel (overflow:hidden blocks user scrolling but not `window.scrollBy`, so the old programmatic probe could not tell locked from unlocked) — 24/24, and 7 fail when the desktop lock is reverted; new `t36-webkit-scroll.js` runs the reported flow on WebKit and Chromium and pins the mobile contract. `_wheelprobe*.js` are the controls proving each probe can report success; one caught that Chromium swallows the FIRST wheel after the overlay closes, which reads exactly like the bug if you trust it. 111 client unit tests and 40/43 browser suites green — `t2`, `t6`, `t8b` fail identically before and after this change (stale, they call `openPermitModal(html)` from before the FEAT-025 card stack, which takes no arguments); worth a separate cleanup card (Claude Code)
+- 2026-07-30 15:10 CT — OPEN: this is fix attempt #2 and it is NOT confirmed on a real device. Test on the branch preview at https://raw.githack.com/dkaruri/chicago-building-permits-search/fix-010-mobile-scroll-2/docs/list.html (different origin, so the saved list will be empty there — add a couple of permits first). If it still locks up, the cause is not the page lock at all and the next step is a real Safari Web Inspector session over USB rather than a third guess (Claude Code)
 
 ### FIX-016 · "Posting as" name in permit notes cannot be changed
 
