@@ -340,24 +340,29 @@ The neighborhood shown in the permit view is a bare number — most likely the d
 - **Priority:** P2-Medium
 - **Status:** in-progress
 - **Created:** 2026-07-29 12:44 CT
-- **Updated:** 2026-07-30 16:55 CT
+- **Updated:** 2026-07-30 17:20 CT
 - **Tags:** Chicago Permit Search Tool
 
 For General Contractors, the "average processing days" stat currently measures application-to-issuance time (the dataset's processing_time). What Divyam wants shown is how long the GC takes to CLOSE a permit on average — issuance to completion/closure. This is a metric definition change, not just a relabel.
 
 **Checklist:**
 - [x] Identify the right closure signal in the permit data (completion/closed date, status transition out of ACTIVE) and note coverage/quality in this task's Log
-- [ ] Compute average issuance→closure days per GC in the pipeline, excluding still-open permits, and export it
-- [ ] Replace the processing-days stat on GC profiles/cards with the new metric, labeled clearly (e.g. "Avg time to close a permit")
-- [ ] Decide whether app→issuance processing days stays as a secondary stat or is dropped; keep sort options consistent
-- [ ] Handle GCs with no closed permits (show n/a, never 0)
-- [ ] Verify a sample of GCs by hand against their permit histories
+- [x] Compute average issuance→closure days per GC in the pipeline, excluding still-open permits, and export it — by OBSERVATION across seeds; not derivable retroactively (see Log)
+- [x] Replace the processing-days stat on GC profiles/cards with the new metric, labeled clearly (e.g. "Avg time to close a permit")
+- [x] Decide whether app→issuance processing days stays as a secondary stat or is dropped; keep sort options consistent — KEPT, relabelled "days to get issued" (it measures the permit desk, not the builder); both are sort options
+- [x] Handle GCs with no closed permits (show n/a, never 0) — the pill is ABSENT, and the directory column shows an em dash
+- [x] Verify a sample of GCs by hand against their permit histories
 
 **Log:**
 - 2026-07-29 12:44 CT — created (Divyam)
 - 2026-07-30 16:55 CT — in-progress. DATA FINDING: **there is no closure DATE anywhere in the City's published data**, so issuance-to-closure cannot be computed retroactively at all. Checked exhaustively: (a) `ydr8-5enu` has 122 columns and exactly four are date/status related — `application_start_date`, `issue_date`, `processing_time`, `permit_status`; there is no completion, closed, final or expiry date. (b) `permit_status` DOES carry COMPLETE (462,083 rows) so closure is knowable as a STATE, but the dataset is a snapshot and never records WHEN the state changed. (c) Socrata's row-level `:updated_at` is not a substitute — sampled COMPLETE permits issued in 2020 all carry `2025-10-14T20:58-21:00Z`, seconds apart: that is a bulk re-upload timestamp, not a status change. (d) No inspections dataset links permits to a final inspection date; the only permit-adjacent sets are violations and issuance-side "time to issue" performance metrics. (e) `dmcg-xwb8 "Building Permits Search"` is a non-tabular search view, not queryable (Claude Code)
 - 2026-07-30 16:55 CT — measured the computable substitutes on real GCs across all 15 contact slots (an earlier pass using only `contact_1_name` was wrong — it returned rows whose status is null, and the app matches every slot). BEAR CONSTRUCTION COMPANY: 2,890 permits, 2,263 COMPLETE of 2,626 decided = **86.2% completion rate**, 147 open averaging **642 days old** (median 577, oldest 2,050). BULLEY & ANDREWS: 1,387 permits, 834 of 1,016 = **82.1%**, 129 open averaging **469 days** (median 420, oldest 2,030). Both are exact and honest; neither is a duration-to-close (Claude Code)
 - 2026-07-30 16:55 CT — asked Divyam which metric should replace the stat. He pushed back asking whether open-to-close time can simply be computed for all jobs — it cannot, for the reason in (b) above: the data records THAT a permit closed, never WHEN. The only route to the true metric is to start observing it: log the date each permit is first seen COMPLETE on each seed, and compute issue -> first-seen-COMPLETE from then on. That yields real closure times going forward, accurate to the seed cadence, but covers no permit that closed before we started watching. Awaiting his decision (Claude Code)
+- [ ] Run `npm run seed` twice — the first run establishes the closure baseline, real close times appear from the second onward
+- 2026-07-30 17:20 CT — built on branch `fix-012-close-time` (`ecba9d5`, pushed, NOT merged). Divyam chose "open-job age now + start observing closures". New `worker/src/closure.js` + 9 unit tests. Open-job age is exact and computed from permits the seed already fetches. Time-to-close is OBSERVED: each seed snapshots the open set, and a permit that has left it and now reads COMPLETE books issue_date -> observation date. EXPIRED/CANCELLED are excluded — stopping is not finishing, and counting them would flatter slow builders. Stats stored aggregated per contractor ({n, days}) so KV stays bounded by contractor count rather than growing with every permit that ever closes. Snapshot is written LAST so a partial upload re-detects the same closures next run instead of losing them (Claude Code)
+- 2026-07-30 17:20 CT — contractors with no observations get NO close keys, so the pill is absent rather than 0; for months that will be nearly everyone, and 0 would read as "closes same day" — the exact confusion this ticket was raised about. Directory column shows an em dash. Verified a hostile render at 390px in both themes: pills wrap, nothing clipped. Adds the first KV READ the seed has ever needed, with the same `--remote` requirement as the writes — without it wrangler reads local Miniflare, every run looks like the first, and no closure ever accumulates. 136 Worker + 111 client unit tests, 46/46 browser suites, overlay block byte-identical (Claude Code)
+- 2026-07-30 17:20 CT — NOT DONE until seeded TWICE: run one writes `closure:open_snapshot` and establishes the baseline (no close times yet); run two is the first that can observe a closure. Open-job age appears after the first seed. Awaiting merge approval (Claude Code)
+
 
 ### FIX-013 · Desktop: tag chips at the top should size to their text, not the list width
 
