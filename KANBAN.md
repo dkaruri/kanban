@@ -457,6 +457,27 @@ The visited checkbox on permits in My Permit List (`docs/list.html`) has no head
 **Log:**
 - 2026-07-29 15:55 CT — created (Divyam)
 
+### FIX-021 · Desktop: make the list-header section (Starting Location through List Note) collapsible
+
+- **Priority:** P2-Medium
+- **Status:** todo
+- **Created:** 2026-07-30 15:13 CT
+- **Updated:** 2026-07-30 15:13 CT
+- **Tags:** Chicago Permit Search Tool
+
+On desktop in My Permit List (`docs/list.html`), let the whole block from "Starting Location" down through "List Note" collapse and expand as one section, so the permit rows can take the screen when that header block isn't needed. A clear toggle opens it back up; the collapsed/expanded choice should persist with the existing last-view state so it survives reloads and list switches.
+
+**Checklist:**
+- [ ] Identify the exact block spanning Starting Location → List Note in the desktop layout (and what sits between them: route controls, filters, description, etc.)
+- [ ] Wrap it in a collapsible section with a clear toggle (chevron + label), animated open/close, `aria-expanded` on the control
+- [ ] Persist the collapsed state in last-view storage per list; default expanded
+- [ ] Keep all controls inside fully functional when expanded (no lazy-render surprises), and make sure nothing inside is reachable by keyboard while collapsed
+- [ ] Decide mobile behavior: leave mobile unchanged unless the same collapse is an obvious win there — this ticket only requires desktop
+- [ ] Verify on desktop widths: collapse, expand, reload persistence, list switch, and no layout shift of the permit rows below
+
+**Log:**
+- 2026-07-30 15:13 CT — created (Divyam)
+
 ### FIX-019 · My Permit List: tag pills should hug their text, not span the list width
 
 - **Priority:** P3-Low
