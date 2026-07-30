@@ -323,9 +323,9 @@ The number of people viewing a shared list can be wrong after reloading the page
 ### FIX-011 · Permit view: show the actual neighborhood name, not just a number
 
 - **Priority:** P2-Medium
-- **Status:** in-progress
+- **Status:** done
 - **Created:** 2026-07-29 12:11 CT
-- **Updated:** 2026-07-30 19:55 CT
+- **Updated:** 2026-07-30 20:00 CT
 - **Tags:** Chicago Permit Search Tool
 
 The neighborhood shown in the permit view is a bare number — most likely the dataset's community area code. Chicago has 77 named community areas (e.g., 22 → Logan Square); the view should display the real name, with the number at most as secondary detail.
@@ -344,7 +344,7 @@ The neighborhood shown in the permit view is a bare number — most likely the d
 - 2026-07-30 19:55 CT — every surface that showed the bare code now resolves it: permit overlay on both pages, map detail sheet on all three, map result rail. Exports carried no neighborhood AT ALL, so they gain the name (a bare code in a spreadsheet would be worse than nothing). The map's neighborhood filter now matches on the NAME too — typing "Logan Square" previously matched nothing because only the code was in the haystack; the code still matches, so nothing is lost (Claude Code)
 - 2026-07-30 19:55 CT — fallbacks are deliberate: unknown codes, 0, null, empty, junk and already-named values all pass through as the RAW value. Never blank, and never an invented name — a confidently mislabelled neighborhood is worse than a number the reader can look up (Claude Code)
 - 2026-07-30 19:55 CT — verified against real ADDRESSES, not just the mapping: 22 Logan Square (Humboldt/Diversey/Dickens), 32 Loop (233 S Wacker), 6 Lake View (Broadway/Newport), 41 Hyde Park (Drexel/Blackstone), 76 O'Hare (Bessie Coleman Dr — literally at the airport). Built on branch `fix-011-neighborhood-names` (`fba05ce`, pushed, NOT merged). Guard `t42-neighborhood.js` covers the table, every display surface and all six fallback shapes across all three pages, and fails against the pre-fix code. 111 client unit tests, 49/49 browser suites, lookup byte-identical across the three pages. Awaiting merge approval (Claude Code)
-
+- 2026-07-30 20:00 CT — MERGED to main (`3b34a95`, --no-ff) and pushed; branch deleted. Client-only, no Worker deploy needed — live on Pages. Closed (Claude Code)
 
 ### FIX-012 · GC "average processing days" should measure average time to close a permit
 
