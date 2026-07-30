@@ -477,7 +477,7 @@ In the General Contractor view, the numbers on Specialties bubbles overflow past
 - **Priority:** P1-High
 - **Status:** in-progress
 - **Created:** 2026-07-29 14:07 CT
-- **Updated:** 2026-07-30 16:05 CT
+- **Updated:** 2026-07-30 16:26 CT
 - **Tags:** Chicago Permit Search Tool
 
 Wherever a General Contractor company shows up (directory rows, profile cards, permit detail, overlay cards, map popups, list rows, exports), display the name of the person in charge of that company. Same for Open Subs that are LLCs or companies: show the responsible person alongside the business name. Likely sources: the city contractor registry / licensing data already ingested (FEAT-004/FEAT-014 surfaced titles), and IL Secretary of State LLC registrations (manager/registered agent) — FEAT-026 covers deeper LLC ingestion; this task uses whatever fields are available now and leaves richer enrichment to FEAT-026.
@@ -485,10 +485,13 @@ Wherever a General Contractor company shows up (directory rows, profile cards, p
 **Checklist:**
 - [x] Identify where a "person in charge" name exists in current data (contractor registry contact/licensee name, permit contact fields) for GCs and for Open Sub companies; note coverage in this task's Log
 - [x] Add the name to the pipeline exports so it rides the existing JSON indexes
-- [ ] Display it everywhere GCs appear: directory rows, GC profile/overlay card, permit detail contractor lines, map popups, CSV export
-- [ ] Same for Open Subs that are LLCs/companies, in all the same surfaces
-- [ ] Handle missing data honestly (omit the line rather than showing blank/unknown junk)
-- [ ] Verify a sample of well-known GCs and sub companies against the registry/SoS records
+- [x] Display it everywhere GCs appear: directory rows, GC profile/overlay card, permit detail contractor lines, map popups, CSV export
+- [x] Same for Open Subs that are LLCs/companies, in all the same surfaces
+- [x] Handle missing data honestly (omit the line rather than showing blank/unknown junk)
+- [x] Verify a sample of well-known GCs and sub companies against the registry/SoS records
+- [x] ADDED by Divyam 2026-07-30: show the unit owner's name and contact information on the permit view, alongside the GC's owner
+- [ ] Run `npm run seed` from `worker/` — the join happens at seed time, so nothing appears until then
+- [ ] Confirm on a real phone once seeded
 
 **Log:**
 - 2026-07-29 14:07 CT — created (Divyam)
@@ -496,6 +499,9 @@ Wherever a General Contractor company shows up (directory rows, profile cards, p
 - 2026-07-30 16:05 CT — the field DOES exist in a third city dataset the ticket does not mention: **Business Owners (ezma-pppn)** — 329,725 rows, 319,616 with a named person, giving owner first/middle/last and owner_title (PRESIDENT, MANAGING MEMBER, SOLE PROPRIETOR, SECRETARY...) per business licence. Joined on the project's existing normalized-name key it covers 190,727 distinct businesses (Claude Code)
 - 2026-07-30 16:05 CT — COVERAGE, measured with the shipped module against live data (not a throwaway script): **GCs 1,057/4,985 with open jobs = 21.2%, and 45.0% of the top 200 by open jobs** — the ones anyone actually scrolls. **Subs 119/993 = 12.0%, 20.0% of the top 200**; sub matches skew to sole proprietors, where person and business are the same name. Spot-checked leads: Frackiel Builders → Bonnie E. Frackiel (President), Bulley & Andrews → Paul R. Hellermann (President, +4 more), Bear Construction → James S. Wienold (President, +1). Remaining ~79% get no line at all, per the checklist's "omit rather than show blank junk" (Claude Code)
 - 2026-07-30 16:05 CT — data half done on branch `fix-015-person-in-charge` (`c72004e`, pushed, NOT merged). New `worker/src/principals.js` + 7 tests; joined at SEED time in `seed-kv.js` on the existing normalized-name key, so every surface that renders a profile row inherits it with no extra client call — that is the whole point of doing it there rather than per-request. Company owners (e.g. "Marsh & McLennan Companies, Inc." as SHAREHOLDER) are dropped: not a person in charge. 48% of matched GCs list several owners, so titles are RANKED to make the lead name deterministic across rebuilds instead of dataset row order — that is what picks Bear Construction's President over its Secretary. Unmatched companies get no keys at all rather than empty ones, so the UI keys off absence. 124 Worker tests green (Claude Code)
+- 2026-07-30 16:26 CT — display half done (`894f228`, same branch, pushed, NOT merged). Divyam extended the scope: the permit view must also name the UNIT's owner with contact information, not just the GC's. Both are in. The owner block is built from the permit's own contact slots — the same names identified above as the contractor's CUSTOMER — so they are labelled as the owner and kept out of the contractor blocks; t37 explicitly asserts an owner's name never shows up as a contractor's "Run by". Owner contact detail is thin because the source is thin and the UI says so plainly ("No phone published for owners") rather than implying a failed lookup; but owner lines reuse `.contractor-line`, so an owner who is also a licensed contractor (the 59k "owner as general contractor" permits) resolves to a real tel: link — that is the owner phone where one exists at all. Contractors gained "Run by <name> <title> +N more" on every permit view, a "Person in charge" block on the contractor card, the lead name on directory rows, and a Unit owner column in CSV. No new client fetch anywhere (Claude Code)
+- 2026-07-30 16:26 CT — ui-ux-pro-max pass caught two real defects, both measured not eyeballed: the "Run by" label was 11px, and the NAME measured identical to its own label and title (6.32:1 for all three), so the line had no hierarchy on the one word that matters. The name now carries ink + weight (16.35 light / 16.1 dark). Then the SCREENSHOT caught what no assertion could — a blanket /api/contact fixture made the owner inherit the GC's principal and rendered "Run by" under UNIT OWNER; test-only, but it would have read as a product bug, so the fixture is name-aware now and the render was re-checked by eye. Guards `t37-principals.js` and `t38-uiux-principals.js`; 111 client + 124 Worker unit tests green (Claude Code)
+- 2026-07-30 16:26 CT — NOTE for FIX-020: on this branch `t2`, `t27` and `t36` fail, because they are FIX-010 round-2 guards and this branch is cut from `main`, where FIX-010 is not merged. The suite is gitignored and therefore SHARED across branches instead of travelling with the code — concrete evidence for that card, not a regression here (Claude Code)
 - 2026-07-30 16:05 CT — NEXT: the display half (checklist items 3-6) — GC/sub cards, directory rows, permit overlay, map popups, CSV — plus the ui-ux-pro-max pass. Pausing here per the standing confirm-before-each-phase rule. DEPLOY HAZARD: the join runs at seed time, so nothing appears anywhere until Divyam runs `npm run seed` from `worker/`; the seed now also pages 320k owner rows and takes correspondingly longer (Claude Code)
 
 ### FIX-017 · Verify the GC and Open Subs counts at the top are accurate; document how they're computed
