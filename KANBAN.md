@@ -967,15 +967,17 @@ When a shared permit-list link is posted in Slack, a text message, or social app
 **Log:**
 - 2026-07-29 13:18 CT — created (Divyam)
 
-### FEAT-034 · Per-list notes feed: searchable, timestamped notes inside each permit list
+### FEAT-034 · Per-list notes feed: searchable, timestamped notes inside each permit list — with GC follow-up tagging
 
 - **Priority:** P1-High
 - **Status:** todo
 - **Created:** 2026-07-29 13:27 CT
-- **Updated:** 2026-07-29 14:11 CT
+- **Updated:** 2026-07-30 15:05 CT
 - **Tags:** Chicago Permit Search Tool
 
 Make notes searchable within each permit list — NOT one overall site-wide tab. Inside a specific list in My Permit List (`docs/list.html`), a notes feed opened from a control at the top of that list lays out that list's notes as a timestamped feed (newest first) with search. Each entry shows its note text, timestamp, and the permit (in this list) it belongs to. Clicking a note jumps to its associated permit, and from a permit you can jump back into the feed — navigation works to and from in both directions without losing your place in the feed. The feed's scope is always the list you're in; different lists have separate feeds.
+
+Also includes a **follow-up tag for GCs**: from a permit, tag its General Contractor as "follow up". The tag must be apparent both INSIDE the permit view (clear follow-up marker near the GC) and OUTSIDE it (visible badge on the permit's row in the list, without opening the permit). The list gains a filter to show only permits tagged for follow-up, composing with FEAT-031's visited/called filters.
 
 **Checklist:**
 - [ ] Inventory where notes are stored today (per-permit) and expose them as a queryable collection scoped per permit list
@@ -985,12 +987,18 @@ Make notes searchable within each permit list — NOT one overall site-wide tab.
 - [ ] Click a note → open its associated permit; back returns to the feed at the same scroll/search state
 - [ ] From a permit in the list, link into the feed filtered to that permit's notes
 - [ ] Decide behavior on shared lists (do viewers see the feed? consistent with how notes themselves are shared)
+- [ ] Follow-up tag: from the permit view, tag the permit's GC to follow up (toggleable, like visited/called)
+- [ ] Show the follow-up state clearly inside the permit view, adjacent to the GC it applies to
+- [ ] Show a follow-up badge on the permit's list row so it's visible without opening the permit
+- [ ] Add a "follow-up" filter to the permit list (only tagged permits), combinable with visited/called filters (FEAT-031)
+- [ ] Sync follow-up state on shared lists the same way visited/called sync, so the whole team sees who's flagged
 - [ ] Mobile: 44px touch targets, feed usable on small screens
-- [ ] Verify round-trip navigation and search on mobile and desktop, across multiple lists (feeds stay separate)
+- [ ] Verify round-trip navigation and search on mobile and desktop, across multiple lists (feeds stay separate); verify tagging + filter round-trip
 
 **Log:**
 - 2026-07-29 13:27 CT — created (Divyam)
 - 2026-07-29 14:11 CT — scope clarified by Divyam: the feed lives INSIDE each specific permit list, not as an overall site tab; description, title, and checklist updated (Claude)
+- 2026-07-30 15:05 CT — scope expanded by Divyam: add a GC follow-up tag — visible inside the permit view and on the list row — plus a list filter for follow-up-tagged permits (Claude)
 
 ### FEAT-035 · Permit lists: 1000-permit cap with 100-per-page pagination that remembers your page
 
