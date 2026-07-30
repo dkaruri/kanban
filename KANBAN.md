@@ -1014,7 +1014,7 @@ When a shared permit-list link is posted in Slack, a text message, or social app
 - **Priority:** P1-High
 - **Status:** in-progress
 - **Created:** 2026-07-29 13:27 CT
-- **Updated:** 2026-07-30 20:58 CT
+- **Updated:** 2026-07-30 22:14 CT
 - **Tags:** Chicago Permit Search Tool
 
 Make notes searchable within each permit list — NOT one overall site-wide tab. Inside a specific list in My Permit List (`docs/list.html`), a notes feed opened from a control at the top of that list lays out that list's notes as a timestamped feed (newest first) with search. Each entry shows its note text, timestamp, and the permit (in this list) it belongs to. Clicking a note jumps to its associated permit, and from a permit you can jump back into the feed — navigation works to and from in both directions without losing your place in the feed. The feed's scope is always the list you're in; different lists have separate feeds.
@@ -1023,12 +1023,12 @@ Also includes a **follow-up tag for GCs**: from a permit, tag its General Contra
 
 **Checklist:**
 - [x] Inventory where notes are stored today (per-permit) and expose them as a queryable collection scoped per permit list
-- [ ] Add a notes feed entry point at the top of each permit list view (inside the list, not a global tab)
-- [ ] Feed view: timestamped entries for this list only, newest first, each showing note text + linked permit summary
-- [ ] Search within the feed (note text, permit address/number); instant filter as you type
-- [ ] Click a note → open its associated permit; back returns to the feed at the same scroll/search state
-- [ ] From a permit in the list, link into the feed filtered to that permit's notes
-- [ ] Decide behavior on shared lists (do viewers see the feed? consistent with how notes themselves are shared)
+- [x] Add a notes feed entry point at the top of each permit list view (inside the list, not a global tab)
+- [x] Feed view: timestamped entries for this list only, newest first, each showing note text + linked permit summary
+- [x] Search within the feed (note text, permit address/number); instant filter as you type
+- [x] Click a note → open its associated permit; back returns to the feed at the same scroll/search state
+- [x] From a permit in the list, link into the feed filtered to that permit's notes
+- [x] Decide behavior on shared lists (do viewers see the feed? consistent with how notes themselves are shared)
 - [ ] Follow-up tag: from the permit view, tag the permit's GC to follow up (toggleable, like visited/called)
 - [ ] Show the follow-up state clearly inside the permit view, adjacent to the GC it applies to
 - [ ] Show a follow-up badge on the permit's list row so it's visible without opening the permit
@@ -1043,6 +1043,8 @@ Also includes a **follow-up tag for GCs**: from a permit, tag its General Contra
 - 2026-07-30 15:05 CT — scope expanded by Divyam: add a GC follow-up tag — visible inside the permit view and on the list row — plus a list filter for follow-up-tagged permits (Claude)
 - 2026-07-30 20:58 CT — started; status in-progress. Scope settled with Divyam: the feed shows BOTH public thread posts and private per-permit notes, each labelled; on a shared list viewers see the public posts plus their OWN private notes (no new sharing surface); the follow-up tag attaches to the PERMIT and is labelled with its GC, syncing exactly like the visited tick (Claude Code)
 - 2026-07-30 20:58 CT — phase 1 (data foundations) done on branch `feat-034-notes-feed` (`2f2f688`): new `GET /api/notes/bulk` so the feed costs one request instead of one per permit; `fu` follow-up flags added to the list document alongside `ticks` (shared REST handler, no revision written, never settable from a PUT body); private notes now carry an edit timestamp in a parallel `noteTs` map — pre-existing notes stay undated rather than being given a false time. Also fixed KV list() cursor-following in `/notes/counts`, which would have silently under-reported past 1000 noted permits. 158 worker tests green, up from 136 (Claude Code)
+- 2026-07-30 22:14 CT — phase 2 (the feed itself) done on `feat-034-notes-feed` (`0075d7e`): Notes button at the top of each list opens a native <dialog> feed of that list's notes, newest first, with instant search over note text / permit number / address / author. Private notes and shared posts appear together, each badged in WORDS (not colour alone); walkthroughs and photo posts render as prose instead of blank rows; notes with no recorded time say so and sort last rather than masquerading as newest. Round trip verified: tapping a note opens its permit and coming back restores both the search text and the scroll position, driven against a real 40-note overflow. Two distinct empty states (no notes yet vs no search matches). Shared-list behaviour per Divyam: viewers see the public posts plus their own private notes — no new sharing surface (Claude Code)
+- 2026-07-30 22:14 CT — ui-ux-pro-max pre-landing pass caught two REAL defects, both fixed: the Material Symbols stylesheet is fetched with an explicit `icon_names` allowlist and none of the feed's icons were declared, so close/lock/group/sticky_note_2 would have rendered as their literal names in production — invisible to any DOM-level assertion; and "close" as literal text measured 100px against a 44px button, pushing the header 12px wide. Guard `t42-uiux-feed.js` now fails on any undeclared icon (verified against the bug) and checks 44px targets, the 16px input floor, contrast in both themes, real-Tab focus rings and horizontal overflow across desktop + iPhone 13. Guard `t41-notes-feed.js` covers the feed behaviour; both restoration guards verified to fail when the restore is reverted. 158 worker + 128 client unit tests, 51/51 applicable browser suites (Claude Code)
 
 ### FEAT-035 · Permit lists: 1000-permit cap with 100-per-page pagination that remembers your page
 
