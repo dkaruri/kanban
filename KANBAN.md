@@ -474,9 +474,9 @@ On My Permit List (`docs/list.html`), the tag pills stretch to the full width of
 ### FIX-014 · GC view: Specialties counts hang outside their bubbles — keep the number inside like Associations
 
 - **Priority:** P3-Low
-- **Status:** in-progress
+- **Status:** done
 - **Created:** 2026-07-29 13:11 CT
-- **Updated:** 2026-07-30 19:30 CT
+- **Updated:** 2026-07-30 19:35 CT
 - **Tags:** Chicago Permit Search Tool
 
 In the General Contractor view, the numbers on Specialties bubbles overflow past the edge of the pill, while Associations renders its counts contained correctly. Make Specialties display its count inside the bubble the same way Associations does.
@@ -493,7 +493,7 @@ In the General Contractor view, the numbers on Specialties bubbles overflow past
 - 2026-07-30 19:30 CT — fixed on branch `fix-014-specialty-chips` (`1e35d08`, pushed, NOT merged). Both lists now wrap name+count in ONE element that carries the pill, and the brittle positional selector is deleted so they cannot silently drift apart again. Long names wrap inside the chip instead of forcing it wider than the card; chip capped at 100% width. Verified with a 53-character specialty and a 4-digit count (1,284) at 390px — no horizontal scroll on page or overlay (Claude Code)
 - 2026-07-30 19:30 CT — the screenshot caught what the assertions passed: I first used `align-items: baseline`, which put the count on the FIRST line's baseline so it floated alone in the top-right of a two-line chip — geometrically inside, visually detached, and a NEW inconsistency in a ticket about making two components consistent. Now `center`, matching `.assoc` (Claude Code)
 - 2026-07-30 19:30 CT — guard `t41-chips.js` measures CONTAINMENT geometrically rather than asserting markup: it walks up to the nearest ancestor that actually paints a background and radius, checks the count's box is within it, and checks both lists paint the same pill (radius/background/border). Asserting the markup would pass even if the CSS drifted back, which is exactly how these two diverged. Against the pre-fix code it reports "no painted bubble" for every specialty count. 4 page/viewport combinations. 111 client unit tests, 48/48 browser suites, shared blocks byte-identical. Awaiting merge approval (Claude Code)
-
+- 2026-07-30 19:35 CT — MERGED to main (`f5539c1`, --no-ff) and pushed; branch deleted. Client-only, live on Pages. Closed (Claude Code)
 
 ### FIX-015 · Show the person in charge of a GC company (and Open Sub LLCs/companies) everywhere they appear
 
