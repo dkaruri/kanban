@@ -1087,6 +1087,28 @@ On My Permit List (`docs/list.html`), the "Permits Loaded", "Open Permits", "Con
 **Log:**
 - 2026-07-30 10:42 CT — created from Divyam's report (Claude)
 
+### FEAT-037 · Notes attached to a General Contractor: flagged under the GC in Permit View, listed in GC View
+
+- **Priority:** P2-Medium
+- **Status:** todo
+- **Created:** 2026-07-30 15:54 CT
+- **Updated:** 2026-07-30 15:54 CT
+- **Tags:** Chicago Permit Search Tool
+
+Associate notes with a General Contractor (the person/company), not just with a permit. In the Permit View, under the General Contractor, show an indicator when that GC has associated notes (e.g. "3 notes on this contractor") so it's visible without leaving the permit. In the GC View, list those notes in full. Builds on FEAT-034's notes infrastructure (per-list feed, `GET /api/notes/bulk`, note timestamps) — coordinate with that in-progress work rather than inventing a parallel notes store: a GC's notes are naturally the notes on that GC's permits plus any notes written directly on the GC.
+
+**Checklist:**
+- [ ] Decide the association model with FEAT-034's data layer: notes written on a GC directly, plus roll-up of notes on that GC's permits — keyed on the same normalized contractor name the rest of the app uses
+- [ ] Permit View: under the General Contractor line, show a clear "has notes" indicator with a count when the GC has associated notes; absent when there are none (never a zero badge)
+- [ ] Make the indicator open/jump to those notes
+- [ ] GC View: add a Notes section listing the GC's associated notes — text, timestamp, author, and which permit each came from (or "on contractor" for direct notes), newest first
+- [ ] Respect note visibility rules from FEAT-034 (public thread posts vs. private notes; on shared lists show public + your own private ones)
+- [ ] Keep it consistent on both index.html and list.html card stacks
+- [ ] Verify on desktop and mobile with a GC that has notes on several permits, a GC with none, and both themes
+
+**Log:**
+- 2026-07-30 15:54 CT — created (Divyam)
+
 ### FEAT-001 · Build searchable directory of permits, contractors, and subs
 
 - **Priority:** P1-High
