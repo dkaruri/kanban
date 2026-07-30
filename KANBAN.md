@@ -279,6 +279,27 @@ Reported by Divyam after entering the wrong name. The only workarounds today are
 - 2026-07-29 19:51 CT — merged to main (`03f8961`, --no-ff) at Divyam's request and pushed; branch deleted, live on GitHub Pages. Merged after FIX-004 and re-verified together on the merged tree — no interaction between them. Client-only, no Worker deploy needed (Claude Code)
 - 2026-07-29 19:41 CT — last checklist item resolved as "leave them": posts already made keep the old name, because the Worker's PUT never reassigns `author`. Changing that would let anyone rewrite the byline on an existing post, which is worse than a stale name. Delete and repost is the intended route. If it becomes a nuisance, the narrow version is to allow it only for the post's own author within a short window — worth a separate card, not this one (Claude Code)
 
+### FIX-022 · Desktop: GC names under a permit should be selectable without opening GC View; GC View shows full names with actions right-aligned
+
+- **Priority:** P1-High
+- **Status:** todo
+- **Created:** 2026-07-30 15:41 CT
+- **Updated:** 2026-07-30 15:41 CT
+- **Tags:** Chicago Permit Search Tool
+
+Two desktop problems around GC names. (1) Under a permit, the General Contractor's name is part of the click target that opens the GC View (FEAT-025 card stack), so trying to highlight/select the name to copy it immediately navigates instead — let the text be selected without triggering the card. (2) Inside GC View, long names truncate to "…"; display names in full (wrap, don't clip), and move the per-row actions (Call, Add to list) to be right-aligned so full names have the row width to breathe.
+
+**Checklist:**
+- [ ] Permit view: make the GC name text selectable — a click-drag selection must not open the GC card (e.g., open on the row/affordance rather than the name text, or suppress the click when a selection was made / distinguish click from drag)
+- [ ] Keep GC View still easy to open on desktop: an obvious affordance remains clickable and keyboard-accessible after the change
+- [ ] GC View: remove the "…" truncation on names — render them in full, wrapping to multiple lines when long
+- [ ] GC View: right-align the Call and Add-to-list actions on their rows; keep alignment consistent across rows as names wrap
+- [ ] Check the same rows on narrow/mobile widths — this ticket targets desktop, so mobile behavior must not regress (truncation rules and tap targets there stay as designed)
+- [ ] Verify with hostile cases: very long company names, names with no spaces, 4-digit counts, and both themes
+
+**Log:**
+- 2026-07-30 15:41 CT — created (Divyam)
+
 ### FIX-006 · Shared permit-list link should layer over the directory with a back button
 
 - **Priority:** P2-Medium
