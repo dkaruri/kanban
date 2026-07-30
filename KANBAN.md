@@ -181,22 +181,27 @@ The zoning data shown with a permit/parcel should say what the zoning district a
 ### FIX-008 · Remember map layers and filters across page reload
 
 - **Priority:** P1-High
-- **Status:** todo
+- **Status:** in-progress
 - **Created:** 2026-07-28 14:06 CT
-- **Updated:** 2026-07-28 14:06 CT
+- **Updated:** 2026-07-30 18:10 CT
 - **Tags:** Chicago Permit Search Tool
 
 Map Search (`docs/map.html`) should persist the user's selected layers and filters (month, date range, GC job-count range, and future work-type/residential/value filters) so reloading the page restores the same view.
 
 **Checklist:**
-- [ ] Inventory every layer toggle and filter setting on the map page
-- [ ] Persist them client-side (localStorage, consistent with the existing chi_permit_theme pattern) on every change
-- [ ] Restore persisted state on load before first render; fall back to defaults when absent or invalid
-- [ ] Handle stale state gracefully when saved filters reference months/shards that no longer exist
-- [ ] Verify across reloads, new tabs, and after a daily data refresh
+- [x] Inventory every layer toggle and filter setting on the map page
+- [x] Persist them client-side (localStorage, consistent with the existing chi_permit_theme pattern) on every change
+- [x] Restore persisted state on load before first render; fall back to defaults when absent or invalid
+- [x] Handle stale state gracefully when saved filters reference months/shards that no longer exist
+- [x] Verify across reloads, new tabs, and after a daily data refresh
 
 **Log:**
 - 2026-07-28 14:06 CT — created (Divyam)
+- 2026-07-30 18:10 CT — in-progress. INVENTORY FIRST, and it changed the job: the filters and layers this ticket asks for ALREADY persist, shipped 2026-07-20 under `chi_permit_map_settings` and `chi_permit_map_layers`. Drove the page and diffed state across a reload — every control (date from/to, GC min/max, neighborhood, query, radius) and every layer toggle (permits, clusters, heat, zoning, TIF) survived. Stale and corrupt saved state also already degrade cleanly: future date ranges, reversed ranges, non-numeric GC bounds, wrong types throughout, and a corrupt layers blob all came back with ZERO page errors and a live map. Checklist items 2 and 4 were already satisfied; rebuilding them would have been busywork (Claude Code)
+- 2026-07-30 18:10 CT — the one real gap was the VIEWPORT. Pan or zoom anywhere, reload, and the map threw you back to the whole-city default with your filters still applied — the part of "restores the same view" that was actually broken. Fixed on branch `fix-008-map-view` (`bb8cb8c`, pushed, NOT merged): saved on moveend under a new `chi_permit_map_view` key and used to CONSTRUCT the map rather than jumped to afterwards, so there is no lurch from the default. Validated on read — anything non-finite or out of range falls back, because a NaN reaching maplibre leaves a blank canvas with no error, which is worse than the default view (Claude Code)
+- 2026-07-30 18:10 CT — also suppresses ONE re-centre at restore time: the saved search query is re-geocoded on load, and its easeTo would otherwise yank the map back to the address on every reload, so panning away from a searched address and reloading lost your position — the same bug wearing a different hat. That suppression had a real defect the tests caught: the map object is REBUILT on render, not only at page load, so arming the flag per construction re-armed it on every rebuild and stopped genuine NEW searches flying to the address. Now armed once per page load (Claude Code)
+- 2026-07-30 18:10 CT — guard `t40-mapstate.js` covers all six behaviours and fails 2/6 against the pre-fix code. 111 client unit tests, 46/47 browser suites — `t14-live` is a pre-existing live-network flake (fails ~1 run in 3, exercises list sharing, nothing to do with the map). No ui-ux-pro-max pass: nothing visual was added or reworked, this restores position only. Awaiting merge approval (Claude Code)
+
 
 ### FIX-010 · Mobile: permit list scrolling locks up after opening permit details
 
@@ -488,9 +493,9 @@ In the General Contractor view, the numbers on Specialties bubbles overflow past
 ### FIX-015 · Show the person in charge of a GC company (and Open Sub LLCs/companies) everywhere they appear
 
 - **Priority:** P1-High
-- **Status:** in-progress
+- **Status:** done
 - **Created:** 2026-07-29 14:07 CT
-- **Updated:** 2026-07-30 16:45 CT
+- **Updated:** 2026-07-30 18:10 CT
 - **Tags:** Chicago Permit Search Tool
 
 Wherever a General Contractor company shows up (directory rows, profile cards, permit detail, overlay cards, map popups, list rows, exports), display the name of the person in charge of that company. Same for Open Subs that are LLCs or companies: show the responsible person alongside the business name. Likely sources: the city contractor registry / licensing data already ingested (FEAT-004/FEAT-014 surfaced titles), and IL Secretary of State LLC registrations (manager/registered agent) — FEAT-026 covers deeper LLC ingestion; this task uses whatever fields are available now and leaves richer enrichment to FEAT-026.
@@ -504,7 +509,7 @@ Wherever a General Contractor company shows up (directory rows, profile cards, p
 - [x] Verify a sample of well-known GCs and sub companies against the registry/SoS records
 - [x] ADDED by Divyam 2026-07-30: show the unit owner's name and contact information on the permit view, alongside the GC's owner
 - [x] Run `npm run seed` from `worker/` — the join happens at seed time, so nothing appears until then
-- [ ] Confirm on a real phone once seeded
+- [x] Confirm on a real phone once seeded
 
 **Log:**
 - 2026-07-29 14:07 CT — created (Divyam)
@@ -518,6 +523,7 @@ Wherever a General Contractor company shows up (directory rows, profile cards, p
 - 2026-07-30 16:05 CT — NEXT: the display half (checklist items 3-6) — GC/sub cards, directory rows, permit overlay, map popups, CSV — plus the ui-ux-pro-max pass. Pausing here per the standing confirm-before-each-phase rule. DEPLOY HAZARD: the join runs at seed time, so nothing appears anywhere until Divyam runs `npm run seed` from `worker/`; the seed now also pages 320k owner rows and takes correspondingly longer (Claude Code)
 - 2026-07-30 16:45 CT — MERGED to main (`48015e0`, --no-ff) and production KV SEEDED at Divyam's request. Seed reported `Resource location: remote` on every write and matched **1,119/5,784 GCs and 1,421/7,441 subs** — subs landed far better than the 12% estimated off the stale `docs/data` export, because the live profile set is different. Verified at the destination rather than trusting "Done!": read three GCs back off the live API and got real principals with a fresh seeded_at (Claude Code)
 - 2026-07-30 16:45 CT — that read-back immediately exposed two name-formatting defects no test had produced: "Allan E. Bulley, Iii" and "Michael W..D.. Sudol". Generational suffixes were being title-cased and pre-punctuated initials were having a period appended to every letter. Also found VANDERBILT-HOLLINGSWORTH becoming "Vanderbilt-hollingsworth", wrong in the original code too and never noticed. Fixed on branch `fix-015-name-formatting` (`9ea7551`, pushed, NOT merged — awaiting approval); "V" is disambiguated by position, since it is a suffix in "Henry Tudor V" and a middle initial in "Anna V. Reyes". Swept all 239,794 distinct formatted names from the live dataset for residue: 144 trip a crude detector and nearly all are false positives. 127 Worker tests. **A RE-SEED is required after that merge for the corrected names to reach production** (Claude Code)
+- 2026-07-30 18:10 CT — CLOSED at Divyam's request. Everything is merged, seeded and verified live: unit owner on the permit view, person in charge on cards/directory/CSV, name formatting corrected after real data exposed two defects. Coverage is partial by nature (~19-21% of contractors, 45% of the top-200 GCs) and companies with no match render no line at all, which is intended (Claude Code)
 
 ### FIX-017 · Verify the GC and Open Subs counts at the top are accurate; document how they're computed
 
