@@ -338,15 +338,15 @@ The neighborhood shown in the permit view is a bare number — most likely the d
 ### FIX-012 · GC "average processing days" should measure average time to close a permit
 
 - **Priority:** P2-Medium
-- **Status:** todo
+- **Status:** in-progress
 - **Created:** 2026-07-29 12:44 CT
-- **Updated:** 2026-07-29 12:44 CT
+- **Updated:** 2026-07-30 16:55 CT
 - **Tags:** Chicago Permit Search Tool
 
 For General Contractors, the "average processing days" stat currently measures application-to-issuance time (the dataset's processing_time). What Divyam wants shown is how long the GC takes to CLOSE a permit on average — issuance to completion/closure. This is a metric definition change, not just a relabel.
 
 **Checklist:**
-- [ ] Identify the right closure signal in the permit data (completion/closed date, status transition out of ACTIVE) and note coverage/quality in this task's Log
+- [x] Identify the right closure signal in the permit data (completion/closed date, status transition out of ACTIVE) and note coverage/quality in this task's Log
 - [ ] Compute average issuance→closure days per GC in the pipeline, excluding still-open permits, and export it
 - [ ] Replace the processing-days stat on GC profiles/cards with the new metric, labeled clearly (e.g. "Avg time to close a permit")
 - [ ] Decide whether app→issuance processing days stays as a secondary stat or is dropped; keep sort options consistent
@@ -355,6 +355,9 @@ For General Contractors, the "average processing days" stat currently measures a
 
 **Log:**
 - 2026-07-29 12:44 CT — created (Divyam)
+- 2026-07-30 16:55 CT — in-progress. DATA FINDING: **there is no closure DATE anywhere in the City's published data**, so issuance-to-closure cannot be computed retroactively at all. Checked exhaustively: (a) `ydr8-5enu` has 122 columns and exactly four are date/status related — `application_start_date`, `issue_date`, `processing_time`, `permit_status`; there is no completion, closed, final or expiry date. (b) `permit_status` DOES carry COMPLETE (462,083 rows) so closure is knowable as a STATE, but the dataset is a snapshot and never records WHEN the state changed. (c) Socrata's row-level `:updated_at` is not a substitute — sampled COMPLETE permits issued in 2020 all carry `2025-10-14T20:58-21:00Z`, seconds apart: that is a bulk re-upload timestamp, not a status change. (d) No inspections dataset links permits to a final inspection date; the only permit-adjacent sets are violations and issuance-side "time to issue" performance metrics. (e) `dmcg-xwb8 "Building Permits Search"` is a non-tabular search view, not queryable (Claude Code)
+- 2026-07-30 16:55 CT — measured the computable substitutes on real GCs across all 15 contact slots (an earlier pass using only `contact_1_name` was wrong — it returned rows whose status is null, and the app matches every slot). BEAR CONSTRUCTION COMPANY: 2,890 permits, 2,263 COMPLETE of 2,626 decided = **86.2% completion rate**, 147 open averaging **642 days old** (median 577, oldest 2,050). BULLEY & ANDREWS: 1,387 permits, 834 of 1,016 = **82.1%**, 129 open averaging **469 days** (median 420, oldest 2,030). Both are exact and honest; neither is a duration-to-close (Claude Code)
+- 2026-07-30 16:55 CT — asked Divyam which metric should replace the stat. He pushed back asking whether open-to-close time can simply be computed for all jobs — it cannot, for the reason in (b) above: the data records THAT a permit closed, never WHEN. The only route to the true metric is to start observing it: log the date each permit is first seen COMPLETE on each seed, and compute issue -> first-seen-COMPLETE from then on. That yields real closure times going forward, accurate to the seed cadence, but covers no permit that closed before we started watching. Awaiting his decision (Claude Code)
 
 ### FIX-013 · Desktop: tag chips at the top should size to their text, not the list width
 
