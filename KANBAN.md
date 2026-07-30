@@ -412,6 +412,26 @@ The visited checkbox on permits in My Permit List (`docs/list.html`) has no head
 **Log:**
 - 2026-07-29 15:55 CT — created (Divyam)
 
+### FIX-019 · My Permit List: tag pills should hug their text, not span the list width
+
+- **Priority:** P3-Low
+- **Status:** todo
+- **Created:** 2026-07-30 09:27 CT
+- **Updated:** 2026-07-30 09:27 CT
+- **Tags:** Chicago Permit Search Tool
+
+On My Permit List (`docs/list.html`), the tag pills stretch to the full width of the list on both desktop and mobile. Each pill should take only the space its text needs plus padding (inline-flex / fit-content), wrapping naturally as a row of chips. Same pattern as FIX-013 (tag chips at the top, desktop) — keep the chip styling consistent between the two.
+
+**Checklist:**
+- [ ] Locate the tag pill elements in `docs/list.html` and identify why they expand to full width (block display, width:100%, or stretched flex/grid item)
+- [ ] Size each pill to its content with appropriate padding; lay the group out as a wrapping chip row
+- [ ] Apply on both desktop and mobile layouts; keep touch targets adequate on mobile
+- [ ] Keep the styling consistent with FIX-013's chip treatment if that lands first (or share one fix and log it in both tasks)
+- [ ] Verify on desktop and phone viewports, on lists with few and many tags
+
+**Log:**
+- 2026-07-30 09:27 CT — created from Divyam's report (Claude)
+
 ### FIX-014 · GC view: Specialties counts hang outside their bubbles — keep the number inside like Associations
 
 - **Priority:** P3-Low
