@@ -201,9 +201,9 @@ Map Search (`docs/map.html`) should persist the user's selected layers and filte
 ### FIX-010 · Mobile: permit list scrolling locks up after opening permit details
 
 - **Priority:** P1-High
-- **Status:** in-progress
+- **Status:** done
 - **Created:** 2026-07-29 11:28 CT
-- **Updated:** 2026-07-30 15:10 CT
+- **Updated:** 2026-07-30 16:45 CT
 - **Tags:** Chicago Permit Search Tool
 
 REOPENED 2026-07-30 — still happening on Divyam's phone after the first fix shipped. Exact steps: in a list under My Permit List, open the Permit View for the first permit; scroll down and back up inside the Permit View; close it. The list then will not scroll in either direction until the page is reloaded.
@@ -246,6 +246,7 @@ Second fix (on branch): stop locking mobile at all. Below 641px the card is an o
 - 2026-07-30 15:52 CT — retro, at Divyam's request: (1) round 1 shipped a fix for a symptom that was never reproduced — the defect found was real but was not necessarily HIS bug, and "unconfirmed on the only platform where it occurs" belongs in the sentence that says the work is done, not in a log line; (2) his two symptom reports each eliminated more than an hour of headless work, so ask for discriminating detail (does it recover? how long? what did you do immediately before?) BEFORE writing code; (3) nine months of iOS bugs had been verified on Chromium at an iPhone viewport, which is not Safari — real WebKit is now installed; (4) the winning move was proving what was NOT wrong, which located the failure outside the DOM; (5) the ladder question "should this mechanism exist at all?" would have skipped two rounds — mobile never needed a scroll lock. Written to Claude's long-term memory as `unreproduced-is-unfixed` (Claude Code)
 - 2026-07-30 15:52 CT — also fixed the three permanently-red browser suites (t2, t6, t8b) that had been hiding regressions. Single root cause was drift in the shared `_boot.js` launcher: it waited on `typeof state !== "undefined"` instead of `body[data-ready]`, so init's async tail clobbered every seed; saved-list seeding also now needs `state.lists` + `activeListId` AND `showList()` to unhide the list view, or rows render `hidden` and waitForSelector times out on a working page; and t2 still called `openPermitModal(html)`, argument-less since FEAT-025. Verified they fail when the fix is reverted. 43/43 browser suites and 111 unit tests green. NOTE: `verify-tmp/` is gitignored, so the entire browser suite is untracked and lives on one machine — worth its own card (Claude Code)
 - 2026-07-30 15:10 CT — OPEN: this is fix attempt #2 and it is NOT confirmed on a real device. Test on the branch preview at https://raw.githack.com/dkaruri/chicago-building-permits-search/fix-010-mobile-scroll-2/docs/list.html (different origin, so the saved list will be empty there — add a couple of permits first). If it still locks up, the cause is not the page lock at all and the next step is a real Safari Web Inspector session over USB rather than a third guess (Claude Code)
+- 2026-07-30 16:45 CT — MERGED to main (`0799285`, --no-ff) at Divyam's request and pushed; branch deleted. Client-only, no Worker deploy. Closed (Claude Code)
 
 ### FIX-016 · "Posting as" name in permit notes cannot be changed
 
@@ -477,7 +478,7 @@ In the General Contractor view, the numbers on Specialties bubbles overflow past
 - **Priority:** P1-High
 - **Status:** in-progress
 - **Created:** 2026-07-29 14:07 CT
-- **Updated:** 2026-07-30 16:26 CT
+- **Updated:** 2026-07-30 16:45 CT
 - **Tags:** Chicago Permit Search Tool
 
 Wherever a General Contractor company shows up (directory rows, profile cards, permit detail, overlay cards, map popups, list rows, exports), display the name of the person in charge of that company. Same for Open Subs that are LLCs or companies: show the responsible person alongside the business name. Likely sources: the city contractor registry / licensing data already ingested (FEAT-004/FEAT-014 surfaced titles), and IL Secretary of State LLC registrations (manager/registered agent) — FEAT-026 covers deeper LLC ingestion; this task uses whatever fields are available now and leaves richer enrichment to FEAT-026.
@@ -490,7 +491,7 @@ Wherever a General Contractor company shows up (directory rows, profile cards, p
 - [x] Handle missing data honestly (omit the line rather than showing blank/unknown junk)
 - [x] Verify a sample of well-known GCs and sub companies against the registry/SoS records
 - [x] ADDED by Divyam 2026-07-30: show the unit owner's name and contact information on the permit view, alongside the GC's owner
-- [ ] Run `npm run seed` from `worker/` — the join happens at seed time, so nothing appears until then
+- [x] Run `npm run seed` from `worker/` — the join happens at seed time, so nothing appears until then
 - [ ] Confirm on a real phone once seeded
 
 **Log:**
@@ -503,6 +504,8 @@ Wherever a General Contractor company shows up (directory rows, profile cards, p
 - 2026-07-30 16:26 CT — ui-ux-pro-max pass caught two real defects, both measured not eyeballed: the "Run by" label was 11px, and the NAME measured identical to its own label and title (6.32:1 for all three), so the line had no hierarchy on the one word that matters. The name now carries ink + weight (16.35 light / 16.1 dark). Then the SCREENSHOT caught what no assertion could — a blanket /api/contact fixture made the owner inherit the GC's principal and rendered "Run by" under UNIT OWNER; test-only, but it would have read as a product bug, so the fixture is name-aware now and the render was re-checked by eye. Guards `t37-principals.js` and `t38-uiux-principals.js`; 111 client + 124 Worker unit tests green (Claude Code)
 - 2026-07-30 16:26 CT — NOTE for FIX-020: on this branch `t2`, `t27` and `t36` fail, because they are FIX-010 round-2 guards and this branch is cut from `main`, where FIX-010 is not merged. The suite is gitignored and therefore SHARED across branches instead of travelling with the code — concrete evidence for that card, not a regression here (Claude Code)
 - 2026-07-30 16:05 CT — NEXT: the display half (checklist items 3-6) — GC/sub cards, directory rows, permit overlay, map popups, CSV — plus the ui-ux-pro-max pass. Pausing here per the standing confirm-before-each-phase rule. DEPLOY HAZARD: the join runs at seed time, so nothing appears anywhere until Divyam runs `npm run seed` from `worker/`; the seed now also pages 320k owner rows and takes correspondingly longer (Claude Code)
+- 2026-07-30 16:45 CT — MERGED to main (`48015e0`, --no-ff) and production KV SEEDED at Divyam's request. Seed reported `Resource location: remote` on every write and matched **1,119/5,784 GCs and 1,421/7,441 subs** — subs landed far better than the 12% estimated off the stale `docs/data` export, because the live profile set is different. Verified at the destination rather than trusting "Done!": read three GCs back off the live API and got real principals with a fresh seeded_at (Claude Code)
+- 2026-07-30 16:45 CT — that read-back immediately exposed two name-formatting defects no test had produced: "Allan E. Bulley, Iii" and "Michael W..D.. Sudol". Generational suffixes were being title-cased and pre-punctuated initials were having a period appended to every letter. Also found VANDERBILT-HOLLINGSWORTH becoming "Vanderbilt-hollingsworth", wrong in the original code too and never noticed. Fixed on branch `fix-015-name-formatting` (`9ea7551`, pushed, NOT merged — awaiting approval); "V" is disambiguated by position, since it is a suffix in "Henry Tudor V" and a middle initial in "Anna V. Reyes". Swept all 239,794 distinct formatted names from the live dataset for residue: 144 trip a crude detector and nearly all are false positives. 127 Worker tests. **A RE-SEED is required after that merge for the corrected names to reach production** (Claude Code)
 
 ### FIX-017 · Verify the GC and Open Subs counts at the top are accurate; document how they're computed
 
