@@ -991,9 +991,9 @@ When a shared permit-list link is posted in Slack, a text message, or social app
 ### FEAT-034 · Per-list notes feed: searchable, timestamped notes inside each permit list — with GC follow-up tagging
 
 - **Priority:** P1-High
-- **Status:** todo
+- **Status:** in-progress
 - **Created:** 2026-07-29 13:27 CT
-- **Updated:** 2026-07-30 15:05 CT
+- **Updated:** 2026-07-30 20:58 CT
 - **Tags:** Chicago Permit Search Tool
 
 Make notes searchable within each permit list — NOT one overall site-wide tab. Inside a specific list in My Permit List (`docs/list.html`), a notes feed opened from a control at the top of that list lays out that list's notes as a timestamped feed (newest first) with search. Each entry shows its note text, timestamp, and the permit (in this list) it belongs to. Clicking a note jumps to its associated permit, and from a permit you can jump back into the feed — navigation works to and from in both directions without losing your place in the feed. The feed's scope is always the list you're in; different lists have separate feeds.
@@ -1001,7 +1001,7 @@ Make notes searchable within each permit list — NOT one overall site-wide tab.
 Also includes a **follow-up tag for GCs**: from a permit, tag its General Contractor as "follow up". The tag must be apparent both INSIDE the permit view (clear follow-up marker near the GC) and OUTSIDE it (visible badge on the permit's row in the list, without opening the permit). The list gains a filter to show only permits tagged for follow-up, composing with FEAT-031's visited/called filters.
 
 **Checklist:**
-- [ ] Inventory where notes are stored today (per-permit) and expose them as a queryable collection scoped per permit list
+- [x] Inventory where notes are stored today (per-permit) and expose them as a queryable collection scoped per permit list
 - [ ] Add a notes feed entry point at the top of each permit list view (inside the list, not a global tab)
 - [ ] Feed view: timestamped entries for this list only, newest first, each showing note text + linked permit summary
 - [ ] Search within the feed (note text, permit address/number); instant filter as you type
@@ -1020,6 +1020,8 @@ Also includes a **follow-up tag for GCs**: from a permit, tag its General Contra
 - 2026-07-29 13:27 CT — created (Divyam)
 - 2026-07-29 14:11 CT — scope clarified by Divyam: the feed lives INSIDE each specific permit list, not as an overall site tab; description, title, and checklist updated (Claude)
 - 2026-07-30 15:05 CT — scope expanded by Divyam: add a GC follow-up tag — visible inside the permit view and on the list row — plus a list filter for follow-up-tagged permits (Claude)
+- 2026-07-30 20:58 CT — started; status in-progress. Scope settled with Divyam: the feed shows BOTH public thread posts and private per-permit notes, each labelled; on a shared list viewers see the public posts plus their OWN private notes (no new sharing surface); the follow-up tag attaches to the PERMIT and is labelled with its GC, syncing exactly like the visited tick (Claude Code)
+- 2026-07-30 20:58 CT — phase 1 (data foundations) done on branch `feat-034-notes-feed` (`2f2f688`): new `GET /api/notes/bulk` so the feed costs one request instead of one per permit; `fu` follow-up flags added to the list document alongside `ticks` (shared REST handler, no revision written, never settable from a PUT body); private notes now carry an edit timestamp in a parallel `noteTs` map — pre-existing notes stay undated rather than being given a false time. Also fixed KV list() cursor-following in `/notes/counts`, which would have silently under-reported past 1000 noted permits. 158 worker tests green, up from 136 (Claude Code)
 
 ### FEAT-035 · Permit lists: 1000-permit cap with 100-per-page pagination that remembers your page
 
