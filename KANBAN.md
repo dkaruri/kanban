@@ -570,7 +570,7 @@ General UI polish plus accessibility on small screens.
 - **Priority:** P2-Medium
 - **Status:** todo
 - **Created:** 2026-07-30 15:55 CT
-- **Updated:** 2026-07-30 15:55 CT
+- **Updated:** 2026-07-30 18:40 CT
 - **Tags:** Chicago Permit Search Tool
 
 `verify-tmp/` is in `.gitignore`, so the entire browser test suite — 43 Playwright suites plus the `.mjs` unit tests and the shared `_boot.js` launcher — is untracked and lives only on Divyam's machine. Nothing is backed up, nothing is reviewable in a diff, and a fresh clone has no way to check that a change to `docs/*.html` still works. This already cost real time: `t2`, `t6` and `t8b` sat permanently red for weeks because `_boot.js` drifted behind the multi-list and card-stack reworks, and nobody could see it happening in a commit. Done when the suites are versioned, the scratch output is not, and a fresh clone can run them.
@@ -586,6 +586,7 @@ General UI polish plus accessibility on small screens.
 
 **Log:**
 - 2026-07-30 15:55 CT — created (Claude Code, at Divyam's request after FIX-010)
+- 2026-07-30 18:40 CT — related flakiness fixed ahead of this card, on branch `fix-008-map-view` (`6895d95`). `t14-live` was failing ~50% of runs (measured 4/8) because it waited on `typeof shareUserList === "function"` — declarations hoist, so init had not run and its async tail replaced `state.lists`, wiping the seed. 10/10 after. Scanning for the same predicate found it in 13 MORE suites, passing but latently flaky. Converting them exposed the deeper defect: `data-ready` was set on the LAST line of `init()`, after `await search()`, which REJECTS on local preview because the Worker is CORS-locked to the Pages origin — so the flag stayed undefined forever and anything waiting on it hung. The flag now lives in one `.finally()` per page and means "init finished", not "init succeeded"; duplicates that had drifted across the three pages are gone and `map.html` has it for the first time. Two clean full sweeps: 0 failures of 47, twice. A third sweep reported `FAIL t17.js` but was killed mid-run — t17 then passed 8/8 in isolation, so that was the teardown, not a flake (Claude Code)
 
 ---
 
