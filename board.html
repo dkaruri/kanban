@@ -249,7 +249,7 @@
   <button id="renderPaste">Render board</button>
 </div>
 
-<footer>Source of truth: <code>KANBAN.md</code> · edits made here are staged, then saved via Claude or the GitHub editor.</footer>
+<footer>Source of truth: <code>KANBAN.md</code> · edits made here are staged, then saved via Claude or the GitHub editor. · In-progress tasks pin to the top of each list.</footer>
 
 <div id="overlay">
   <div id="modal" role="dialog" aria-modal="true" aria-labelledby="m-title"></div>
@@ -528,6 +528,9 @@
       var col = document.createElement('div');
       col.className = 'col' + (state.collapsed[l.name] ? ' collapsed' : '') + (listDirty(l) ? ' edited' : '');
       var tasks = l.tasks.slice().sort(function(a,b){
+        var aip = (a.meta.status === 'in-progress') ? 0 : 1;   // in-progress always pins to the top,
+        var bip = (b.meta.status === 'in-progress') ? 0 : 1;   // whatever sort mode is active
+        if (aip !== bip) return aip - bip;
         if (state.sort === 'priority'){
           var dp = priKey(a) - priKey(b);
           if (dp !== 0) return dp;
@@ -665,7 +668,7 @@
     }
     if (isDirty(t)){
       html += '<div class="m-save"><b>Unsaved edits</b> — ' + esc(diffParts(t).join('; ')) +
-        '. The board is a static site, so save by sending the prompt to Claude (it commits directly) or editing on GitHub.' +
+        '. The board is a static site, so save by sending the prompt to Claude (it commits for you) or editing on GitHub.' +
         '<div class="m-actions" style="margin-top:10px;padding-top:0;border-top:none">' +
         '<button class="primary" data-act="saveprompt">Copy save prompt</button>' +
         '<button data-act="savemd">Copy card</button>' +
