@@ -280,6 +280,33 @@ Reported by Divyam after entering the wrong name. The only workarounds today are
 - 2026-07-29 19:51 CT — merged to main (`03f8961`, --no-ff) at Divyam's request and pushed; branch deleted, live on GitHub Pages. Merged after FIX-004 and re-verified together on the merged tree — no interaction between them. Client-only, no Worker deploy needed (Claude Code)
 - 2026-07-29 19:41 CT — last checklist item resolved as "leave them": posts already made keep the old name, because the Worker's PUT never reassigns `author`. Changing that would let anyone rewrite the byline on an existing post, which is worse than a stale name. Delete and repost is the intended route. If it becomes a nuisance, the narrow version is to allow it only for the post's own author within a short window — worth a separate card, not this one (Claude Code)
 
+### FIX-023 · Permit view opens blank on My Permit List
+
+- **Priority:** P0-Critical
+- **Status:** done
+- **Created:** 2026-07-31 16:11 CT
+- **Updated:** 2026-07-31 16:11 CT
+- **Tags:** Chicago Permit Search Tool
+
+Tapping a permit in My Permit List opened the permit overlay with nothing in it. Live-only: every real permit that names a general contractor was affected, from the moment FEAT-034 shipped.
+
+Root cause: `followUpGcName` read `row.general_contractors` as an array of `{name}` objects. The field is a pipe-delimited **string** everywhere in the product — that is what the Worker returns, what Socrata publishes, and what `contractorLinesHtml` has always parsed. `gcs.find` therefore threw, and because `permitDetailHtml` joins its section thunks, one throw emptied the entire card.
+
+It shipped green because all three FEAT-034 guards (t44, t45, t46) invented the array-of-objects fixture, so the test suite agreed with the bug.
+
+**Checklist:**
+- [x] Reproduce against the live site (drove `list.html#s=PeeXTko`, caught `TypeError: gcs.find is not a function`)
+- [x] Trace to the source rather than guarding the render loop
+- [x] Correct the fixtures in t44/t45/t46 to the real pipe-string shape, and confirm they now fail
+- [x] Fix `followUpGcName` to parse the real shape
+- [x] Verify end-to-end with a real row fetched from the live Worker
+- [x] Confirm `index.html` is unaffected (its `followUpToggleHtml` is a deliberate no-op stub)
+- [x] Full regression: 54 browser scripts, 128 client + 158 Worker unit tests
+
+**Log:**
+- 2026-07-31 16:11 CT — found while starting FIX-022; Divyam reported the permit view opening blank (Claude Code)
+- 2026-07-31 16:11 CT — fixed on branch `fix-023-permit-view-empty` (pushed, NOT merged — awaiting approval). Client-only, `docs/list.html`; no Worker deploy needed. **Lesson: the three guards written for FEAT-034 all used a fixture shape that exists nowhere in the product, so a feature that crashed on every real permit passed its own tests. A fixture is a claim about production data and has to be checked against it** (Claude Code)
+
 ### FIX-022 · Desktop: "Read more" link opens GC/Open Sub view instead of the whole area being clickable; GC View shows full names with actions right-aligned
 
 - **Priority:** P1-High
