@@ -822,14 +822,14 @@ All three phases are shipped and live.
 ### FEAT-021 · Add permit value range to Search and Map Search
 
 - **Priority:** P1-High
-- **Status:** in-progress
+- **Status:** done
 - **Created:** 2026-07-27 10:09 CT
-- **Updated:** 2026-07-31 14:39 CT
+- **Updated:** 2026-07-31 14:51 CT
 - **Tags:** Chicago Permit Search Tool
 
 Filter/search by permit (reported cost) value range in both the Search tool and the Map Search tool.
 
-Built on branch `feat-021-permit-value-range` (`9fa3c37`), awaiting approval to merge.
+Live: Worker version `8c859f74`, site merged as `03477ee`.
 
 Scope decision: the range shows only in **Open Permits** mode on the Search tool. The General Contractors / Open Subs modes are contractor profiles whose only money field is `reported_cost_total` (a lifetime sum across all their jobs) — filtering that by a per-permit range would answer a different question than the card asks, so `setMode()` hides the fields there.
 
@@ -845,12 +845,13 @@ Where the filtering happens, and why it differs per surface:
 - [x] Ensure indexes expose reported cost efficiently
 - [x] Verify results match range on both tools
 - [x] ui-ux-pro-max at design time and again before landing (desktop + iPhone 13, both themes)
-- [ ] Merge to main and verify on production (awaiting approval)
+- [x] Merge to main and verify on production
 
 **Log:**
 - 2026-07-27 10:09 CT — created (Divyam)
 - 2026-07-31 14:20 CT — status → in-progress; starting design pass (Claude Code)
 - 2026-07-31 14:39 CT — implemented on `feat-021-permit-value-range` (`9fa3c37`), pushed. No index work was needed: `reported_cost` was already in the `$select` for both the Worker query and the map's Socrata fetch. Also moved `permits.js` off its `index.js` import to a local `json()` helper (same pattern as profiles.js) — importing index.js pulls in `cloudflare:workers`, which `node --test` cannot load, so the endpoint had no tests at all before this. Verified: 6 new Worker tests (164 total pass), 128 unit tests, and `verify-tmp/t49-value-range.js` — 68 assertions across desktop and iPhone 13, each confirmed to FAIL against the un-fixed code. The pre-landing UI pass caught one real defect the assertions missed: `.controls > p { order: 8 }` outranked the error's own rule and parked the message below the Search button, a screen away from the fields; fixed and now asserted by layout position, not DOM order. Raised FIX-025 for a pre-existing issue measured along the way. (Claude Code)
+- 2026-07-31 14:51 CT — **DONE, live.** Deployed the Worker first (version `8c859f74`), then merged `--no-ff` to main (`03477ee`); Pages build 2m25s. Worth recording: the first post-deploy probe said the filter was NOT working — `cost_min=999999999` still returned 50 rows and a banded query came back with null costs. That was propagation lag, not a bug; re-probed a minute later and it was correct. **A probe run seconds after "Deployed" tests the old version** ([[verify-at-the-destination]] applies to timing, not just destination). Verified against live data: a 1000-row band query returns every row inside 200k–250k with zero nulls, a min-only bound of 5M holds at the floor across 479 rows, an unbounded query is unchanged, and the ward filter is unaffected. Then drove the real production site headless — 10/10 on desktop and iPhone 13: Search rows all inside the band, the min>max error renders beside the fields, and the Map filter narrows the set with every row above the floor. Also raised FIX-026 (the "Reported cost" sort is a no-op in the two profile modes), noticed while reading `sortRows` for this work. (Claude Code)
 
 ### FEAT-027 · Integrate HighLevel CRM
 
