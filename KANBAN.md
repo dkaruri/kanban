@@ -632,24 +632,28 @@ Check whether the General Contractors and Open Subs counts shown at the top of t
 **Log:**
 - 2026-07-29 15:39 CT — created (Divyam)
 
-### FIX-002 · UI cleanup and mobile accessibility
+### FIX-002 · Site-wide ui-ux-pro-max pass: revitalize, clean up, and reformat elements without breaking anything
 
 - **Priority:** P3-Low
 - **Status:** todo
 - **Created:** 2026-07-27 10:09 CT
-- **Updated:** 2026-07-27 10:09 CT
+- **Updated:** 2026-07-31 11:31 CT
 - **Tags:** Chicago Permit Search Tool
 
-General UI polish plus accessibility on small screens.
+Invoke the **ui-ux-pro-max skill** across the whole site (index.html, map.html, list.html) to revitalize, clean up, and reformat elements — layout, spacing, hierarchy, contrast, touch ergonomics, motion — while ensuring FULL functionality is preserved. This is a design-quality sweep, not a redesign: every existing behavior, control, and flow must work exactly as before, proven by the test suite and screenshots, not assumed.
 
 **Checklist:**
+- [ ] Run the ui-ux-pro-max skill against all three pages, desktop and mobile viewports, both themes
+- [ ] Revitalize and reformat elements it flags: spacing/alignment to the 8px grid, type hierarchy and the 12px floor, contrast to WCAG AA, 44px touch targets, consistent chip/pill/button treatments
+- [ ] Clean up accumulated inconsistencies between the three pages (shared components should look and behave identically)
 - [ ] Audit layout and overflow on phone-sized viewports
-- [ ] Improve touch target sizes and contrast
-- [ ] Add ARIA labels / semantic markup where missing
-- [ ] Verify with Lighthouse accessibility pass
+- [ ] Add ARIA labels / semantic markup where missing; verify with a Lighthouse accessibility pass
+- [ ] FULL functionality guarantee: run the entire browser suite + unit tests after each change batch; screenshot-diff key screens so purely visual regressions get caught too
+- [ ] Log every element changed and why in this task's Log, so anything that looks different is traceable
 
 **Log:**
 - 2026-07-27 10:09 CT — created (Divyam)
+- 2026-07-31 11:31 CT — rescoped by Divyam: this is now an explicit site-wide ui-ux-pro-max skill pass — revitalize, clean up, and reformat elements while ensuring full functionality; title, description, and checklist updated (Claude)
 
 ### FIX-020 · The browser test suite is gitignored and exists on one machine only
 
