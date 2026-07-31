@@ -498,22 +498,28 @@ Sweep the tool for general bugs and browser/device compatibility issues.
 ### FIX-018 · Label the visited checkbox column "Visited/Called" on desktop and mobile
 
 - **Priority:** P2-Medium
-- **Status:** todo
+- **Status:** done
 - **Created:** 2026-07-29 15:55 CT
-- **Updated:** 2026-07-29 15:55 CT
+- **Updated:** 2026-07-31 13:41 CT
 - **Tags:** Chicago Permit Search Tool
 
 The visited checkbox on permits in My Permit List (`docs/list.html`) has no header label. Add a "Visited/Called" label at the top of the checkbox column so it is clear what checking it means, on both desktop and mobile layouts.
 
 **Checklist:**
-- [ ] Locate the visited-checkmark column (FEAT-008) in the list's desktop and mobile layouts
-- [ ] Add a "Visited/Called" header label above the checkbox column on desktop
-- [ ] Add the same label on the mobile layout, keeping it legible without breaking the row layout on small screens
-- [ ] Keep the label consistent with the column in any shared-list/read-only view if the checkbox appears there
-- [ ] Verify on desktop and phone viewports that the label renders, aligns with the checkboxes, and doesn't overflow
+- [x] Locate the visited-checkmark column (FEAT-008) in the list's desktop and mobile layouts
+- [x] Add a "Visited/Called" header label above the checkbox column on desktop
+- [x] Add the same label on the mobile layout, keeping it legible without breaking the row layout on small screens
+- [x] Keep the label consistent with the column in any shared-list/read-only view if the checkbox appears there
+- [x] Verify on desktop and phone viewports that the label renders, aligns with the checkboxes, and doesn't overflow
+- [x] Fix the thead/tbody column-order mismatch the visible label exposed (every header sat one column off)
 
 **Log:**
 - 2026-07-29 15:55 CT — created (Divyam)
+- 2026-07-31 13:17 CT — status → in-progress; started work in chicago-building-permits-search (Claude Code)
+- 2026-07-31 13:41 CT — implemented on branch `fix-018-visited-label` (`c6a52e7`, pushed). `docs/list.html`: the tick `<th>` now renders a visible "Visited/Called" (sr-only duplicate removed, `white-space: normal` so it can wrap at its `<wbr>` — `.saved-permits-table th` is nowrap above 640px); the cell's `data-label` carries the same text, which the mobile stacked-card layout prints via `::before` at 13.8px; the checkbox `aria-label` now says "visited/called". Shared/read-only lists render through the same `permitTable(..., move:true)` path, so they inherit it — there is no separate read-only renderer. (Claude Code)
+- 2026-07-31 13:41 CT — DEFECT FOUND AND FIXED while verifying: `thead` emitted the tick header FIRST while the row emitted the tick cell THIRD (after remove and select), so every header in the saved-permits table sat one column off. Harmless-looking while the tick header was a bare ✓ over an empty remove header; with a real label it put "Visited/Called" over the remove (×) column. `thead` now follows the row order (remove, select, tick). (Claude Code)
+- 2026-07-31 13:41 CT — verified headless at 1280px and iPhone 13 in light and dark (`verify-tmp/t47-visitedlabel.js`, 14 assertions; control run against the pre-fix code fails 5 of them). Screenshots reviewed at both viewports/themes. Full `list.html` browser suite (49 scripts) and 286 unit tests pass. Status → done. (Claude Code)
+- 2026-07-31 13:41 CT — NOTE, not fixed here (out of scope): every `<th>` in this table renders at 9.6px uppercase — below the 12px legibility floor. Site-wide table-header restyle, worth its own card. (Claude Code)
 
 ### FIX-021 · Desktop: make the list-header section (Starting Location through List Note) collapsible
 
