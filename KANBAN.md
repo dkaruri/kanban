@@ -720,6 +720,30 @@ Invoke the **ui-ux-pro-max skill** across the whole site (index.html, map.html, 
 - 2026-07-30 15:55 CT — created (Claude Code, at Divyam's request after FIX-010)
 - 2026-07-30 18:40 CT — related flakiness fixed ahead of this card, on branch `fix-008-map-view` (`6895d95`). `t14-live` was failing ~50% of runs (measured 4/8) because it waited on `typeof shareUserList === "function"` — declarations hoist, so init had not run and its async tail replaced `state.lists`, wiping the seed. 10/10 after. Scanning for the same predicate found it in 13 MORE suites, passing but latently flaky. Converting them exposed the deeper defect: `data-ready` was set on the LAST line of `init()`, after `await search()`, which REJECTS on local preview because the Worker is CORS-locked to the Pages origin — so the flag stayed undefined forever and anything waiting on it hung. The flag now lives in one `.finally()` per page and means "init finished", not "init succeeded"; duplicates that had drifted across the three pages are gone and `map.html` has it for the first time. Two clean full sweeps: 0 failures of 47, twice. A third sweep reported `FAIL t17.js` but was killed mid-run — t17 then passed 8/8 in isolation, so that was the teardown, not a flake (Claude Code)
 
+### FIX-025 · Filter inputs are under 16px, so iOS zooms the page on every focus
+
+- **Priority:** P2-Medium
+- **Status:** todo
+- **Created:** 2026-07-31 14:39 CT
+- **Updated:** 2026-07-31 14:39 CT
+- **Tags:** Chicago Permit Search Tool
+
+Measured while building FEAT-021, on the fields next to the new ones — this is pre-existing and site-wide, not caused by that work. Safari on iOS auto-zooms the page whenever a focused input's font is below 16px, and then leaves the page zoomed in; the user has to pinch back out after every filter edit.
+
+Measured at an iPhone 13 viewport: every control in the Search panel renders at **15px** (`body.directory-page .controls input` sets `font-size: 1rem`, but `index.html` shrinks `html` to 15px below 640px, so 1rem is not 16px there — the same rem trap recorded on FIX-022), and every field in the map filter drawer renders at **14.4px** (`map-date-from` at 13.76px). Touch heights are fine: 44–50px throughout.
+
+Not fixed inside FEAT-021 on purpose: the new value-range fields were matched to their neighbours rather than made the only 16px inputs in a row of 15px ones. It needs one deliberate pass across all three pages.
+
+**Checklist:**
+- [ ] Decide the fix: raise the inputs to a hard 16px, or stop shrinking `html` below 640px (check what else depends on that rem before touching it)
+- [ ] Apply to `index.html`, `map.html` and `list.html` — the rem behaves differently per page, so verify each rather than assuming one rule covers all three
+- [ ] Confirm the date inputs too (`map-date-from`/`map-date-to` are the smallest at 13.76px)
+- [ ] Verify at an iPhone 13 viewport that no control computes below 16px
+- [ ] Confirm on a real iOS device that focusing a filter no longer zooms — headless cannot show this
+
+**Log:**
+- 2026-07-31 14:39 CT — created (Claude Code, from measurements taken during FEAT-021)
+
 ---
 
 ## ✨ Features
@@ -775,20 +799,33 @@ All three phases are shipped and live.
 - **Priority:** P1-High
 - **Status:** in-progress
 - **Created:** 2026-07-27 10:09 CT
-- **Updated:** 2026-07-31 14:20 CT
+- **Updated:** 2026-07-31 14:39 CT
 - **Tags:** Chicago Permit Search Tool
 
 Filter/search by permit (reported cost) value range in both the Search tool and the Map Search tool.
 
+Built on branch `feat-021-permit-value-range` (`9fa3c37`), awaiting approval to merge.
+
+Scope decision: the range shows only in **Open Permits** mode on the Search tool. The General Contractors / Open Subs modes are contractor profiles whose only money field is `reported_cost_total` (a lifetime sum across all their jobs) — filtering that by a per-permit range would answer a different question than the card asks, so `setMode()` hides the fields there.
+
+Where the filtering happens, and why it differs per surface:
+- **Search** sends `cost_min` / `cost_max` to the Worker, which adds a `reported_cost` clause to the SoQL. Not filtered in the browser: `/api/permits` caps at 1000 rows ordered by `issue_date DESC`, so a client-side filter would silently drop every match outside that first page.
+- **Map Search** filters the already-loaded month shards in the browser on `row.c`. The shards are cached per month, so pushing the range into the Socrata query would break that cache for no gain.
+- A permit with **no** reported cost drops out once either bound is set — it cannot be shown to sit inside a range.
+- `min > max` shows an inline `role="alert"` error beside the fields on both pages. Deliberately **not** `#map-status-strip`: that strip is `display: none` below the mobile breakpoint, so the existing "Choose a valid date range." error is already invisible on a phone (worth its own card if you want it fixed).
+
 **Checklist:**
-- [ ] Add value-range input to Search filters
-- [ ] Add value-range filter to Map Search
-- [ ] Ensure indexes expose reported cost efficiently
-- [ ] Verify results match range on both tools
+- [x] Add value-range input to Search filters
+- [x] Add value-range filter to Map Search
+- [x] Ensure indexes expose reported cost efficiently
+- [x] Verify results match range on both tools
+- [x] ui-ux-pro-max at design time and again before landing (desktop + iPhone 13, both themes)
+- [ ] Merge to main and verify on production (awaiting approval)
 
 **Log:**
 - 2026-07-27 10:09 CT — created (Divyam)
 - 2026-07-31 14:20 CT — status → in-progress; starting design pass (Claude Code)
+- 2026-07-31 14:39 CT — implemented on `feat-021-permit-value-range` (`9fa3c37`), pushed. No index work was needed: `reported_cost` was already in the `$select` for both the Worker query and the map's Socrata fetch. Also moved `permits.js` off its `index.js` import to a local `json()` helper (same pattern as profiles.js) — importing index.js pulls in `cloudflare:workers`, which `node --test` cannot load, so the endpoint had no tests at all before this. Verified: 6 new Worker tests (164 total pass), 128 unit tests, and `verify-tmp/t49-value-range.js` — 68 assertions across desktop and iPhone 13, each confirmed to FAIL against the un-fixed code. The pre-landing UI pass caught one real defect the assertions missed: `.controls > p { order: 8 }` outranked the error's own rule and parked the message below the Search button, a screen away from the fields; fixed and now asserted by layout position, not DOM order. Raised FIX-025 for a pre-existing issue measured along the way. (Claude Code)
 
 ### FEAT-027 · Integrate HighLevel CRM
 
