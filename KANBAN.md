@@ -723,12 +723,12 @@ Invoke the **ui-ux-pro-max skill** across the whole site (index.html, map.html, 
 ### FIX-026 · "Reported cost" sort does nothing in General Contractors / Open Subs modes
 
 - **Priority:** P2-Medium
-- **Status:** in-progress
+- **Status:** done
 - **Created:** 2026-07-31 14:44 CT
-- **Updated:** 2026-07-31 15:00 CT
+- **Updated:** 2026-07-31 15:06 CT
 - **Tags:** Chicago Permit Search Tool
 
-Fixed on branch `fix-026-cost-sort` (`881e67c`), awaiting approval to merge.
+Live as `ab3f7b4`.
 
 Found while building FEAT-021. The Sort dropdown in `index.html` offers "Reported cost" in all three search modes, but it is a no-op in two of them: picking it reorders nothing, and the results silently stay in their previous order.
 
@@ -743,11 +743,12 @@ Decide which is meant before fixing, since they are different questions: sort co
 - [x] If mapping it, relabel so the column and the option say what is being sorted ("Total reported cost") — a lifetime sum under a "Reported cost" label invites the same confusion
 - [x] Check `sortValue()`'s `cost` key and the sortable results-table headers for the same mismatch — clean, no change needed: the contacts table has no cost column and its sortable headers are name/type/public-contact/open-jobs/open-job-age, so the `cost` key belongs to the permits table only
 - [x] Verify by sorting each of the three modes and confirming the order actually changes and is correct
-- [ ] Merge to main and verify on production (awaiting approval)
+- [x] Merge to main and verify on production
 
 **Log:**
 - 2026-07-31 14:44 CT — created (Claude Code, noticed during FEAT-021)
 - 2026-07-31 15:00 CT — fixed on `fix-026-cost-sort` (`881e67c`), pushed. `sortFieldFor()` resolves the dropdown's key per mode (`reported_cost` → `reported_cost_total` outside Open Permits) and the option is relabelled "Total reported cost" there. Verified by `verify-tmp/t50-costsort.js` — 11 assertions that check the ORDER changes and is correct, not that a control exists, since the old bug passed every presence check; confirmed to FAIL against the un-fixed code, where the list stays in `open_jobs` order. FEAT-021's 68 assertions, 164 Worker tests and the neighbouring suites still pass. **Scope note:** `list.html` and `map.html` carry copies of the same `sortRows`, both behind `display: none` (`.layout` and `.controls` respectively), so the bug is unreachable there and they were left alone — if FIX-002's site-wide pass un-hides that directory, it has to carry this fix. **Observed, not changed:** the contacts table shows no cost column, so the new order has no visible justification — but that is pre-existing and consistent, since "Total jobs" and "Days to get issued" are equally invisible in that table. Adding a value column is a separate design call. (Claude Code)
+- 2026-07-31 15:06 CT — **DONE, live.** Merged `--no-ff` to main (`ab3f7b4`); Pages build 2m34s. No Worker change, so this was a merge-only ship. Verified against the real dataset on production, desktop and iPhone 13, 20/20: in both profile modes the cost sort reorders the list and **every** row is descending by `reported_cost_total` (top GC: GILBANE BUILDING COMPANY at $1,207,719,804; top Open Sub: MAP STRATEGIES LLC at $4,283,481,870), the option reads "Total reported cost" there and "Reported cost" in Open Permits, and Open Permits still sorts descending by per-permit cost. (Claude Code)
 
 ### FIX-025 · Filter inputs are under 16px, so iOS zooms the page on every focus
 
