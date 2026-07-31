@@ -285,7 +285,7 @@ Reported by Divyam after entering the wrong name. The only workarounds today are
 - **Priority:** P0-Critical
 - **Status:** done
 - **Created:** 2026-07-31 16:11 CT
-- **Updated:** 2026-07-31 16:11 CT
+- **Updated:** 2026-07-31 16:19 CT
 - **Tags:** Chicago Permit Search Tool
 
 Tapping a permit in My Permit List opened the permit overlay with nothing in it. Live-only: every real permit that names a general contractor was affected, from the moment FEAT-034 shipped.
@@ -306,6 +306,7 @@ It shipped green because all three FEAT-034 guards (t44, t45, t46) invented the 
 **Log:**
 - 2026-07-31 16:11 CT — found while starting FIX-022; Divyam reported the permit view opening blank (Claude Code)
 - 2026-07-31 16:11 CT — fixed on branch `fix-023-permit-view-empty` (pushed, NOT merged — awaiting approval). Client-only, `docs/list.html`; no Worker deploy needed. **Lesson: the three guards written for FEAT-034 all used a fixture shape that exists nowhere in the product, so a feature that crashed on every real permit passed its own tests. A fixture is a claim about production data and has to be checked against it** (Claude Code)
+- 2026-07-31 16:19 CT — merged to main (`b6d8288`, --no-ff) at Divyam's request and pushed; branch deleted. Re-verified on the merged tree against a live row before pushing. Client-only, live on GitHub Pages once Pages rebuilds (Claude Code)
 
 ### FIX-022 · Desktop: "Read more" link opens GC/Open Sub view instead of the whole area being clickable; GC View shows full names with actions right-aligned
 
