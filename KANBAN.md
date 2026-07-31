@@ -755,8 +755,10 @@ Decide which is meant before fixing, since they are different questions: sort co
 - **Priority:** P2-Medium
 - **Status:** in-progress
 - **Created:** 2026-07-31 14:39 CT
-- **Updated:** 2026-07-31 15:07 CT
+- **Updated:** 2026-07-31 15:17 CT
 - **Tags:** Chicago Permit Search Tool
+
+Fixed on branch `fix-025-input-zoom` (`fc387c2`), awaiting approval to merge.
 
 Measured while building FEAT-021, on the fields next to the new ones — this is pre-existing and site-wide, not caused by that work. Safari on iOS auto-zooms the page whenever a focused input's font is below 16px, and then leaves the page zoomed in; the user has to pinch back out after every filter edit.
 
@@ -765,15 +767,18 @@ Measured at an iPhone 13 viewport: every control in the Search panel renders at 
 Not fixed inside FEAT-021 on purpose: the new value-range fields were matched to their neighbours rather than made the only 16px inputs in a row of 15px ones. It needs one deliberate pass across all three pages.
 
 **Checklist:**
-- [ ] Decide the fix: raise the inputs to a hard 16px, or stop shrinking `html` below 640px (check what else depends on that rem before touching it)
-- [ ] Apply to `index.html`, `map.html` and `list.html` — the rem behaves differently per page, so verify each rather than assuming one rule covers all three
-- [ ] Confirm the date inputs too (`map-date-from`/`map-date-to` are the smallest at 13.76px)
-- [ ] Verify at an iPhone 13 viewport that no control computes below 16px
+- [x] Decide the fix: raise the inputs to a hard 16px, or stop shrinking `html` below 640px — **raised the controls**. The shrink is a deliberate density choice the rest of the layout is built on, and this is a form-control problem, so the fix belongs on form controls rather than on the page's type scale
+- [x] Apply to `index.html`, `map.html` and `list.html` — the rem behaves differently per page, so verify each rather than assuming one rule covers all three
+- [x] Confirm the date inputs too (`map-date-from`/`map-date-to` are the smallest at 13.76px)
+- [x] Verify at an iPhone 13 viewport that no control computes below 16px
+- [x] Verify raising the type did not break the layouts — no clipping, no control past the viewport edge, no horizontal scroll at 390px, and no leak to desktop
 - [ ] Confirm on a real iOS device that focusing a filter no longer zooms — headless cannot show this
+- [ ] Merge to main (awaiting approval)
 
 **Log:**
 - 2026-07-31 14:39 CT — created (Claude Code, from measurements taken during FEAT-021)
 - 2026-07-31 15:07 CT — status → in-progress; auditing every form control on all three pages before choosing the fix (Claude Code)
+- 2026-07-31 15:17 CT — fixed on `fix-025-input-zoom` (`fc387c2`), pushed. The audit found **32** controls under the floor, not the handful the card listed: 9 on index.html (15px), 14 on map.html (14.4px, dates 13.76px) and 9 on list.html. Applied as a blanket 16px floor on `input`/`select`/`textarea` below 640px, in **px** — `1rem` is exactly the trap that caused this bug, meaning 15px on index.html (shrinks `html`) and 16px on list.html (shrinks only `body`). Chose a blanket floor over per-field rules because the walkthrough/photo/note dialogs render on demand and an id-by-id fix would have missed them — the first audit did miss them, until the test suite opened the dialogs. **Two traps worth recording.** (1) The rule needs `:is()`: written as three plain selectors, `html body select` scores 0-0-3 and LOSES to `body.directory-page .controls select` (0-2-2), which is exactly what happened on the first attempt — the inputs passed and #sort/#mode-select stayed at 15px, because the input arm happened to carry two `[type]` tests. `:is()` takes its most specific argument so every arm lands at 0-2-3. (2) `#photo-compose .dlg-field input` is id-scoped (1-1-2) and outranks the floor, so it was fixed at source or it would have been the one control still zooming. Verified by `verify-tmp/t51-input-zoom.js`, 15 assertions across all three pages, confirmed to FAIL against the un-fixed code; it also covers the half that could have broken things (no clipping, nothing past the viewport, no horizontal scroll at 390px) and that the floor does not leak to desktop, checked byte-for-byte against main. t47/t48/t49/t50 still pass. **Only the real-device confirmation is left** — headless cannot show the zoom. (Claude Code)
 
 ---
 
