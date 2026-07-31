@@ -311,25 +311,29 @@ It shipped green because all three FEAT-034 guards (t44, t45, t46) invented the 
 ### FIX-022 · Desktop: "Read more" link opens GC/Open Sub view instead of the whole area being clickable; GC View shows full names with actions right-aligned
 
 - **Priority:** P1-High
-- **Status:** todo
+- **Status:** done
 - **Created:** 2026-07-30 15:41 CT
-- **Updated:** 2026-07-30 16:06 CT
+- **Updated:** 2026-07-31 18:01 CT
 - **Tags:** Chicago Permit Search Tool
 
 Two desktop problems around GC/Open Sub rows. (1) In the Permit View, the WHOLE General Contractor area (and likewise the whole Open Sub area) is currently the click target that opens the GC View / Open Sub View (FEAT-025 card stack). Replace that: add a clearly clickable "Read more" text on the RIGHT of the GC/Open Sub row that navigates to the respective view, and make the rest of the area inert for navigation — so the name and details can be highlighted/selected/copied freely without accidentally opening the card. (2) Inside GC View, long names truncate to "…"; display names in full (wrap, don't clip), and move the per-row actions (Call, Add to list) to be right-aligned so full names have the row width to breathe.
 
 **Checklist:**
-- [ ] Permit view: add a "Read more" clickable text on the right of the General Contractor area that opens the GC View; remove the whole-area click target so the name/details are freely selectable
-- [ ] Same for Open Subs: "Read more" on the right of each Open Sub area opens the Open Sub view; the rest of the area no longer navigates
-- [ ] "Read more" is an obvious affordance (link-styled, keyboard-accessible, focus ring) and announces where it goes (accessible name like "Read more about <name>")
-- [ ] GC View: remove the "…" truncation on names — render them in full, wrapping to multiple lines when long
-- [ ] GC View: right-align the Call and Add-to-list actions on their rows; keep alignment consistent across rows as names wrap
-- [ ] Check the same rows on narrow/mobile widths — this ticket targets desktop, so mobile behavior must not regress (tap-to-open, truncation rules, and tap targets there stay as designed)
-- [ ] Verify with hostile cases: very long company names, names with no spaces, 4-digit counts, and both themes
+- [x] Permit view: add a "Read more" clickable text on the right of the General Contractor area that opens the GC View; remove the whole-area click target so the name/details are freely selectable
+- [x] Same for Open Subs: "Read more" on the right of each Open Sub area opens the Open Sub view; the rest of the area no longer navigates
+- [x] "Read more" is an obvious affordance (link-styled, keyboard-accessible, focus ring) and announces where it goes (accessible name like "Read more about <name>")
+- [x] GC View: remove the "…" truncation on names — render them in full, wrapping to multiple lines when long
+- [x] GC View: right-align the Call and Add-to-list actions on their rows; keep alignment consistent across rows as names wrap
+- [x] Check the same rows on narrow/mobile widths — this ticket targets desktop, so mobile behavior must not regress (tap-to-open, truncation rules, and tap targets there stay as designed)
+- [x] Verify with hostile cases: very long company names, names with no spaces, 4-digit counts, and both themes
+- [x] Owner ("owner as general contractor") rows go through the same hydration — they got the same treatment, and the "No profile on file" note still sits under the name rather than beside the link
 
 **Log:**
 - 2026-07-30 15:41 CT — created (Divyam)
 - 2026-07-30 16:06 CT — reworded by Divyam: rather than making the name text selectable within a clickable area, replace the whole-area click target with a "Read more" link on the right of the GC/Open Sub row that opens the respective view; applies to both GCs and Open Subs. GC View full-name + right-aligned actions half unchanged (Claude)
+- 2026-07-31 16:32 CT — in-progress on branch `fix-022-read-more`. Divyam chose ONE behaviour at every width: "Read more" is the only click target on desktop AND mobile, the row itself never navigates (so the name is selectable on a phone too). Design-time `ui-ux-pro-max` pass done — 44px target, focus ring, descriptive accessible name, wrap-over-truncate (Claude Code)
+- 2026-07-31 18:01 CT — done: `53cae02` on branch `fix-022-read-more`, pushed, NOT merged (awaiting approval). Client-only, `docs/index.html` + `docs/list.html` patched identically; no Worker deploy needed. The GC View header keeps the stacked layout on desktop via a new `contact-card` class, so the permit card's own header is untouched. Two things the ticket did not name and the build needed: a 66-character name with no spaces overflowed the row until `.ci-main` got `overflow-wrap: anywhere`, and the global `button { width: 100% }` made "Add all N to list" claim the whole row and wrap below Call (Claude Code)
+- 2026-07-31 18:01 CT — verified: t18 rewritten to assert the row does NOT navigate and the link is a 44px target right of the details with the right accessible name; t19 + t37 now drive the link. Both fail against the unfixed tree and pass against the fix. New `verify-tmp/_shotreadmore.js` covers desktop + iPhone 13 × light/dark with hostile names. Full regression green: 55/55 browser scripts, 128 client + 158 Worker unit tests. Link contrast measured 7.76:1 light / 8.61:1 dark (Claude Code)
 
 ### FIX-006 · Shared permit-list link should layer over the directory with a back button
 
