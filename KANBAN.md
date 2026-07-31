@@ -720,6 +720,31 @@ Invoke the **ui-ux-pro-max skill** across the whole site (index.html, map.html, 
 - 2026-07-30 15:55 CT — created (Claude Code, at Divyam's request after FIX-010)
 - 2026-07-30 18:40 CT — related flakiness fixed ahead of this card, on branch `fix-008-map-view` (`6895d95`). `t14-live` was failing ~50% of runs (measured 4/8) because it waited on `typeof shareUserList === "function"` — declarations hoist, so init had not run and its async tail replaced `state.lists`, wiping the seed. 10/10 after. Scanning for the same predicate found it in 13 MORE suites, passing but latently flaky. Converting them exposed the deeper defect: `data-ready` was set on the LAST line of `init()`, after `await search()`, which REJECTS on local preview because the Worker is CORS-locked to the Pages origin — so the flag stayed undefined forever and anything waiting on it hung. The flag now lives in one `.finally()` per page and means "init finished", not "init succeeded"; duplicates that had drifted across the three pages are gone and `map.html` has it for the first time. Two clean full sweeps: 0 failures of 47, twice. A third sweep reported `FAIL t17.js` but was killed mid-run — t17 then passed 8/8 in isolation, so that was the teardown, not a flake (Claude Code)
 
+### FIX-026 · "Reported cost" sort does nothing in General Contractors / Open Subs modes
+
+- **Priority:** P2-Medium
+- **Status:** todo
+- **Created:** 2026-07-31 14:44 CT
+- **Updated:** 2026-07-31 14:44 CT
+- **Tags:** Chicago Permit Search Tool
+
+Found while building FEAT-021. The Sort dropdown in `index.html` offers "Reported cost" in all three search modes, but it is a no-op in two of them: picking it reorders nothing, and the results silently stay in their previous order.
+
+Cause: `sortRows()` sorts on `Number(b[key] || 0)` with `key = "reported_cost"`. Open Permits rows do carry `reported_cost`, so it works there. General Contractors and Open Subs rows are contractor **profiles** — their money field is `reported_cost_total` (the lifetime sum across that contractor's jobs), and they have no `reported_cost` at all. So every row evaluates to 0 and the comparator reports every pair as equal.
+
+The silence is the problem: nothing errors, the dropdown shows the selection, and the list just doesn't change — so it reads as "these are already sorted by cost" rather than as a broken control.
+
+Decide which is meant before fixing, since they are different questions: sort contractors by their **lifetime** reported-cost total (`reported_cost_total`, the field that exists), or drop the option from the two profile modes the way FEAT-021 hides the value range there.
+
+**Checklist:**
+- [ ] Decide: map the sort to `reported_cost_total` in profile modes, or remove the option from those modes
+- [ ] If mapping it, relabel so the column and the option say what is being sorted ("Total reported cost") — a lifetime sum under a "Reported cost" label invites the same confusion
+- [ ] Check `sortValue()`'s `cost` key and the sortable results-table headers for the same mismatch
+- [ ] Verify by sorting each of the three modes and confirming the order actually changes and is correct
+
+**Log:**
+- 2026-07-31 14:44 CT — created (Claude Code, noticed during FEAT-021)
+
 ### FIX-025 · Filter inputs are under 16px, so iOS zooms the page on every focus
 
 - **Priority:** P2-Medium
