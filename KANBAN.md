@@ -104,7 +104,7 @@ Root cause was not the overlay. `body` carried `overflow-x: hidden` alongside `h
 - [x] Confirm no horizontal scroll returns on any page at 1280/390/320
 - [x] Guard test that fails against the pre-fix code
 - [x] Merge and deploy
-- [ ] Confirm on Divyam's own browser after deploy (headless cannot render scrollbars — see log)
+- [x] Confirm on Divyam's own browser after deploy (headless cannot render scrollbars — see log)
 
 **Log:**
 - 2026-07-31 14:05 CT — created from a user report, already diagnosed and fixed in the same session (Claude Code)
@@ -112,6 +112,7 @@ Root cause was not the overlay. `body` carried `overflow-x: hidden` alongside `h
 - 2026-07-31 14:05 CT — CAVEAT: this headless build has overlay scrollbars (width 0) and CANNOT render the symptom. A forced-`::-webkit-scrollbar` probe was tried and rejected — a control read 2px on a known scroller, so the probe was blind, not clean. The fix rests on structural evidence (body was a scroll container with real scrollable overflow, and now is not), so the last checklist item is a human confirmation on a classic-scrollbar browser. (Claude Code)
 - 2026-07-31 14:05 CT — NOTE: `map.html`'s ≤640px `body.map-page { overflow-y: auto }` deliberately opts body into scrolling and was left alone. (Claude Code)
 - 2026-07-31 14:14 CT — merged to `main` with user approval (`27e341d`, `--no-ff`), branch deleted, GitHub Pages deployed (2m25s). Verified against the LIVE site by driving a real open/close at 1280px and on iPhone 13: body computes `overflow-y: visible`, does not scroll independently, no horizontal scroll, zero page errors. Still open: Divyam's own confirmation on a classic-scrollbar browser — hard-refresh first (Ctrl+Shift+R). (Claude Code)
+- 2026-07-31 14:22 CT — CONFIRMED FIXED by Divyam on his own browser: the second scrollbar is gone. Closes the one thing headless could not verify. (Claude Code)
 
 ### FIX-004 · Scope Optimize Route to the full permit list
 
