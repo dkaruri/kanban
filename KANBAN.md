@@ -773,9 +773,9 @@ All three phases are shipped and live.
 ### FEAT-021 · Add permit value range to Search and Map Search
 
 - **Priority:** P1-High
-- **Status:** todo
+- **Status:** in-progress
 - **Created:** 2026-07-27 10:09 CT
-- **Updated:** 2026-07-27 10:09 CT
+- **Updated:** 2026-07-31 14:20 CT
 - **Tags:** Chicago Permit Search Tool
 
 Filter/search by permit (reported cost) value range in both the Search tool and the Map Search tool.
@@ -788,6 +788,7 @@ Filter/search by permit (reported cost) value range in both the Search tool and 
 
 **Log:**
 - 2026-07-27 10:09 CT — created (Divyam)
+- 2026-07-31 14:20 CT — status → in-progress; starting design pass (Claude Code)
 
 ### FEAT-027 · Integrate HighLevel CRM
 
