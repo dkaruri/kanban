@@ -753,9 +753,9 @@ Decide which is meant before fixing, since they are different questions: sort co
 ### FIX-025 · Filter inputs are under 16px, so iOS zooms the page on every focus
 
 - **Priority:** P2-Medium
-- **Status:** todo
+- **Status:** in-progress
 - **Created:** 2026-07-31 14:39 CT
-- **Updated:** 2026-07-31 14:39 CT
+- **Updated:** 2026-07-31 15:07 CT
 - **Tags:** Chicago Permit Search Tool
 
 Measured while building FEAT-021, on the fields next to the new ones — this is pre-existing and site-wide, not caused by that work. Safari on iOS auto-zooms the page whenever a focused input's font is below 16px, and then leaves the page zoomed in; the user has to pinch back out after every filter edit.
@@ -773,6 +773,7 @@ Not fixed inside FEAT-021 on purpose: the new value-range fields were matched to
 
 **Log:**
 - 2026-07-31 14:39 CT — created (Claude Code, from measurements taken during FEAT-021)
+- 2026-07-31 15:07 CT — status → in-progress; auditing every form control on all three pages before choosing the fix (Claude Code)
 
 ---
 
