@@ -723,10 +723,12 @@ Invoke the **ui-ux-pro-max skill** across the whole site (index.html, map.html, 
 ### FIX-026 · "Reported cost" sort does nothing in General Contractors / Open Subs modes
 
 - **Priority:** P2-Medium
-- **Status:** todo
+- **Status:** in-progress
 - **Created:** 2026-07-31 14:44 CT
-- **Updated:** 2026-07-31 14:44 CT
+- **Updated:** 2026-07-31 15:00 CT
 - **Tags:** Chicago Permit Search Tool
+
+Fixed on branch `fix-026-cost-sort` (`881e67c`), awaiting approval to merge.
 
 Found while building FEAT-021. The Sort dropdown in `index.html` offers "Reported cost" in all three search modes, but it is a no-op in two of them: picking it reorders nothing, and the results silently stay in their previous order.
 
@@ -737,13 +739,15 @@ The silence is the problem: nothing errors, the dropdown shows the selection, an
 Decide which is meant before fixing, since they are different questions: sort contractors by their **lifetime** reported-cost total (`reported_cost_total`, the field that exists), or drop the option from the two profile modes the way FEAT-021 hides the value range there.
 
 **Checklist:**
-- [ ] Decide: map the sort to `reported_cost_total` in profile modes, or remove the option from those modes
-- [ ] If mapping it, relabel so the column and the option say what is being sorted ("Total reported cost") — a lifetime sum under a "Reported cost" label invites the same confusion
-- [ ] Check `sortValue()`'s `cost` key and the sortable results-table headers for the same mismatch
-- [ ] Verify by sorting each of the three modes and confirming the order actually changes and is correct
+- [x] Decide: map the sort to `reported_cost_total` in profile modes, or remove the option from those modes — **mapped**, because the ranking is useful and the data exists: it surfaces the highest-dollar-volume contractors, which is the question the two profile modes are for
+- [x] If mapping it, relabel so the column and the option say what is being sorted ("Total reported cost") — a lifetime sum under a "Reported cost" label invites the same confusion
+- [x] Check `sortValue()`'s `cost` key and the sortable results-table headers for the same mismatch — clean, no change needed: the contacts table has no cost column and its sortable headers are name/type/public-contact/open-jobs/open-job-age, so the `cost` key belongs to the permits table only
+- [x] Verify by sorting each of the three modes and confirming the order actually changes and is correct
+- [ ] Merge to main and verify on production (awaiting approval)
 
 **Log:**
 - 2026-07-31 14:44 CT — created (Claude Code, noticed during FEAT-021)
+- 2026-07-31 15:00 CT — fixed on `fix-026-cost-sort` (`881e67c`), pushed. `sortFieldFor()` resolves the dropdown's key per mode (`reported_cost` → `reported_cost_total` outside Open Permits) and the option is relabelled "Total reported cost" there. Verified by `verify-tmp/t50-costsort.js` — 11 assertions that check the ORDER changes and is correct, not that a control exists, since the old bug passed every presence check; confirmed to FAIL against the un-fixed code, where the list stays in `open_jobs` order. FEAT-021's 68 assertions, 164 Worker tests and the neighbouring suites still pass. **Scope note:** `list.html` and `map.html` carry copies of the same `sortRows`, both behind `display: none` (`.layout` and `.controls` respectively), so the bug is unreachable there and they were left alone — if FIX-002's site-wide pass un-hides that directory, it has to carry this fix. **Observed, not changed:** the contacts table shows no cost column, so the new order has no visible justification — but that is pre-existing and consistent, since "Total jobs" and "Days to get issued" are equally invisible in that table. Adding a value column is a separate design call. (Claude Code)
 
 ### FIX-025 · Filter inputs are under 16px, so iOS zooms the page on every focus
 
