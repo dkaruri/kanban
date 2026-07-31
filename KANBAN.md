@@ -181,9 +181,9 @@ The zoning data shown with a permit/parcel should say what the zoning district a
 ### FIX-008 · Remember map layers and filters across page reload
 
 - **Priority:** P1-High
-- **Status:** in-progress
+- **Status:** done
 - **Created:** 2026-07-28 14:06 CT
-- **Updated:** 2026-07-30 18:10 CT
+- **Updated:** 2026-07-31 10:58 CT
 - **Tags:** Chicago Permit Search Tool
 
 Map Search (`docs/map.html`) should persist the user's selected layers and filters (month, date range, GC job-count range, and future work-type/residential/value filters) so reloading the page restores the same view.
@@ -198,6 +198,7 @@ Map Search (`docs/map.html`) should persist the user's selected layers and filte
 **Log:**
 - 2026-07-28 14:06 CT — created (Divyam)
 - 2026-07-30 18:10 CT — in-progress. INVENTORY FIRST, and it changed the job: the filters and layers this ticket asks for ALREADY persist, shipped 2026-07-20 under `chi_permit_map_settings` and `chi_permit_map_layers`. Drove the page and diffed state across a reload — every control (date from/to, GC min/max, neighborhood, query, radius) and every layer toggle (permits, clusters, heat, zoning, TIF) survived. Stale and corrupt saved state also already degrade cleanly: future date ranges, reversed ranges, non-numeric GC bounds, wrong types throughout, and a corrupt layers blob all came back with ZERO page errors and a live map. Checklist items 2 and 4 were already satisfied; rebuilding them would have been busywork (Claude Code)
+- 2026-07-31 10:58 CT — done; final piece MERGED to main (`1d06dd9`, --no-ff) and live. The viewport was the only real gap, now saved on `moveend` under `chi_permit_map_view`. Two defects in that persistence, both fixed: the `moveend` saver was attached INSIDE the map's `load` handler, which waits on network tiles — so a pan before tiles finished was silently never recorded (tracing every write to the key showed ZERO saves and a null value); and the one-shot that stops a restored search query yanking the map back to its address was consumed by ANY render, including the first one that had no search location yet, so the suppression was spent before the geocode resolved. The second only became visible once the tiles were stubbed, because the unstubbed network was hiding it behind the first. Guard `t40-mapstate.js` went from 2/6 passing to green (Claude Code)
 - 2026-07-30 18:10 CT — the one real gap was the VIEWPORT. Pan or zoom anywhere, reload, and the map threw you back to the whole-city default with your filters still applied — the part of "restores the same view" that was actually broken. Fixed on branch `fix-008-map-view` (`bb8cb8c`, pushed, NOT merged): saved on moveend under a new `chi_permit_map_view` key and used to CONSTRUCT the map rather than jumped to afterwards, so there is no lurch from the default. Validated on read — anything non-finite or out of range falls back, because a NaN reaching maplibre leaves a blank canvas with no error, which is worse than the default view (Claude Code)
 - 2026-07-30 18:10 CT — also suppresses ONE re-centre at restore time: the saved search query is re-geocoded on load, and its easeTo would otherwise yank the map back to the address on every reload, so panning away from a searched address and reloading lost your position — the same bug wearing a different hat. That suppression had a real defect the tests caught: the map object is REBUILT on render, not only at page load, so arming the flag per construction re-armed it on every rebuild and stopped genuine NEW searches flying to the address. Now armed once per page load (Claude Code)
 - 2026-07-30 18:10 CT — guard `t40-mapstate.js` covers all six behaviours and fails 2/6 against the pre-fix code. 111 client unit tests, 46/47 browser suites — `t14-live` is a pre-existing live-network flake (fails ~1 run in 3, exercises list sharing, nothing to do with the map). No ui-ux-pro-max pass: nothing visual was added or reworked, this restores position only. Awaiting merge approval (Claude Code)
@@ -405,22 +406,23 @@ For General Contractors, the "average processing days" stat currently measures a
 ### FIX-013 · Desktop: tag chips at the top should size to their text, not the list width
 
 - **Priority:** P2-Medium
-- **Status:** todo
+- **Status:** done
 - **Created:** 2026-07-29 13:11 CT
-- **Updated:** 2026-07-29 13:11 CT
+- **Updated:** 2026-07-31 10:58 CT
 - **Tags:** Chicago Permit Search Tool
 
 On desktop, the tags listed at the top stretch to the width of the list/container instead of hugging their text. Each tag should be an inline pill sized to its content (fit-content / inline-flex), wrapping naturally as a row of chips — not full-width blocks.
 
 **Checklist:**
-- [ ] Locate the tag elements and identify why they expand (block-level display, width:100%, or a stretched flex/grid item)
-- [ ] Size each tag to its text with appropriate padding; lay the group out as a wrapping chip row
-- [ ] Confirm mobile/narrow layout is unchanged (or improved) by the change
-- [ ] Check hover/focus states and touch targets still meet the ui-ux-pro-max standard after resizing
-- [ ] Verify on desktop widths across the pages where these tags appear
+- [x] Locate the tag elements and identify why they expand (block-level display, width:100%, or a stretched flex/grid item)
+- [x] Size each tag to its text with appropriate padding; lay the group out as a wrapping chip row
+- [x] Confirm mobile/narrow layout is unchanged (or improved) by the change
+- [x] Check hover/focus states and touch targets still meet the ui-ux-pro-max standard after resizing
+- [x] Verify on desktop widths across the pages where these tags appear
 
 **Log:**
 - 2026-07-29 13:11 CT — created (Divyam)
+- 2026-07-31 10:58 CT — done; MERGED to main (`ea2af41`, --no-ff) and live. Root cause was the global `button, input, select, textarea { width: 100% }` reset at the top of `docs/list.html` catching every `<button class="tag">` — measured 1039px on desktop and 348px on mobile, one chip per row. The sibling `<span class="tag">` chips were never affected, which is why only some pills looked wrong. Same trap as FIX-016's inline "Posting as" button: a button that is not a form control has to opt out of BOTH width and min-height. Fixed alongside a mojibake `::before` tick on selected chips (visible garbage on every pressed pill), now written as the CSS escape `\2713` so no future encoding round-trip can corrupt it. One fix covers FIX-019 too. Guard `t43-tagchips.js` (Claude Code)
 
 ### FIX-003 · Speed up permit removal in My Permit List and stop accidental opens
 
@@ -504,22 +506,23 @@ On desktop in My Permit List (`docs/list.html`), let the whole block from "Start
 ### FIX-019 · My Permit List: tag pills should hug their text, not span the list width
 
 - **Priority:** P3-Low
-- **Status:** todo
+- **Status:** done
 - **Created:** 2026-07-30 09:27 CT
-- **Updated:** 2026-07-30 09:27 CT
+- **Updated:** 2026-07-31 10:58 CT
 - **Tags:** Chicago Permit Search Tool
 
 On My Permit List (`docs/list.html`), the tag pills stretch to the full width of the list on both desktop and mobile. Each pill should take only the space its text needs plus padding (inline-flex / fit-content), wrapping naturally as a row of chips. Same pattern as FIX-013 (tag chips at the top, desktop) — keep the chip styling consistent between the two.
 
 **Checklist:**
-- [ ] Locate the tag pill elements in `docs/list.html` and identify why they expand to full width (block display, width:100%, or stretched flex/grid item)
-- [ ] Size each pill to its content with appropriate padding; lay the group out as a wrapping chip row
-- [ ] Apply on both desktop and mobile layouts; keep touch targets adequate on mobile
-- [ ] Keep the styling consistent with FIX-013's chip treatment if that lands first (or share one fix and log it in both tasks)
-- [ ] Verify on desktop and phone viewports, on lists with few and many tags
+- [x] Locate the tag pill elements in `docs/list.html` and identify why they expand to full width (block display, width:100%, or stretched flex/grid item)
+- [x] Size each pill to its content with appropriate padding; lay the group out as a wrapping chip row
+- [x] Apply on both desktop and mobile layouts; keep touch targets adequate on mobile
+- [x] Keep the styling consistent with FIX-013's chip treatment if that lands first (or share one fix and log it in both tasks)
+- [x] Verify on desktop and phone viewports, on lists with few and many tags
 
 **Log:**
 - 2026-07-30 09:27 CT — created from Divyam's report (Claude)
+- 2026-07-31 10:58 CT — done; same single fix as FIX-013, merged to main (`ea2af41`, --no-ff) and live. Both tickets were the same global `width: 100%` button reset in `docs/list.html`; see FIX-013's log for the full root cause (Claude Code)
 
 ### FIX-014 · GC view: Specialties counts hang outside their bubbles — keep the number inside like Associations
 
@@ -1014,9 +1017,9 @@ When a shared permit-list link is posted in Slack, a text message, or social app
 ### FEAT-034 · Per-list notes feed: searchable, timestamped notes inside each permit list — with GC follow-up tagging
 
 - **Priority:** P1-High
-- **Status:** in-progress
+- **Status:** done
 - **Created:** 2026-07-29 13:27 CT
-- **Updated:** 2026-07-31 10:14 CT
+- **Updated:** 2026-07-31 10:58 CT
 - **Tags:** Chicago Permit Search Tool
 
 Make notes searchable within each permit list — NOT one overall site-wide tab. Inside a specific list in My Permit List (`docs/list.html`), a notes feed opened from a control at the top of that list lays out that list's notes as a timestamped feed (newest first) with search. Each entry shows its note text, timestamp, and the permit (in this list) it belongs to. Clicking a note jumps to its associated permit, and from a permit you can jump back into the feed — navigation works to and from in both directions without losing your place in the feed. The feed's scope is always the list you're in; different lists have separate feeds.
@@ -1050,6 +1053,7 @@ Also includes a **follow-up tag for GCs**: from a permit, tag its General Contra
 - 2026-07-31 09:40 CT — phase 3 (the GC follow-up tag) done on `feat-034-notes-feed` (`4f34ed2`): flag a permit for follow-up from inside its card, directly under the general contractors the flag is about, and see it from outside the card as a worded badge on the list row. New "Follow-up only" filter chip on the list. The flag attaches to the PERMIT and is labelled with its GC rather than to the contractor company — flagging the firm would mark every one of its permits at once, a much larger feature. Keyed exactly like a visited tick and riding the same (now generic) flag-sync queue to the Worker `/follow` endpoint from phase 1, so shared lists sync it the same way. The filter is a VIEW filter only: exports, drive distances and Optimize route all keep reading the full list, so narrowing the view can never quietly narrow what gets routed; reordering is locked while filtered (aria-disabled, not disabled, so the buttons stay focusable and can say why) because the move offset acts on the full list (Claude Code)
 - 2026-07-31 09:40 CT — ui-ux-pro-max pre-landing pass caught two more REAL defects, both fixed before landing: `flag` was missing from the Material Symbols `icon_names` allowlist, so in production the badge and the toggle would both have rendered the literal word "flag" — the same class of bug as phase 2, now guarded again; and the filter chip reused the directory's `button.tag` rules, which are driven entirely by `--tc`, so without naming a colour it rendered panel-on-panel at exactly 1.00:1 in both themes. Guards `t44-followup.js` (behaviour, desktop + iPhone 13) and `t45-uiux-followup.js` (geometry + WCAG contrast, 2 viewports x 2 themes). 158 worker + 128 client unit tests and every browser suite green except `t43-tagchips`, which guards the still-unmerged `fix-013-019-tag-chips` branch (Claude Code)
 - 2026-07-31 10:14 CT — phase 4 (close-out) done on `feat-034-notes-feed` (`9e096de`); implementation is COMPLETE, awaiting Divyam's merge call. Writing the close-out guard found one more real defect: `state.listFilters` survived a `showList()`, so switching from a list with the follow-up filter on to a list with nothing flagged showed an empty panel for a filter the user never set there — cleared on an actual list change now, verified by reverting the line (t46 fails 4 checks without it). Guard `t46-multilist.js` proves flags and filters stay separate across two lists, survive leaving and returning, and survive a reload read back from what was persisted rather than anything the test hands in; it also sweeps every visible control in the list view for the 44px floor at an iPhone 13 viewport. Full regression: 158 worker + 128 client unit tests and 53/54 browser suites green — the one exception is `t43-tagchips`, which guards the separate, still-unmerged `fix-013-019-tag-chips` branch and is not a regression from this work. NOTE for the merge: the follow-up filter chip inherits the directory's `button.tag[aria-pressed="true"]::before` glyph, which is mojibake on main and fixed on `fix-013-019-tag-chips` — merging that branch fixes the chip's pressed tick too (Claude Code)
+- 2026-07-31 10:58 CT — MERGED to main (`3c5de2a`, --no-ff) and live on GitHub Pages; branch deleted. Status done. All 54 browser suites green on the merged tree, including `t43-tagchips` now that FIX-013/019 landed alongside — the follow-up filter chip picked up its proper tick from that fix, exactly as predicted. 158 worker + 128 client unit tests green. REMAINING: the Worker must be deployed (`npx wrangler deploy` from `worker/`) before `/api/notes/bulk` and shared-list follow-up sync work live — until then the feed falls back to private notes only and follow-up flags stay local (Claude Code)
 
 ### FEAT-035 · Permit lists: 1000-permit cap with 100-per-page pagination that remembers your page
 
