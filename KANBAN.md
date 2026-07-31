@@ -85,6 +85,32 @@ NEVER
 
 > **Purpose:** Things to fix on current projects — currently the Chicago Permit Search tool. Bugs, regressions, broken behavior, and cleanup on what already exists. This is Claude Code's default work queue.
 
+### FIX-024 · A second page scrollbar appears after opening and closing a permit
+
+- **Priority:** P2-Medium
+- **Status:** done
+- **Created:** 2026-07-31 14:05 CT
+- **Updated:** 2026-07-31 14:05 CT
+- **Tags:** Chicago Permit Search Tool
+
+Reported by Divyam: opening a permit in My Permit List (`docs/list.html`) and closing it leaves a second scrollbar down the side of the page.
+
+Root cause was not the overlay. `body` carried `overflow-x: hidden` alongside `html`. On body that buys nothing — the root's overflow propagates to the viewport, so the page is already immune to sideways scroll — but it forces body's `overflow-y` from `visible` to `auto`, making body a SECOND full-page scroll container behind `html` (the real page scroller). It hides while body's content fits its own box exactly; body's border box is a fractional 960.27px, and the overlay's open/close perturbs layout enough that body's `scrollHeight` rounds up 1px, so body gains a pixel of scrollable overflow and paints its own scrollbar.
+
+**Checklist:**
+- [x] Reproduce and identify the second scroller (body, not the overlay or the scroll lock)
+- [x] Remove the redundant `overflow-x: hidden` from `body` on all three pages
+- [x] Remove the duplicate copy inside each ≤640px block (list keeps it on `main`; index scopes it to `html`)
+- [x] Confirm no horizontal scroll returns on any page at 1280/390/320
+- [x] Guard test that fails against the pre-fix code
+- [ ] Confirm on Divyam's own browser after deploy (headless cannot render scrollbars — see log)
+
+**Log:**
+- 2026-07-31 14:05 CT — created from a user report, already diagnosed and fixed in the same session (Claude Code)
+- 2026-07-31 14:05 CT — fixed on branch `fix-second-scrollbar` (`7500b62`, pushed, awaiting merge approval). Verified behaviourally: before the fix `document.body.scrollTop` actually moved after a close; after it does not, and body computes `overflow-y: visible`. `verify-tmp/t48-second-scrollbar.js` (12 assertions, desktop + iPhone 13, three open/close cycles) fails 10/14 against the pre-fix code. No horizontal scroll on any of the four pages at 1280/390/320. Full browser suite + 286 unit tests pass. (Claude Code)
+- 2026-07-31 14:05 CT — CAVEAT: this headless build has overlay scrollbars (width 0) and CANNOT render the symptom. A forced-`::-webkit-scrollbar` probe was tried and rejected — a control read 2px on a known scroller, so the probe was blind, not clean. The fix rests on structural evidence (body was a scroll container with real scrollable overflow, and now is not), so the last checklist item is a human confirmation on a classic-scrollbar browser. (Claude Code)
+- 2026-07-31 14:05 CT — NOTE: `map.html`'s ≤640px `body.map-page { overflow-y: auto }` deliberately opts body into scrolling and was left alone. (Claude Code)
+
 ### FIX-004 · Scope Optimize Route to the full permit list
 
 - **Priority:** P1-High
