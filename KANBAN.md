@@ -119,9 +119,9 @@ Present identically on all three pages — the `.map-search` block is byte-ident
 ### FIX-028 · My Permit List toolbar buttons are all different widths
 
 - **Priority:** P3-Low
-- **Status:** in-progress
+- **Status:** done
 - **Created:** 2026-08-03 12:32 CT
-- **Updated:** 2026-08-03 14:37 CT
+- **Updated:** 2026-08-03 14:56 CT
 - **Tags:** Chicago Permit Search Tool
 
 **CORRECTION 2026-08-03 14:37 CT — the first fix was wrong on desktop and this card overstated its own reasoning.** It shipped a 156px floor and recorded the resulting two-row wrap as unavoidable. It was not: 156px was simply too wide. Divyam reported `Clear list` / `Delete list` sitting on a separate row. See the reopened log below.
@@ -136,7 +136,7 @@ Raised by Divyam: the buttons on the My Permit List toolbar should all be the sa
 - [x] Confirm equalizing did not clip labels, break the 44px touch height, or add horizontal scroll
 - [x] Regression test, proven to fail against the un-fixed code
 - [x] Merge to main and verify live
-- [ ] Keep all eight on ONE desktop row (reopened — the first fix wrapped)
+- [x] Keep all eight on ONE desktop row (reopened — the first fix wrapped)
 
 **Log:**
 - 2026-08-03 12:32 CT — created and fixed on `fix-028-toolbar-button-widths` (`92fdcaa`, pushed, NOT merged). Status → in-progress (Claude Code)
@@ -148,6 +148,8 @@ Raised by Divyam: the buttons on the My Permit List toolbar should all be the sa
 - 2026-08-03 14:37 CT — **REOPENED. The desktop half of this fix was wrong, and the card's own reasoning was the error.** Divyam reported `Clear list` / `Delete list` on a second row. The 12:32 log claimed "no realistic desktop fits all eight on one row at a readable size" — that was measured against the 156px floor I had already chosen, not against what the labels actually need, so it justified the wrap with a number of my own making. Circular, and wrong (Claude Code)
 - 2026-08-03 14:37 CT — the equal width is bounded from BOTH sides: at least the widest button's natural width, or equality breaks; at most `(container - gaps) / 8`, or the row wraps. Measured containers: 1039px @1280, 1125px @1366, 1199px @1440, 1295px @1536, **capped at 1398px** — so the ceiling is 121px @1280 and 141px @1440, and it was already one row at 1600+. At the original 14px padding / 0.86rem the widest button (`Optimize route`) is **147.6px** naturally, which clears the ceiling on every desktop below 1536. Trimming padding, font and icon gap drops that to **117.6px**, which fits from 1280 up — so one row was always achievable, just not at 156px (Claude Code)
 - 2026-08-03 14:37 CT — fixed on `fix-028b-toolbar-one-row` (`f63181b`, pushed, NOT merged). Two desktop tiers so wide screens do not pay for the narrow case: **120px below 1400px, 136px above**. Scoped to `min-width: 641px` so mobile keeps its base sizing and its own two-column grid — a blanket change would have shrunk mobile buttons to ~11.7px text, since `body` is 15px there. Verified one row, equal widths and no clipping at **1280 / 1366 / 1400 / 1440 / 1536 / 1600 / 1920**; the destructive pair keeps its gap. t54 now asserts a single row at BOTH desktop tiers and is confirmed to fail against `main` with "2 rows" at 1280 and 1440 (Claude Code)
+- 2026-08-03 14:56 CT — **DONE, live.** Divyam approved the merge; `--no-ff` to main (`a857705`), branch deleted, Pages build green. Merge-only ship, no Worker change. Verified in the right order — waited for the deploy, confirmed the deployed `list.html` is byte-identical (md5) to `main`, then measured. **Live: one row at 1280 / 1366 / 1400 / 1440 / 1536 / 1600 / 1920, all eight equal (120px under 1400, 136px above), no clipped labels, no horizontal scroll at any width.** Checked against a REAL shared list, not the local fixture, so the longer "Edit details" label is the one being measured. t54 20/20 against production, including the new single-row assertion at both desktop tiers. Full sweep 64/64 green before merge (Claude Code)
+- 2026-08-03 14:56 CT — lesson recorded outside the board: the failure here was not the 156px value, it was justifying the resulting wrap with a measurement taken against that same self-chosen value and then presenting it to the user as a deliberate benefit. A real constraint survives varying your own inputs (Claude Code)
 
 ### FIX-027 · Icon names flash as text and scroll the page sideways before the icon font loads
 
