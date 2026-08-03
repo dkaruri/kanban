@@ -85,6 +85,35 @@ NEVER
 
 > **Purpose:** Things to fix on current projects — currently the Chicago Permit Search tool. Bugs, regressions, broken behavior, and cleanup on what already exists. This is Claude Code's default work queue.
 
+### FIX-029 · Map search "clear" button is a 44×28 touch target, under the 44×44 minimum
+
+- **Priority:** P3-Low
+- **Status:** in-progress
+- **Created:** 2026-08-03 13:11 CT
+- **Updated:** 2026-08-03 13:11 CT
+- **Tags:** Chicago Permit Search Tool
+
+Found by the specificity audit run after FIX-028 (see that card for the pattern). The `×` clear button inside the map search field declares `32px` square (`28px` below 640px), but `.map-search button { min-width: 44px }` scores **0-1-1** and outranks the bare `.map-search-clear` at **0-1-0**, so the width declarations are dead and it renders **44px wide**. `min-height` is not declared by the winner, so that one DOES apply — giving a **44×28** target on mobile and 44×32 on desktop, under the 44×44 minimum.
+
+Second, smaller consequence: the input reserves `padding-right: 42px` for a button that is actually 44px wide at `right: 6–8px`, so the button intrudes ~10px into the text area. Screenshotted at an iPhone 13 viewport with a normal-length address — **no visible defect**, the intrusion only shows with text long enough to scroll under the `×`. Low severity; the touch target is the real issue.
+
+Present identically on all three pages — the `.map-search` block is byte-identical across `index.html`, `map.html` and `list.html`.
+
+**Checklist:**
+- [x] Give the clear button a full 44×44 hit area without changing the glyph
+- [x] Make the rule actually win, so the declared sizes stop being a lie
+- [x] Reserve enough input padding that the button no longer overlaps the text
+- [x] Apply to all three pages and keep the shared block byte-identical
+- [x] Regression test, proven to fail against the un-fixed code
+- [ ] Merge to main and verify live
+
+**Log:**
+- 2026-08-03 13:11 CT — created from the FIX-028 audit; status → in-progress. Working on `fix-029-map-search-clear-target` (Claude Code)
+- 2026-08-03 13:57 CT — fixed on `fix-029-map-search-clear-target` (`0b55836`, pushed, NOT merged). Scoped the rule to `.map-search .map-search-clear` (**0-2-0**) so it genuinely outranks `.map-search button` (0-1-1) and the declarations stop being a lie, then set 44×44 at every viewport. The glyph is unchanged — the button is transparent until hover, so only the hit area and the hover circle grow; screenshotted before/after at an iPhone 13 viewport and they are visually identical. Input `padding-right` 42px → 52px, since the old value reserved less than the button's real width (Claude Code)
+- 2026-08-03 13:57 CT — verified: `verify-tmp/t55-map-clear-target.js`, 28 assertions across three pages × two viewports, **confirmed to FAIL against un-fixed main with 14 reds** at exactly the values on this card (44×32 desktop, 44×28 mobile, 8px/10px text intrusion). The specificity audit that raised this now reports **CRITICAL 0, down from 1**; its 5 remaining REVIEW items are the INVERSE relationship — `.map-search .map-search-clear` correctly outranking `.map-search button` — which is the intent. 164 Worker unit tests green. All three pages byte-checked (no control bytes, line endings preserved: index/map LF, list CRLF) and the shared `.map-search` block confirmed still byte-identical across them (Claude Code)
+- 2026-08-03 13:57 CT — **scope note worth recording: on `list.html` this button is not reachable at all.** `body.list-page .layout { display: none }` hides the entire search directory there, so the element has no layout box and only its computed contract can be asserted. It exists on that page purely because the three copies of the `.map-search` block are kept identical. t55 asserts computed `min-width`/`min-height` on every page and geometry only where a layout box exists, rather than silently skipping the page (Claude Code)
+- 2026-08-03 13:57 CT — **the full browser sweep is NOT clean, and it is not this change.** Two sweeps both returned 63/64 with a DIFFERENT single red each time: run 1 red `t27-scrolllock`, run 2 red `t49-value-range` (and t27 green). A regression fails the same test every time; alternating reds is flake. Both pass in isolation — t27 **9/9**, t49 **3/3**. Neither has a causal path to this diff: t27 exercises the permit overlay in directory mode where `.map-search` is not rendered at all, and t49's failing assertion is "rendered map source matches the filter []", i.e. map data had not loaded, not styling. t27's failing assertion carries a **4px desktop tolerance** against Chromium scroll anchoring that the test's own comment acknowledges re-settles ~50px on that path (it allows 64px on mobile) — a tight tolerance that is a latent flake independent of any change. Currently re-running the sweep with the two NEW suites held out, to rule out that adding them increased contention. **Flakiness is being tracked as its own concern, not silently absorbed into this card** (Claude Code)
+
 ### FIX-028 · My Permit List toolbar buttons are all different widths
 
 - **Priority:** P3-Low
