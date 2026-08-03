@@ -486,7 +486,7 @@ When My Permit List is opened from a shared link, the Search Directory renders a
 - **Priority:** P2-Medium
 - **Status:** in-progress
 - **Created:** 2026-07-29 11:28 CT
-- **Updated:** 2026-08-03 15:49 CT
+- **Updated:** 2026-08-03 15:54 CT
 - **Tags:** Chicago Permit Search Tool
 
 The number of people viewing a shared list can be wrong after reloading the page or moving between apps on mobile — reloads appear to double-count, and backgrounded mobile sessions appear to linger (or drop) incorrectly.
@@ -498,7 +498,8 @@ The number of people viewing a shared list can be wrong after reloading the page
 - [x] Handle visibilitychange/pagehide/bfcache so backgrounded and restored tabs update presence correctly, with a TTL sweep for clients that vanish without notice
 - [x] Verify count stability across reloads, app switches, tab closes, and multiple real viewers
 - [x] Keep a cached pre-fix page working against the new Worker (deploy-order safety)
-- [ ] Merge to main, deploy the Worker, and confirm live
+- [x] Merge to main
+- [ ] Deploy the Worker (`npx wrangler deploy` from `worker/`) and confirm live
 
 **Log:**
 - 2026-07-29 11:28 CT — created (Divyam)
@@ -508,6 +509,10 @@ The number of people viewing a shared list can be wrong after reloading the page
 - 2026-08-03 15:49 CT — client (`docs/list.html`): session id lives in **sessionStorage**, not localStorage. That is the whole point — it survives a reload and dies with the tab, so a refresh REPLACES the viewer while two genuinely open tabs are still two viewers. localStorage would have merged two real people at one desk into one. Plus: heartbeat while connected, `pagehide` closes the socket immediately (the only unload event iOS fires reliably, and it precedes a bfcache freeze), and `visibilitychange`/`pageshow` reconnect without waiting out the exponential backoff (Claude Code)
 - 2026-08-03 15:49 CT — caught a deploy-order hazard that would have been self-inflicted: a NEW Worker facing an OLD cached page would have swept it every 90s, because the old client cannot heartbeat — the fix would have looked like a disconnect bug on exactly the mobile users this card is about. The sweep is now opt-in (`beats`), set only when the client supplied a real sid. A pre-fix page gets a synthetic id, counts as one viewer, and is never reaped. **Deploy the Worker first**, then the client (Claude Code)
 - 2026-08-03 15:49 CT — verified. 173 worker unit tests (8 new in `presence.test.mjs`); 65/65 browser suites green, including the existing presence-pill guard t12. New `verify-tmp/t56-presence-lifecycle.js` proves the client half on desktop AND iPhone 13 — sid present and unchanged across a real `page.reload()`, a ping on the 30s interval (fired via a captured interval rather than waiting 30s), socket closed on pagehide, exactly one new socket on resume — and it FAILS against pre-fix `list.html` on four of those. `verify-tmp/_fix009-room.js` drives a real `ListRoom` under `wrangler dev`: reload=1, two sessions=2, departing peer drops, a quiet client swept after the real 90s TTL, legacy client left alone; 5 of its 6 assertions fail against the pre-fix room. Branch `fix-009-presence-accuracy` (`995623b`), pushed, NOT merged — awaiting merge approval and a Worker deploy (Claude Code)
+
+- 2026-08-03 15:54 CT — MERGED to main (`6f6118a`, --no-ff), branch deleted. The client half is live on Pages; **the fix does nothing until the Worker is deployed**, which is Divyam's to run. Benign either way — the new client's `sid` and `ping` are simply ignored by the old Worker, so the count stays as wrong as it is today until the deploy, and nothing breaks (Claude Code)
+- 2026-08-03 15:54 CT — caught at merge time: git reported `presence.js` as **Bin**, not text. It held a literal NUL byte — `presenceKey` joined names with a 0x00 instead of a space. Harmless (the key is only ever compared for equality, and all 173 tests passed either way) but corrupt source, and this repo has been bitten by invisible control bytes three times. Repaired in `4075a09`; the committed blob was verified clean by reading it back out of git rather than trusting the write. Worth recording that the TESTS COULD NOT have caught this — only the `Bin` in the merge stat did (Claude Code)
+- 2026-08-03 15:54 CT — swept all 316 tracked source files for NUL/backspace bytes while there. One other hit, pre-existing and unrelated to this card: `worker/src/closure.js:156` writes a word-boundary `404` guard with two REAL backspace bytes instead of escapes, so `isKeyMissingError` tests for a literal backspace and can never match on the 404 path. It fails in the SAFE direction (it under-detects "key missing", so the closure seed treats an absent key as an error rather than as a first-run baseline — it will not wipe the accumulated observations), and the second `/key .*not found/i` check may cover it in practice. NOT fixed here — out of scope for this card, reported to Divyam (Claude Code)
 
 ### FIX-011 · Permit view: show the actual neighborhood name, not just a number
 
