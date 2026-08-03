@@ -85,6 +85,34 @@ NEVER
 
 > **Purpose:** Things to fix on current projects — currently the Chicago Permit Search tool. Bugs, regressions, broken behavior, and cleanup on what already exists. This is Claude Code's default work queue.
 
+### FIX-027 · Icon names flash as text and scroll the page sideways before the icon font loads
+
+- **Priority:** P2-Medium
+- **Status:** in-progress
+- **Created:** 2026-08-03 11:03 CT
+- **Updated:** 2026-08-03 11:03 CT
+- **Tags:** Chicago Permit Search Tool
+
+Every `<span class="material-symbols-outlined">` lays out its LIGATURE NAME as literal text until the Material Symbols font arrives. At 22px `moon_stars` is 4.6em wide instead of 1em, and `keyboard_double_arrow_down` is 12.5em. The theme toggle is `position: fixed` against the right edge, so on every cold page load the document scrolled sideways — 409/390 on `index.html`, 405/390 on `list.html`, 395/390 on `disclaimer.html` — and the nav briefly read "da… Search Directory / ma… Permit Map".
+
+Found by chasing why **t28-uiux-lock and t43-tagchips had both been red on main**. Neither was about what its name says: t43 measures `hScroll` immediately after `data-ready` and caught it every run; t28 samples `hScroll` three times and only the first was true, because it raced the font load — which is exactly why it flapped between 3 and 4 failures rather than failing consistently.
+
+**Checklist:**
+- [x] Reproduce with the icon font blocked, so the pre-font state is stable rather than a 50ms race
+- [x] Name every offending icon on all four pages at an iPhone 13 width
+- [x] Declare `font-display: block` on the Material Symbols request
+- [x] Bound the icon box so the ligature text cannot push layout even when the font never arrives
+- [x] Prove no icon moved once the font IS loaded
+- [x] Confirm t28 and t43 go green, repeatedly (t28 was the flaky one)
+- [ ] Merge and confirm on the live site
+
+**Log:**
+- 2026-08-03 11:03 CT — created and fixed in the same session, at Divyam's request to "work on t28 and t43". Card written after the fact because neither suite had one (Claude Code)
+- 2026-08-03 11:03 CT — fixed on branch `fix-027-icon-font-overflow` (`a646e2e`, pushed, NOT merged — awaiting approval). Client-only, all four `docs/*.html`; no Worker deploy. Two parts. (1) `&display=block` on the Material Symbols URL — **verified this is not a no-op**: fetching the OLD url returns no `font-display` declaration at all, leaving it to the browser default, while the new one returns `font-display: block`. (2) `max-width: 1em; min-width: 0; overflow: hidden` on the base `.material-symbols-outlined` rule. **`min-width: 0` is load-bearing**: these spans are flex items inside the nav links and the theme toggle, where the default `min-width: auto` resolves to min-content — the full unwrappable text — and min-width beats max-width, so the cap alone was silently ignored. Six sites in `list.html` (`#filter-followup`, `.fu-badge`, `.pm-fu`, `.feed-src`) already applied this exact pattern ad hoc; it belongs at the base (Claude Code)
+- 2026-08-03 11:03 CT — **a geometry baseline caught a regression that would otherwise have shipped.** All 62 icons were measured with the font LOADED before anything was touched; after the fix two had moved — `disclaimer.html`'s `policy` badge went 48px → 24px, because `.disclaimer-icon` is a 48px circular badge that CONTAINS the glyph rather than being it, and `max-width` beats `width`. Fixed with `max-width: none` there; the re-check reports all 62 unchanged, which also clears the other risk in this change (`overflow: hidden` on an inline-block moves its baseline) (Claude Code)
+- 2026-08-03 11:03 CT — verified by `verify-tmp/t53-icon-font.js`: 48 assertions over all four pages at desktop and iPhone 13, in both the font-blocked and font-loaded states, **proven red first at 10 failures against the unfixed tree**. t28 now passes 5/5 (it failed every single run before) and t43 3/3. 164 Worker unit tests pass. One earlier version of the guard had a false positive worth remembering: it measured icon width in ems, which for a `display: block` icon measures the CONTAINER, not the glyph — `disclaimer.html` has a legitimate 48px block icon that looked like a 2em failure. The check now skips container-sized displays (Claude Code)
+- 2026-08-03 11:03 CT — the change also broke `t42-uiux-feed` and `t45-uiux-followup`, and that was mine: both parsed the font URL with `.split("icon_names=")[1]`, assuming `icon_names` was the LAST query parameter, so appending `&display=block` turned the final entry into `"sunny&display=block"` and made them report a declared icon as missing. Both now parse with `URLSearchParams` and were controlled to confirm they still catch a genuinely undeclared ligature. Worth keeping — that assertion guards the same class of bug this card fixes (Claude Code)
+
 ### FIX-024 · A second page scrollbar appears after opening and closing a permit
 
 - **Priority:** P2-Medium
@@ -786,6 +814,36 @@ Not fixed inside FEAT-021 on purpose: the new value-range fields were matched to
 ## ✨ Features
 
 > **Purpose:** New features and ideas to be added to the existing Chicago Permit Search tool. Enhancements that extend the current project rather than repair it.
+
+### FEAT-038 · Source property use from the Cook County Assessor class, so the permit view stops approximating
+
+- **Priority:** P2-Medium
+- **Status:** todo
+- **Created:** 2026-08-03 11:03 CT
+- **Updated:** 2026-08-03 11:03 CT
+- **Tags:** Chicago Permit Search Tool
+
+The permit view's "Property use" line is a guess. `permitUse()` (FEAT-013) reads `permit_type` + `work_description` and is rendered with an "approx" badge because the permits dataset carries no occupancy field. Over a real month it can classify only **32%** of permits; the other 68% read "Unclear".
+
+Divyam asked whether the zoning source that made FEAT-024's filter work could replace it. **It cannot, and should not** — see the log. But the permits dataset already carries `pin_list`, the Cook County PIN, which joins straight to the Assessor's parcel universe (`nj4t-kc8j`) and its `class` field: the County's own legal classification of the parcel's use for assessment. That is a recorded fact the badge can cite, not an inference from prose.
+
+Measured over July 2026 (2,384 open geocoded permits): 2,101 (88.1%) carry a usable 10-digit PIN, and **2,057 (86.3%) match an Assessor parcel record** — 67.4% residential, 11.5% commercial/industrial, 5.0% exempt, 1.8% vacant, 0.4% incentive. With the existing text heuristic kept as fallback for the unmatched, **only 11.5% of permits would still read "unknown", down from 68%.**
+
+**Checklist:**
+- [ ] Build a three-digit class → use mapping, NOT a major-class one (see the log — this is where the errors concentrate)
+- [ ] Resolve a permit's class on demand from `pin_list`, cached per permit, the same shape as the existing zoning and TIF lookups — never a bulk fetch
+- [ ] Handle the multi-PIN case (`pin_list` is pipe-delimited; ~39 permits a month carry several parcels)
+- [ ] Show the class as a sourced fact ("Residential · Cook County class 203") and drop the "approx" badge where the class is decisive
+- [ ] Keep `permitUse()` as the fallback for the ~12% with no parcel match, still badged as approximate
+- [ ] Keep a hedge for the genuinely mixed 5xx classes rather than calling them commercial
+- [ ] Verify a sample against the Assessor's own property search, not just against the old heuristic
+- [ ] Decide whether the FEAT-024 map filter should switch to this source too, or stay on zoning (they answer different questions — see the log)
+
+**Log:**
+- 2026-08-03 11:03 CT — created from Divyam's question after FEAT-024 shipped: "if the residential/commercial filter works effectively now, can we accurately use the same data sources to correctly tag residential/commercial on the Permit details, and not have to use approximations?" (Claude Code)
+- 2026-08-03 11:03 CT — **answer: yes, but NOT from zoning.** Zoning states what a district ALLOWS, not what a property IS. Measured over the same July month, **213 of the 623 permits the text confidently calls residential sit in non-residential districts** — 98 in planned developments, 44 business, 39 downtown, 12 manufacturing, 12 commercial, 6 open space, 2 transportation. Those are overwhelmingly real housing work (a B3-5 fire alarm reading "AFFECTS: 40 DWELLING UNITS"). Zoning is the right signal for a FILTER ("show me residential areas") and the wrong one for a LABEL on one permit, where it would confidently mislabel about a third of them. FEAT-024 stays on zoning deliberately (Claude Code)
+- 2026-08-03 11:03 CT — the join was proven end to end before this card was written, not assumed: `pin_list` → `nj4t-kc8j.pin10` → `class`, newest `year` first, batched 150 PINs per request. Coverage figures above are from that run. Cook County major classes: 0xx/1xx vacant, 2xx houses and 2–6 units, 3xx apartments 7+, 4xx not-for-profit, 5xx commercial/industrial, 6xx–9xx incentive, EX exempt (Claude Code)
+- 2026-08-03 11:03 CT — **three caveats found while measuring, all of which belong in the build rather than being discovered after it.** (1) The class describes the PARCEL, not the work: agreement with the text heuristic where both speak is 85.9%, and the 82 disagreements are instructive — class 590 on "NEW 2 STORY SINGLE FAMILY RESIDENCE", class 517 on plumbing-fixture work — some are conversions the class has not caught up with. (2) **A naive `5xx → commercial` mapping is wrong**: several 5xx classes explicitly ARE mixed commercial/residential (593 is "two or three story, over 62 years, mixed commercial and residential"), and that is exactly where the probe's disagreements clustered, because the probe used major class. (3) It adds a second live dependency on Cook County's Socrata, so it needs the on-demand + cache treatment, not a bulk fetch (Claude Code)
 
 ### FEAT-025 · Contractor detail view in the permit overlay
 
