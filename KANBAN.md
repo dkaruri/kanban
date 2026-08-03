@@ -88,9 +88,9 @@ NEVER
 ### FIX-028 · My Permit List toolbar buttons are all different widths
 
 - **Priority:** P3-Low
-- **Status:** in-progress
+- **Status:** done
 - **Created:** 2026-08-03 12:32 CT
-- **Updated:** 2026-08-03 12:32 CT
+- **Updated:** 2026-08-03 12:38 CT
 - **Tags:** Chicago Permit Search Tool
 
 Raised by Divyam: the buttons on the My Permit List toolbar should all be the same width instead of each sizing to its own label. Measured on production at a 1280 viewport — the eight buttons ranged from **92.7px (Share) to 153.9px (Optimize route)**, a 61.2px spread. On an iPhone 13 the spread was worse: 96.7px to 344px.
@@ -102,7 +102,7 @@ Raised by Divyam: the buttons on the My Permit List toolbar should all be the sa
 - [x] Equalize on mobile
 - [x] Confirm equalizing did not clip labels, break the 44px touch height, or add horizontal scroll
 - [x] Regression test, proven to fail against the un-fixed code
-- [ ] Merge to main and verify live
+- [x] Merge to main and verify live
 
 **Log:**
 - 2026-08-03 12:32 CT — created and fixed on `fix-028-toolbar-button-widths` (`92fdcaa`, pushed, NOT merged). Status → in-progress (Claude Code)
@@ -110,6 +110,7 @@ Raised by Divyam: the buttons on the My Permit List toolbar should all be the sa
 - 2026-08-03 12:32 CT — **equal width forces a wrap, and this was measured before committing to it rather than discovered after.** Eight buttons at the widest label need ~1296px including gaps; the toolbar is 1039px at a 1280 viewport and 1199px at 1440. No realistic desktop fits all eight on one row at a readable size, so the destructive pair now sits on its own row, right-aligned. That strengthens the separation rather than weakening it. Desktop uses a shared 156px `min-width` (not `width`, so a label that ever outgrows it widens its own button instead of clipping); mobile uses two equal grid columns — grid rather than flex because the 6-button and 2-button groups would each divide their own row under flex and land on different widths (Claude Code)
 - 2026-08-03 12:32 CT — verified: `verify-tmp/t54-toolbar-widths.js`, 12 assertions across desktop and iPhone 13, **confirmed to FAIL against un-fixed `main`** (61.2px spread desktop, 247.3px mobile) by serving `git show main:docs/list.html` on a second port. All 8 buttons now measure 156px on desktop and 168px on mobile. The suite also covers what equalizing could plausibly break — no clipped labels, ≥44px touch height, no horizontal scroll, and the destructive pair still separated. Full regression: **63/63 browser suites**, 164 Worker + 152 client unit tests. Rendered in both themes at both viewports. `docs/list.html` byte-checked: no control bytes, all 9369 CRLF preserved (Claude Code)
 - 2026-08-03 12:32 CT — scope note: `index.html` and `map.html` also carry a `.user-list-toolbar` class, but it is a DIFFERENT component there (a 3-column grid of labelled `.action-group`s, hidden until a permit is saved), not this 8-button row. Left untouched — it was not what was reported and its buttons are not ragged in the same way (Claude Code)
+- 2026-08-03 12:38 CT — **DONE, live.** Divyam approved the merge; `--no-ff` to main (`60605db`), branch deleted, Pages build 2m16s. Merge-only ship, no Worker change. Verified at the destination in the right order — waited for the deploy to finish first, then confirmed the deployed `list.html` is byte-identical (md5) to `main` before measuring, so the probe could not be reading the old version. **Live result: all 8 buttons at 156px on desktop and 168px on iPhone 13, spread 0.0px on both.** t54 passes 12/12 against production. Re-checked against a REAL shared list rather than the local fixture, because the fixture renders "Publish…" where a real list renders the longer "Edit details", and the 156px floor is tied to label widths — both land at 156px, as does the "Notes 1" count-badge variant (Claude Code)
 
 ### FIX-027 · Icon names flash as text and scroll the page sideways before the icon font loads
 
