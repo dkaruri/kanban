@@ -787,12 +787,12 @@ Decide which is meant before fixing, since they are different questions: sort co
 ### FIX-025 · Filter inputs are under 16px, so iOS zooms the page on every focus
 
 - **Priority:** P2-Medium
-- **Status:** in-progress
+- **Status:** done
 - **Created:** 2026-07-31 14:39 CT
-- **Updated:** 2026-08-03 12:05 CT
+- **Updated:** 2026-08-03 12:14 CT
 - **Tags:** Chicago Permit Search Tool
 
-**Merged and live as `f112b9d`. Held open for ONE reason: the on-device check.** Everything automation can prove is proven, but the symptom this card is named for — Safari zooming on focus — cannot be reproduced headlessly. Divyam: open the live site on your iPhone, tap a filter field on the Search panel and on the map's Filters drawer, and confirm the page no longer zooms in and stay zoomed. Close this once confirmed; reopen if it still zooms.
+**DONE — merged and live as `f112b9d`, and confirmed on a real iPhone by Divyam on 2026-08-03.** The card was held open purely for that check, because the symptom it is named for — Safari zooming on focus — cannot be reproduced headlessly.
 
 Measured while building FEAT-021, on the fields next to the new ones — this is pre-existing and site-wide, not caused by that work. Safari on iOS auto-zooms the page whenever a focused input's font is below 16px, and then leaves the page zoomed in; the user has to pinch back out after every filter edit.
 
@@ -806,7 +806,7 @@ Not fixed inside FEAT-021 on purpose: the new value-range fields were matched to
 - [x] Confirm the date inputs too (`map-date-from`/`map-date-to` are the smallest at 13.76px)
 - [x] Verify at an iPhone 13 viewport that no control computes below 16px
 - [x] Verify raising the type did not break the layouts — no clipping, no control past the viewport edge, no horizontal scroll at 390px, and no leak to desktop
-- [ ] Confirm on a real iOS device that focusing a filter no longer zooms — headless cannot show this **← still the only item left; needs Divyam's iPhone, no automation can close it**
+- [x] Confirm on a real iOS device that focusing a filter no longer zooms — **confirmed by Divyam 2026-08-03**
 - [x] Merge to main
 - [x] Re-verify the floor survived the CSS that shipped after it (FEAT-024, FIX-027) — re-measured live 2026-08-03, all 29 controls at 16px
 
@@ -818,6 +818,7 @@ Not fixed inside FEAT-021 on purpose: the new value-range fields were matched to
 - 2026-08-03 12:05 CT — asked to implement this card; it was already built, merged and live, so the useful work was a REGRESSION check rather than new code. Two CSS changes have shipped to all three pages since this fix landed (FEAT-024 `568d695`, FIX-027 `8885e8d`), and this card's own note says the `:is()` selector fails *silently and partially* when disturbed — so it was worth re-measuring rather than assuming. It held. Source intact on all three pages; the id-scoped audit re-run finds only the two `#photo-compose .dlg-field input` rules, both already at 16px. t51 passes 15/15 locally, and the deployed `index/map/list.html` are byte-identical (md5) to `main`, so the local run that opens the on-demand dialogs applies to production exactly (Claude Code)
 - 2026-08-03 12:05 CT — re-measured LIVE production at an iPhone 13 viewport: **29 controls, every one at exactly 16px, no horizontal scroll on any page**. Two are worth naming. `map-date-from` was the worst offender on this card at 13.76px and now reads 16px. `map-property-use` is FEAT-024's NEW control, added after this fix shipped, and it lands inside the floor's coverage for free — which is the argument for the blanket rule over per-field fixes, now demonstrated rather than predicted. map.html measures 15 controls where this card originally counted 14, for that reason (Claude Code)
 - 2026-08-03 12:05 CT — **STAYS in-progress, deliberately, for the same single reason as on 07-31.** The symptom this card is named for is Safari's zoom-on-focus, and no headless browser reproduces it — it is a real-device behaviour. Marking this done off green automation would be closing it on evidence that cannot see the bug. Divyam: on your iPhone open the live site, tap the **Name/permit/address** field on Search (`index.html`), then the **date** and **Search area** fields in the map's Filters drawer (`map.html`) — those three were 15px, 13.76px and 14.4px before the fix. If the page does not zoom and strand you, close this card; if it still zooms, reopen with which field did it (Claude Code)
+- 2026-08-03 12:14 CT — **DONE.** Divyam confirmed on a real iPhone that focusing the filter fields no longer zooms the page. That was the last open item and the only one automation could not close; every measurable half was already green live (29 controls at 16px, no horizontal scroll). Closing (Claude Code)
 
 ---
 
