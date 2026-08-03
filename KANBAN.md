@@ -909,15 +909,15 @@ In a list in My Permit List (`docs/list.html`), let people filter permits by whe
 ### FEAT-024 · Map Search: filter out work types and filter to residential only
 
 - **Priority:** P2-Medium
-- **Status:** todo
+- **Status:** in-progress
 - **Created:** 2026-07-27 15:53 CT
-- **Updated:** 2026-07-27 15:53 CT
+- **Updated:** 2026-08-03 09:22 CT
 - **Tags:** Chicago Permit Search Tool
 
 In Map Search (`docs/map.html`), let the user exclude certain types of work and narrow results to residential properties only. FEAT-013 (building type) already supplies the residential signal; this exposes it as a map filter.
 
 **Checklist:**
-- [ ] Enumerate the work types present in the permit data and pick the filterable set
+- [x] Enumerate the work types present in the permit data and pick the filterable set
 - [ ] Add a work-type exclude control to Map Search
 - [ ] Add a residential-only toggle, defining which building types count as residential
 - [ ] Verify both combine correctly with the existing month and value-range filters
@@ -925,6 +925,10 @@ In Map Search (`docs/map.html`), let the user exclude certain types of work and 
 
 **Log:**
 - 2026-07-27 15:53 CT — created (Divyam)
+- 2026-08-03 09:22 CT — status → in-progress on branch `feat-024-map-work-type-residential`. Design spec committed (`6bb1ef7`, `docs/superpowers/specs/2026-08-03-map-work-type-residential-design.md`) after a design-time ui-ux-pro-max pass (Claude Code)
+- 2026-08-03 09:22 CT — checklist item 1 answered, and it changed the control: **`work_type` exists only on Express Permit Program permits.** Trailing 12 months of open permits — Express 14,798 (20 distinct labels), Renovation/Alteration 4,812 and New Construction 1,466, both with `work_type` ALWAYS blank. A control offering only Socrata's labels could not exclude renovation or new construction, which is 30% of permits and the two categories most worth isolating. The filterable set is 22: the 20 labels plus two synthesized from `permit_type`. Also noted: `Porch,Deck,Balcony,or Fire Escape` is ONE label containing literal commas — never split this field on commas (Claude Code)
+- 2026-08-03 09:22 CT — **the residential signal changed source at Divyam's suggestion, and the data backs him decisively.** The checklist assumed FEAT-013's `permitUse()` text heuristic. Measured over July 2026 (2,384 open geocoded permits) it classifies only 32% and can prove residential for just 623 (26%) — the permits dataset has no occupancy field, and an `OCCUPANCY:` label appears in only 73 descriptions, almost all Business/Utility/Education. Divyam asked why not use the zoning districts the map already draws. Point-in-polygon against the shipped `docs/data/zoning.geojson` classifies **99.8%** (5 rows city-wide fall in no district) and finds **1,496 residential (62.8%)**; 1,084 permits the text called "unclear" sit in RS/RT/RM. Cost is affordable — 5.0 MB raw / ~850 KB gzipped, already lazy-loaded for the Zoning Districts layer, and measured at 104ms parse + 77ms index + **11ms to classify all 2,384 points**. `permitUse()` is NOT modified; it still labels individual permits on index/list, which is a different question (what the work says) from what this filter asks (what the property is) (Claude Code)
+- 2026-08-03 09:22 CT — zoning states what a district ALLOWS, not what is built: B1–B3 are storefronts with housing above, and real housing work sits there (a B3-5 fire alarm reading "AFFECTS: 40 DWELLING UNITS", plumbing replacements in B3-2/B3-3). Strict RS/RT/RM would drop ~200 permits a month of genuine residential work, so Divyam chose a two-step select — All / Residential zoning only (RS, RT, RM, DR ~63%) / Residential + business (adds B1–B3, ~71%) — rather than one toggle. Work-type control is a collapsed `<details>` checklist, default nothing excluded (Claude Code)
 
 ### FEAT-032 · Feed the search conditions/filters into the list description
 
