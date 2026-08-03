@@ -85,6 +85,30 @@ NEVER
 
 > **Purpose:** Things to fix on current projects — currently the Chicago Permit Search tool. Bugs, regressions, broken behavior, and cleanup on what already exists. This is Claude Code's default work queue.
 
+### FIX-030 · closure.js: the 404 guard is written with real backspace bytes, so it never matches
+
+- **Priority:** P3-Low
+- **Status:** todo
+- **Created:** 2026-08-03 15:59 CT
+- **Updated:** 2026-08-03 15:59 CT
+- **Tags:** Chicago Permit Search Tool
+
+`worker/src/closure.js:156` writes the word-boundary `404` guard inside `isKeyMissingError` using two REAL 0x08 backspace bytes instead of escape sequences, so the regex tests for a literal backspace character and can never match. The 404 branch of that function is dead code.
+
+Consequence is limited, and it fails in the SAFE direction. `isKeyMissingError` decides whether a KV read failure means "this key has never existed" (a genuine first run, establish a baseline) or "something went wrong" (abort, keep what is there). Under-detecting "key missing" means the closure seed treats an absent key as an error rather than as a first-run baseline — so it will NOT overwrite `closure:stats` with an empty object, which is exactly the catastrophe the comment block above that function was written to prevent. The accumulated observations behind FIX-012's live metric are not at risk. The second check, `/key .*not found/i`, may also cover the case in practice depending on how the installed Wrangler phrases the error.
+
+Found by a repo-wide sweep for NUL/backspace bytes during FIX-009, which turned up exactly two hits across 316 tracked source files — the other was introduced and repaired in that same task. This is the fourth time invisible control bytes have landed in this repo's source, and the first one to survive in `main`; the class is worth a guard, not just a one-line repair.
+
+**Checklist:**
+- [ ] Replace the two backspace bytes with proper `\b` escapes, byte-safely (never via a bash heredoc — that is how they get in)
+- [ ] Confirm the repaired regex actually matches a real Wrangler "404 ... not found" message, and that the pre-fix version does not
+- [ ] Decide whether the 404 branch is still needed at all, given `/key .*not found/i` may already cover it
+- [ ] Add a cheap repo-wide guard against NUL/backspace bytes in tracked source, so the next one is caught at commit rather than by chance
+- [ ] Worker tests green; deploy the Worker
+
+**Log:**
+- 2026-08-03 15:59 CT — created from a FIX-009 side finding; reported to Divyam, who asked for a card (Claude Code)
+
 ### FIX-029 · Map search "clear" button is a 44×28 touch target, under the 44×44 minimum
 
 - **Priority:** P3-Low
