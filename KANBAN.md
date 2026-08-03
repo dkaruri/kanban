@@ -486,21 +486,28 @@ When My Permit List is opened from a shared link, the Search Directory renders a
 - **Priority:** P2-Medium
 - **Status:** in-progress
 - **Created:** 2026-07-29 11:28 CT
-- **Updated:** 2026-08-03 15:23 CT
+- **Updated:** 2026-08-03 15:49 CT
 - **Tags:** Chicago Permit Search Tool
 
 The number of people viewing a shared list can be wrong after reloading the page or moving between apps on mobile — reloads appear to double-count, and backgrounded mobile sessions appear to linger (or drop) incorrectly.
 
 **Checklist:**
-- [ ] Reproduce both cases: rapid reloads inflating the count, and app-switching on mobile leaving a stale viewer
-- [ ] Review how presence is tracked (Worker-side) — connection lifetime, heartbeat, TTL
-- [ ] Key presence to a stable per-browser session id so a reload replaces rather than adds a viewer
-- [ ] Handle visibilitychange/pagehide/bfcache so backgrounded and restored tabs update presence correctly, with a TTL sweep for clients that vanish without notice
-- [ ] Verify count stability across reloads, app switches, tab closes, and multiple real viewers
+- [x] Reproduce both cases: rapid reloads inflating the count, and app-switching on mobile leaving a stale viewer
+- [x] Review how presence is tracked (Worker-side) — connection lifetime, heartbeat, TTL
+- [x] Key presence to a stable per-browser session id so a reload replaces rather than adds a viewer
+- [x] Handle visibilitychange/pagehide/bfcache so backgrounded and restored tabs update presence correctly, with a TTL sweep for clients that vanish without notice
+- [x] Verify count stability across reloads, app switches, tab closes, and multiple real viewers
+- [x] Keep a cached pre-fix page working against the new Worker (deploy-order safety)
+- [ ] Merge to main, deploy the Worker, and confirm live
 
 **Log:**
 - 2026-07-29 11:28 CT — created (Divyam)
 - 2026-08-03 15:23 CT — started; status → in-progress (Claude Code)
+- 2026-08-03 15:49 CT — ROOT CAUSE, one line: `presence()` returned `this.ctx.getWebSockets().length`. Presence was a count of SOCKETS, and a socket is not a person. Three separate symptoms fall out of that one fact, which is why the card reads as three bugs. (1) Reload — the browser opens the new socket before the old one's close reaches the room, so one person is two viewers for as long as the teardown takes. (2) Mobile app switch — iOS freezes the tab and the socket is never closed cleanly, so a viewer who left counts forever; nothing anywhere in the room had a heartbeat or a TTL. (3) `webSocketClose` recomputed presence while the departing socket was STILL in `getWebSockets()`, so even a clean exit reported one viewer too many. Reproduced all three against a real `ListRoom` under `wrangler dev` before changing anything (Claude Code)
+- 2026-08-03 15:49 CT — fix: presence is a set of SESSION ids, not a socket count. New pure `worker/src/presence.js` (`presenceFrom`/`presenceKey`) so the logic is unit-testable — `list-room.js` imports `cloudflare:workers`, which `node --test` cannot load, and that is exactly why this logic had no tests before. `ListRoom` stamps each socket `{sid, author, seen, beats}`, counts distinct sids, and excludes the socket on its way out. A 30s client heartbeat refreshes `seen`; anything past a 90s TTL is closed and uncounted. The sweep runs lazily on any message rather than on an alarm — a remaining viewer's own heartbeat is what corrects the count for everyone, so there is no server timer and no compute burned on an empty room. Presence frames only broadcast when the count or names actually change, so the heartbeat does not spam the room (Claude Code)
+- 2026-08-03 15:49 CT — client (`docs/list.html`): session id lives in **sessionStorage**, not localStorage. That is the whole point — it survives a reload and dies with the tab, so a refresh REPLACES the viewer while two genuinely open tabs are still two viewers. localStorage would have merged two real people at one desk into one. Plus: heartbeat while connected, `pagehide` closes the socket immediately (the only unload event iOS fires reliably, and it precedes a bfcache freeze), and `visibilitychange`/`pageshow` reconnect without waiting out the exponential backoff (Claude Code)
+- 2026-08-03 15:49 CT — caught a deploy-order hazard that would have been self-inflicted: a NEW Worker facing an OLD cached page would have swept it every 90s, because the old client cannot heartbeat — the fix would have looked like a disconnect bug on exactly the mobile users this card is about. The sweep is now opt-in (`beats`), set only when the client supplied a real sid. A pre-fix page gets a synthetic id, counts as one viewer, and is never reaped. **Deploy the Worker first**, then the client (Claude Code)
+- 2026-08-03 15:49 CT — verified. 173 worker unit tests (8 new in `presence.test.mjs`); 65/65 browser suites green, including the existing presence-pill guard t12. New `verify-tmp/t56-presence-lifecycle.js` proves the client half on desktop AND iPhone 13 — sid present and unchanged across a real `page.reload()`, a ping on the 30s interval (fired via a captured interval rather than waiting 30s), socket closed on pagehide, exactly one new socket on resume — and it FAILS against pre-fix `list.html` on four of those. `verify-tmp/_fix009-room.js` drives a real `ListRoom` under `wrangler dev`: reload=1, two sessions=2, departing peer drops, a quiet client swept after the real 90s TTL, legacy client left alone; 5 of its 6 assertions fail against the pre-fix room. Branch `fix-009-presence-accuracy` (`995623b`), pushed, NOT merged — awaiting merge approval and a Worker deploy (Claude Code)
 
 ### FIX-011 · Permit view: show the actual neighborhood name, not just a number
 
