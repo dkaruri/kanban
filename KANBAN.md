@@ -88,9 +88,9 @@ NEVER
 ### FIX-029 · Map search "clear" button is a 44×28 touch target, under the 44×44 minimum
 
 - **Priority:** P3-Low
-- **Status:** in-progress
+- **Status:** done
 - **Created:** 2026-08-03 13:11 CT
-- **Updated:** 2026-08-03 13:11 CT
+- **Updated:** 2026-08-03 14:40 CT
 - **Tags:** Chicago Permit Search Tool
 
 Found by the specificity audit run after FIX-028 (see that card for the pattern). The `×` clear button inside the map search field declares `32px` square (`28px` below 640px), but `.map-search button { min-width: 44px }` scores **0-1-1** and outranks the bare `.map-search-clear` at **0-1-0**, so the width declarations are dead and it renders **44px wide**. `min-height` is not declared by the winner, so that one DOES apply — giving a **44×28** target on mobile and 44×32 on desktop, under the 44×44 minimum.
@@ -105,7 +105,7 @@ Present identically on all three pages — the `.map-search` block is byte-ident
 - [x] Reserve enough input padding that the button no longer overlaps the text
 - [x] Apply to all three pages and keep the shared block byte-identical
 - [x] Regression test, proven to fail against the un-fixed code
-- [ ] Merge to main and verify live
+- [x] Merge to main and verify live
 
 **Log:**
 - 2026-08-03 13:11 CT — created from the FIX-028 audit; status → in-progress. Working on `fix-029-map-search-clear-target` (Claude Code)
@@ -113,6 +113,8 @@ Present identically on all three pages — the `.map-search` block is byte-ident
 - 2026-08-03 13:57 CT — verified: `verify-tmp/t55-map-clear-target.js`, 28 assertions across three pages × two viewports, **confirmed to FAIL against un-fixed main with 14 reds** at exactly the values on this card (44×32 desktop, 44×28 mobile, 8px/10px text intrusion). The specificity audit that raised this now reports **CRITICAL 0, down from 1**; its 5 remaining REVIEW items are the INVERSE relationship — `.map-search .map-search-clear` correctly outranking `.map-search button` — which is the intent. 164 Worker unit tests green. All three pages byte-checked (no control bytes, line endings preserved: index/map LF, list CRLF) and the shared `.map-search` block confirmed still byte-identical across them (Claude Code)
 - 2026-08-03 13:57 CT — **scope note worth recording: on `list.html` this button is not reachable at all.** `body.list-page .layout { display: none }` hides the entire search directory there, so the element has no layout box and only its computed contract can be asserted. It exists on that page purely because the three copies of the `.map-search` block are kept identical. t55 asserts computed `min-width`/`min-height` on every page and geometry only where a layout box exists, rather than silently skipping the page (Claude Code)
 - 2026-08-03 13:57 CT — **the full browser sweep is NOT clean, and it is not this change.** Two sweeps both returned 63/64 with a DIFFERENT single red each time: run 1 red `t27-scrolllock`, run 2 red `t49-value-range` (and t27 green). A regression fails the same test every time; alternating reds is flake. Both pass in isolation — t27 **9/9**, t49 **3/3**. Neither has a causal path to this diff: t27 exercises the permit overlay in directory mode where `.map-search` is not rendered at all, and t49's failing assertion is "rendered map source matches the filter []", i.e. map data had not loaded, not styling. t27's failing assertion carries a **4px desktop tolerance** against Chromium scroll anchoring that the test's own comment acknowledges re-settles ~50px on that path (it allows 64px on mobile) — a tight tolerance that is a latent flake independent of any change. Currently re-running the sweep with the two NEW suites held out, to rule out that adding them increased contention. **Flakiness is being tracked as its own concern, not silently absorbed into this card** (Claude Code)
+- 2026-08-03 14:40 CT — **DONE, live.** Divyam approved the merge; `--no-ff` to main (`47a64a6`), branch deleted, Pages build green. Verified in the right order — waited for the deploy, confirmed the deployed `map.html` is byte-identical (md5) to `main`, then measured. **t55 passes 28/28 against production.** Merge-only ship, no Worker change (Claude Code)
+- 2026-08-03 14:40 CT — **CORRECTION to the 13:57 flake entry.** I wrote that holding the two new suites out gave 62/62 and that this "implicated" them. That inference was wrong on two counts. (1) It rested on a single green run. (2) The sweep runs suites **alphabetically**, so `t49` is #50 and `t54`/`t55` are #55–56 — they execute AFTER `t49` and cannot affect it. A later sweep with a lightened `t55` went red on `t49` again, and a further one came back **64/64 green**. The honest reading: `t49-value-range` flakes at roughly 50% under sweep contention on the assertion "rendered map source matches the filter []" (map data not loaded in time), passes 3/3 in isolation, and is unrelated to any change made today. `t27-scrolllock` flaked once, on an assertion with a 4px desktop tolerance against Chromium scroll anchoring that its own comment says re-settles ~50px on that path. Both are pre-existing test-infrastructure flakes and deserve their own card if they keep costing time (Claude Code)
 
 ### FIX-028 · My Permit List toolbar buttons are all different widths
 
