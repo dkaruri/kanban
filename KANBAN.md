@@ -484,9 +484,9 @@ When My Permit List is opened from a shared link, the Search Directory renders a
 ### FIX-009 · Viewer count on a list is inaccurate across reloads and mobile app switches
 
 - **Priority:** P2-Medium
-- **Status:** todo
+- **Status:** in-progress
 - **Created:** 2026-07-29 11:28 CT
-- **Updated:** 2026-07-29 11:28 CT
+- **Updated:** 2026-08-03 15:23 CT
 - **Tags:** Chicago Permit Search Tool
 
 The number of people viewing a shared list can be wrong after reloading the page or moving between apps on mobile — reloads appear to double-count, and backgrounded mobile sessions appear to linger (or drop) incorrectly.
@@ -500,6 +500,7 @@ The number of people viewing a shared list can be wrong after reloading the page
 
 **Log:**
 - 2026-07-29 11:28 CT — created (Divyam)
+- 2026-08-03 15:23 CT — started; status → in-progress (Claude Code)
 
 ### FIX-011 · Permit view: show the actual neighborhood name, not just a number
 
