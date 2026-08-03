@@ -508,9 +508,9 @@ When My Permit List is opened from a shared link, the Search Directory renders a
 ### FIX-009 · Viewer count on a list is inaccurate across reloads and mobile app switches
 
 - **Priority:** P2-Medium
-- **Status:** in-progress
+- **Status:** done
 - **Created:** 2026-07-29 11:28 CT
-- **Updated:** 2026-08-03 15:54 CT
+- **Updated:** 2026-08-03 16:12 CT
 - **Tags:** Chicago Permit Search Tool
 
 The number of people viewing a shared list can be wrong after reloading the page or moving between apps on mobile — reloads appear to double-count, and backgrounded mobile sessions appear to linger (or drop) incorrectly.
@@ -523,7 +523,7 @@ The number of people viewing a shared list can be wrong after reloading the page
 - [x] Verify count stability across reloads, app switches, tab closes, and multiple real viewers
 - [x] Keep a cached pre-fix page working against the new Worker (deploy-order safety)
 - [x] Merge to main
-- [ ] Deploy the Worker (`npx wrangler deploy` from `worker/`) and confirm live
+- [x] Deploy the Worker and confirm live
 
 **Log:**
 - 2026-07-29 11:28 CT — created (Divyam)
@@ -537,6 +537,8 @@ The number of people viewing a shared list can be wrong after reloading the page
 - 2026-08-03 15:54 CT — MERGED to main (`6f6118a`, --no-ff), branch deleted. The client half is live on Pages; **the fix does nothing until the Worker is deployed**, which is Divyam's to run. Benign either way — the new client's `sid` and `ping` are simply ignored by the old Worker, so the count stays as wrong as it is today until the deploy, and nothing breaks (Claude Code)
 - 2026-08-03 15:54 CT — caught at merge time: git reported `presence.js` as **Bin**, not text. It held a literal NUL byte — `presenceKey` joined names with a 0x00 instead of a space. Harmless (the key is only ever compared for equality, and all 173 tests passed either way) but corrupt source, and this repo has been bitten by invisible control bytes three times. Repaired in `4075a09`; the committed blob was verified clean by reading it back out of git rather than trusting the write. Worth recording that the TESTS COULD NOT have caught this — only the `Bin` in the merge stat did (Claude Code)
 - 2026-08-03 15:54 CT — swept all 316 tracked source files for NUL/backspace bytes while there. One other hit, pre-existing and unrelated to this card: `worker/src/closure.js:156` writes a word-boundary `404` guard with two REAL backspace bytes instead of escapes, so `isKeyMissingError` tests for a literal backspace and can never match on the 404 path. It fails in the SAFE direction (it under-detects "key missing", so the closure seed treats an absent key as an error rather than as a first-run baseline — it will not wipe the accumulated observations), and the second `/key .*not found/i` check may cover it in practice. NOT fixed here — out of scope for this card, reported to Divyam (Claude Code)
+- 2026-08-03 16:12 CT — DEPLOYED and VERIFIED LIVE. `chi-permits-api` version `854d2f4c-888b-47b4-b8ab-e67b47fa8aa9`, bound to the PRODUCTION KV `ef1c7094...` (not the preview id). `verify-tmp/_fix009-room.js PeeXTko prod` passes all six assertions against the deployed Worker over `wss://`, including the real 90-second sweep: reload=1, two sessions=2, departing peer drops, quiet client swept, legacy client untouched. Pages is serving the new client (7 hits for the new identifiers in the live `list.html`). Read the list back afterwards to confirm the probe mutated nothing — 99 permits, 0 ticks, title intact; the probe only ever sends hello/ping, never a patch. Status → done (Claude Code)
+- 2026-08-03 16:12 CT — deploy gotcha worth keeping: `npx wrangler deploy` from `worker/` FAILED, and not because of the working directory. An earlier run from the repo ROOT had auto-scaffolded a `wrangler.jsonc` there with `assets: {directory: "docs"}`; wrangler walks UP the tree and prefers a root `.jsonc` over `worker/wrangler.toml`, so it tried to publish the 26.8 MiB `open_permits.json` as a Worker asset and aborted. Nothing was deployed and no stray Worker was created. Use **`npx wrangler deploy --config wrangler.toml`** from `worker/` — the bare form has been quietly wrong in this repo since that file appeared. The same failed run also deleted-by-scaffolding into `.gitignore`; all of it (stray config, root `.wrangler/`, the `.gitignore` block) has been cleaned up (Claude Code)
 
 ### FIX-011 · Permit view: show the actual neighborhood name, not just a number
 
