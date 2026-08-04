@@ -1063,9 +1063,9 @@ Connect the Search Tool to HighLevel (GoHighLevel) CRM so contractor/sub profile
 ### FEAT-031 · My Permit List: filter by visited / called
 
 - **Priority:** P1-High
-- **Status:** todo
+- **Status:** in-progress
 - **Created:** 2026-07-29 11:28 CT
-- **Updated:** 2026-07-29 11:28 CT
+- **Updated:** 2026-08-04 09:38 CT
 - **Tags:** Chicago Permit Search Tool
 
 In a list in My Permit List (`docs/list.html`), let people filter permits by whether someone has visited or called them. The visited checkmark (FEAT-008) and the Call action (FEAT-025 cards) already exist — this adds a tracked "called" state alongside visited and exposes both as list filters.
@@ -1079,6 +1079,7 @@ In a list in My Permit List (`docs/list.html`), let people filter permits by whe
 
 **Log:**
 - 2026-07-29 11:28 CT — created (Divyam)
+- 2026-08-04 09:38 CT — status → in-progress. Read the existing code first: **FEAT-034 already built the seat this feature sits in.** `state.listFilters` is an object, the filter bar is a `role="group"` explicitly commented as the place FEAT-031's chips join, `visibleListRows()` is a VIEW filter only (exports/routing/drive-times keep reading `userListRows()`), reordering is already locked with `aria-disabled` while filtered, and the Worker's `ticks`/`follow` flag endpoints share one handler over one list document. So "called" is a third flag of the same shape, not a new subsystem (Claude Code)
 
 ### FEAT-024 · Map Search: filter out work types and filter to residential only
 
