@@ -181,7 +181,7 @@ Two independent defects, both from FIX-009.
 - **Priority:** P3-Low
 - **Status:** in-progress
 - **Created:** 2026-08-03 15:59 CT
-- **Updated:** 2026-08-04 13:22 CT
+- **Updated:** 2026-08-04 13:34 CT
 - **Tags:** Chicago Permit Search Tool
 
 `worker/src/closure.js:156` writes the word-boundary `404` guard inside `isKeyMissingError` using two REAL 0x08 backspace bytes instead of escape sequences, so the regex tests for a literal backspace character and can never match. The 404 branch of that function is dead code.
@@ -191,15 +191,23 @@ Consequence is limited, and it fails in the SAFE direction. `isKeyMissingError` 
 Found by a repo-wide sweep for NUL/backspace bytes during FIX-009, which turned up exactly two hits across 316 tracked source files — the other was introduced and repaired in that same task. This is the fourth time invisible control bytes have landed in this repo's source, and the first one to survive in `main`; the class is worth a guard, not just a one-line repair.
 
 **Checklist:**
-- [ ] Replace the two backspace bytes with proper `\b` escapes, byte-safely (never via a bash heredoc — that is how they get in)
-- [ ] Confirm the repaired regex actually matches a real Wrangler "404 ... not found" message, and that the pre-fix version does not
-- [ ] Decide whether the 404 branch is still needed at all, given `/key .*not found/i` may already cover it
-- [ ] Add a cheap repo-wide guard against NUL/backspace bytes in tracked source, so the next one is caught at commit rather than by chance
-- [ ] Worker tests green; deploy the Worker
+- [x] Replace the two backspace bytes with proper `\b` escapes, byte-safely (never via a bash heredoc — that is how they get in)
+- [x] Confirm the repaired regex actually matches a real Wrangler "404 ... not found" message, and that the pre-fix version does not
+- [x] Decide whether the 404 branch is still needed at all, given `/key .*not found/i` may already cover it — **it is needed**, see the log
+- [x] Add a cheap repo-wide guard against NUL/backspace bytes in tracked source, so the next one is caught at commit rather than by chance
+- [x] Worker tests green (200 pass) — **but there is nothing to deploy**, see the log
+- [x] Correct the test fixture that hid this: it used a key name that never occurs in production
+- [ ] Merge to main (awaiting Divyam's go-ahead)
 
 **Log:**
 - 2026-08-03 15:59 CT — created from a FIX-009 side finding; reported to Divyam, who asked for a card (Claude Code)
 - 2026-08-04 13:22 CT — started (Claude Code)
+- 2026-08-04 13:34 CT — fixed byte-safely on branch `fix-030-control-bytes` (b4befcc); the committed blob holds zero 0x08 and zero NUL. Worth recording that the repair itself twice reintroduced the bug: writing the replacement through a shell heredoc, `\\b` collapsed to a real 0x08 before Python ever saw it — once in the source fix, and again while writing THIS board entry. Both times an assertion on the replacement string caught it. The working method is to build the backslash numerically (`bytes([92])` / `chr(92)`) so no layer of escaping can reach it (Claude Code)
+- 2026-08-04 13:34 CT — **the consequence was worse than "dead branch".** Verified against LIVE wrangler output captured from this repo's own KV namespace during the fix: repaired guard `true`, pre-fix guard `false`, fallback `/key .*not found/i` **`false`**. So `isKeyMissingError` returned FALSE for a genuinely absent key, and a real first run would have aborted with "KV read failed, refusing to continue" instead of establishing a baseline. Still the safe direction, and the accumulated observations were never at risk — but the first-run path was broken, not merely redundant (Claude Code)
+- 2026-08-04 13:34 CT — **the 404 branch IS still needed.** The fallback wants the literal word "key" followed by a space, which the real message only contains when the KEY NAME ends in "key". The fixture's did — `closure%3Adefinitely_not_a_key` — which is exactly why this test passed for six weeks while the branch it exists to cover was dead. The fixture now uses `closure:stats`, the key the seed actually reads, and a new test strips anything the fallback could latch onto so the 404 branch must answer alone. Three mutants all caught: restoring the 0x08 bytes, removing the branch, dropping the word boundaries (Claude Code)
+- 2026-08-04 13:34 CT — guard added as `worker/test/control-bytes.test.mjs`: scans every tracked text file for 0x08/0x00, reports file:line, and carries a probe proving the scan can fire. It runs in the normal `node --test test/*.test.mjs`, which CI already executes BEFORE the daily seed writes to production KV. Proved by poisoning a DIFFERENT file (`worker/src/stats.js`) with each byte in turn — both caught. This is test/CI-time, not literally commit-time: a pre-commit hook lives in `.git/hooks`, is untracked, and cannot be shared through the repo — offered to Divyam as a local extra. Its own sanity assertion earned its keep at once: `git ls-files` is CWD-relative, so run from `worker/` the first version saw 30 files instead of 316 and would have guarded almost nothing (Claude Code)
+- 2026-08-04 13:34 CT — **nothing to deploy.** The checklist assumed this code ships in the Worker; it does not. Traced the entry point's transitive imports: `closure.js` is absent from the `src/index.js` bundle and is imported only by `seed-kv.js`, which runs in GitHub Actions. The fix reaches production on the next scheduled seed once merged, so the Worker was deliberately NOT redeployed rather than taking a no-op production action (Claude Code)
+- 2026-08-04 13:34 CT — note: the preceding board commit (beead92) carries a message describing all of this, but its content was only the in-progress marker — the script that wrote the detail aborted on the backslash trap above after the commit had been staged. Corrected here rather than by rewriting pushed history (Claude Code)
 
 ### FIX-029 · Map search "clear" button is a 44×28 touch target, under the 44×44 minimum
 
