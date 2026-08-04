@@ -88,10 +88,12 @@ NEVER
 ### FIX-032 · t56-presence-lifecycle is flaky: pagehide sometimes leaves the socket open
 
 - **Priority:** P2-Medium
-- **Status:** todo
+- **Status:** done
 - **Created:** 2026-08-04 11:04 CT
-- **Updated:** 2026-08-04 11:04 CT
+- **Updated:** 2026-08-04 11:35 CT
 - **Tags:** Chicago Permit Search Tool
+
+> **CLOSED WITHOUT A FIX (won't-fix), 2026-08-04, at Divyam's request.** The flake is still there at ~40%. `done` is the only closing status this board has, so this line exists to stop the status implying otherwise. Everything needed to pick it up again is below.
 
 `verify-tmp/t56-presence-lifecycle.js` fails intermittently on the iPhone 13 leg with `pagehide left the socket open` and `expected exactly one new socket on resume`. **Measured at n=15 on each tree: 6/15 passing WITH FIX-031 and 6/15 on `main` — identical.** Pre-existing, and FIX-031 has no effect on it in either direction.
 
@@ -99,13 +101,14 @@ NEVER
 
 Still worth one look at the product before fixing the test, per the standing rule that a flaky test accuses the product: `liveDisconnect()` calls `ws.close()` and returns without waiting, so on a REAL `pagehide` the close frame may not flush before the page freezes — the ungraceful case the server TTL exists to catch. The test uses a synchronous fake socket, so it cannot be observing that; but it is the question worth asking on a real device.
 
-**Checklist:**
+**Checklist (left unticked — none of this was done):**
 - [ ] Await `showList()` in the test (or wait on a connect signal) and re-measure at n≥15 — a small sample cannot tell a 40% flake from a 60% one
 - [ ] Separately, check on-device whether a real `pagehide` close frame reaches the room, or whether the TTL is doing that work in practice
 - [ ] If it is only the test: fix the race properly, never with a bare sleep
 
 **Log:**
 - 2026-08-04 11:04 CT — created while fixing FIX-031 (Claude Code)
+- 2026-08-04 11:35 CT — **closed at Divyam's request without a fix.** Stating what is being accepted, so nobody re-derives it later: `t56-presence-lifecycle` still fails ~60% of runs, and it is the guard for FIX-009's client half — session ids surviving a reload, the 30s heartbeat firing, `pagehide` closing the socket, and resume reconnecting. A suite that red 60% of the time will be read as noise, so **that guard is effectively gone**; a real regression in the presence lifecycle would not be noticed by it. Cheap to revive if wanted — the cause is known and is one `await` in the test (see above), not an investigation (Claude Code)
 - 2026-08-04 11:23 CT — **CORRECTION to this card's original numbers.** It first said "2/6 on main, 5/6 with FIX-031 — improved by it". That was over-claimed from a sample far too small for a ~40% flake; a later run of the same tree gave 1/6. Re-measured at n=15 per tree: **6/15 both ways, no difference at all.** The lesson is not "measure" — I did measure — it is that **n=6 cannot support a directional claim**, and the original note stated one anyway (Claude Code)
 
 ### FIX-031 · Live-presence pill flickers in and out and shoves the page
@@ -113,7 +116,7 @@ Still worth one look at the product before fixing the test, per the standing rul
 - **Priority:** P1-High
 - **Status:** done
 - **Created:** 2026-08-04 10:40 CT
-- **Updated:** 2026-08-04 11:33 CT
+- **Updated:** 2026-08-04 11:35 CT
 - **Tags:** Chicago Permit Search Tool
 
 Reported by Divyam: with the list open on both mobile and desktop, the "2 here" presence pill keeps disappearing and reappearing, moving the page each time. **The count itself is correct** — both viewers really are there the whole time.
@@ -132,7 +135,7 @@ Two independent defects, both from FIX-009.
 - [x] Regression test asserting geometry, desktop + iPhone 13, with mutants proving it discriminates
 - [x] Cover the OTHER platform's mechanism — an iPhone firing `pagehide` disconnects cleanly, which the TTL cannot help; a 25s grace period on a drop makes a pocket trip invisible (added at Divyam's request after he asked whether both platforms were accounted for)
 - [x] Deploy the Worker, then merge (the TTL lives in the Worker; the client half stands alone without it)
-- [ ] **Confirm on-device that the flicker is gone across a real mobile/desktop pair** — the one thing headless cannot prove; left open until Divyam sees it
+- [x] **Confirm on-device that the flicker is gone across a real mobile/desktop pair** — confirmed by Divyam 2026-08-04 on his own mobile + desktop pair, the one thing headless could not prove
 
 **Log:**
 - 2026-08-04 10:40 CT — reported by Divyam (Claude Code)
@@ -140,6 +143,7 @@ Two independent defects, both from FIX-009.
 - 2026-08-04 11:04 CT — one measurement worth keeping: the remaining "1.4px of movement" after the layout fix was **not the pill at all** — it was `#user-list-panel`'s `listRise` animation still running while the first measurement was taken, drifting the whole panel. Waiting on `getAnimations()` before measuring cleared it. That is the same trap already recorded for contrast probes, hit again on geometry (Claude Code)
 - 2026-08-04 11:04 CT — spun off **FIX-032**: `t56-presence-lifecycle` is flaky, measured at 2/6 on `main` versus 5/6 with this change. Pre-existing and improved here, not cured; raised rather than folded in silently (Claude Code)
 - 2026-08-04 11:23 CT — **`a6f4da6`: a 25s grace period on a presence DROP.** Divyam asked whether the fix accounted for the issue appearing on BOTH mobile and desktop; checking properly showed the two platforms fail by different mechanisms and only one was covered. A desktop tab behind a window gets its heartbeat THROTTLED and is falsely reaped — the TTL fix. An iPhone whose screen goes off fires `pagehide` and disconnects CLEANLY, so the room is right to say one viewer; the TTL cannot help and should not. Holding a drop for 25s makes a pocket trip invisible while a real departure still resolves. Rises are never delayed, a deliberate leave bypasses it, and a repeated identical drop does not restart the clock — a reconnect re-sends room state, so re-arming per frame would stretch the hold forever. t58 now 44 assertions (22 per viewport), **7/7 mutants caught** (Claude Code)
+- 2026-08-04 11:35 CT — **CONFIRMED ON DEVICE by Divyam** — "works" on his real mobile + desktop pair. That closes the only claim the headless suites could not make: the fix was verified at 390×844 in Chromium, which is not iOS Safari, and the whole point of the grace period was an iOS-specific `pagehide` behaviour that headless never exercises (Claude Code)
 - 2026-08-04 11:33 CT — **DONE, merged and live** (`74f2c84`, `--no-ff`, branch deleted). Worker deployed by Divyam and verified before the merge — not by trying to read the TTL back (it is an internal constant and not externally observable), but by confirming the deployment landed at 16:26:28Z **from this branch**, with `PRESENCE_TTL_MS = 300000` in the tree and no uncommitted worker changes. API healthy, reference list `PeeXTko` still 99 permits. Re-verified on the MERGED tree before pushing: 190 Worker + 175 client unit tests, t58 and t57 green. Pages rebuilt and the live page confirmed to carry `applyPresence`, the 25s grace, the no-rearm guard, the reserved row height, and **no** trace of the old socket gate (Claude Code)
 - 2026-08-04 11:23 CT — **CORRECTION: the 11:04 note above is wrong about FIX-032 and is left standing so the error is visible.** "2/6 vs 5/6, improved by this change" came from a sample far too small for a ~40% flake — a later run of the same tree gave 1/6, which by the same reasoning would have said this change made it three times worse. Re-measured at **n=15 per tree: 6/15 both ways, no difference**. FIX-031 does not affect that flake in either direction. I measured, which was right, but then drew a directional conclusion the sample size could not support (Claude Code)
 
