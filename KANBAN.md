@@ -88,9 +88,9 @@ NEVER
 ### FIX-033 · t12 presence-pill suite still asserts the pre-FIX-031 contract
 
 - **Priority:** P2-Medium
-- **Status:** todo
+- **Status:** done
 - **Created:** 2026-08-04 12:52 CT
-- **Updated:** 2026-08-04 12:52 CT
+- **Updated:** 2026-08-04 13:18 CT
 - **Tags:** Chicago Permit Search Tool
 
 `verify-tmp/t12.js` fails deterministically on `main` — 3 runs out of 3 on a quiet machine, and identically on a FEAT-035 branch, so it is not caused by either. The assertion it fails is `closed.hidden`: after the live socket closes, the "N here" presence pill must be hidden. That is exactly the behaviour **FIX-031 deliberately inverted** on 2026-08-04: the pill is now bound to room membership rather than socket state, and a drop is held for a 25s grace period, because gating on the socket made the pill flash in and out while the actual viewers never changed. So t12 encodes the pre-FIX-031 contract and is asserting the bug FIX-031 fixed.
@@ -98,14 +98,21 @@ NEVER
 Found while verifying FEAT-035 (the full 70-script suite was 69 green, this the only red). Not fixed there because it is a question about the product contract, not about pagination.
 
 **Checklist:**
-- [ ] Confirm the intended contract: after a genuine, deliberate leave the pill SHOULD clear — the FIX-031 change was about transient socket drops, not real departures. Decide what t12's "closed" case is actually simulating (a transient close, or a real leave)
-- [ ] Rewrite t12's `closed` case to match: if it simulates a transient drop, assert the pill PERSISTS through the grace period; if a real leave, drive `liveDisconnect()` and assert it clears
-- [ ] Cover the grace period explicitly — a drop then a reconnect inside 25s should never blank the pill
-- [ ] Re-run t12 3x to confirm it is deterministic, not just green once
-- [ ] Check the other presence suites (t56, t57, t58) for the same stale assumption
+- [x] Confirm the intended contract: after a genuine, deliberate leave the pill SHOULD clear — the FIX-031 change was about transient socket drops, not real departures. Decide what t12's "closed" case is actually simulating (a transient close, or a real leave)
+- [x] Rewrite t12's `closed` case to match: if it simulates a transient drop, assert the pill PERSISTS through the grace period; if a real leave, drive `liveDisconnect()` and assert it clears
+- [x] Cover the grace period explicitly — a drop then a reconnect inside 25s should never blank the pill
+- [x] Re-run t12 3x to confirm it is deterministic, not just green once
+- [x] Check the other presence suites (t56, t57, t58) for the same stale assumption
+- [x] A SECOND stale case the card had not spotted: t12's "solo" step asserted the pill hides the instant a presence frame drops the count to 1, which the grace period also changed
+- [x] Keep the suite discriminating after inverting two assertions — prove it with mutants rather than assuming
 
 **Log:**
 - 2026-08-04 12:52 CT — created while verifying FEAT-035; t12 is a stale test, not a regression (Claude Code)
+- 2026-08-04 13:09 CT — started: reading t12's cases against the shipped presence contract (Claude Code)
+- 2026-08-04 13:18 CT — the contract, read off the shipped code: `ws.onclose` deliberately does NOT touch presence ("the count has not changed just because our socket dropped"); a presence frame dropping below 2 is HELD for PRESENCE_SETTLE_MS (25s); only `liveDisconnect()` clears, immediately. So t12's `__wsClose()` case simulates a TRANSIENT drop and the pill is right to persist (Claude Code)
+- 2026-08-04 13:18 CT — **two** stale cases, not one. Besides `closed`, the `solo` step asserted the pill hides the instant a frame drops the count to 1 — also changed by the grace period. Both rewritten to the current contract, plus an assertion on `state.live.settleTo` so "unchanged" is distinguished from "the frame was dropped on the floor" (Claude Code)
+- 2026-08-04 13:18 CT — inverting two "must hide" assertions would have left a suite that a permanently-visible pill could satisfy, so a deliberate-leave case was ADDED to keep it discriminating. Proved with 4 mutants, all caught: restoring the ws.onclose repaint (the original FIX-031 flicker), removing the grace period, stopping a deliberate leave from clearing, and stopping a rise from cancelling a pending drop. The old t12 could never have caught the first of those — it asserted the bug (Claude Code)
+- 2026-08-04 13:18 CT — t12 green 3/3 (was red 3/3, deterministically). t56, t57 and t58 all still green; no other suite carries the stale assumption. Grace-period mechanics deliberately NOT duplicated here — t58-presence-jiggle owns them. **DONE.** Note this fix lives only in the working tree: `verify-tmp/` is gitignored, which is FIX-020 (Claude Code)
 
 ### FIX-032 · t56-presence-lifecycle is flaky: pagehide sometimes leaves the socket open
 
