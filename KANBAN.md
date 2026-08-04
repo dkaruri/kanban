@@ -111,9 +111,9 @@ Still worth one look at the product before fixing the test, per the standing rul
 ### FIX-031 · Live-presence pill flickers in and out and shoves the page
 
 - **Priority:** P1-High
-- **Status:** in-progress
+- **Status:** done
 - **Created:** 2026-08-04 10:40 CT
-- **Updated:** 2026-08-04 11:23 CT
+- **Updated:** 2026-08-04 11:33 CT
 - **Tags:** Chicago Permit Search Tool
 
 Reported by Divyam: with the list open on both mobile and desktop, the "2 here" presence pill keeps disappearing and reappearing, moving the page each time. **The count itself is correct** — both viewers really are there the whole time.
@@ -131,8 +131,8 @@ Two independent defects, both from FIX-009.
 - [x] Stop the layout movement — measured 5.9px on iPhone 13 / 3.7px desktop; `.title-row-end` now reserves the pill's 22.72px box
 - [x] Regression test asserting geometry, desktop + iPhone 13, with mutants proving it discriminates
 - [x] Cover the OTHER platform's mechanism — an iPhone firing `pagehide` disconnects cleanly, which the TTL cannot help; a 25s grace period on a drop makes a pocket trip invisible (added at Divyam's request after he asked whether both platforms were accounted for)
-- [ ] Deploy the Worker, then merge (the TTL lives in the Worker; the client half stands alone without it)
-- [ ] Confirm on-device that the flicker is gone across a real mobile/desktop pair
+- [x] Deploy the Worker, then merge (the TTL lives in the Worker; the client half stands alone without it)
+- [ ] **Confirm on-device that the flicker is gone across a real mobile/desktop pair** — the one thing headless cannot prove; left open until Divyam sees it
 
 **Log:**
 - 2026-08-04 10:40 CT — reported by Divyam (Claude Code)
@@ -140,6 +140,7 @@ Two independent defects, both from FIX-009.
 - 2026-08-04 11:04 CT — one measurement worth keeping: the remaining "1.4px of movement" after the layout fix was **not the pill at all** — it was `#user-list-panel`'s `listRise` animation still running while the first measurement was taken, drifting the whole panel. Waiting on `getAnimations()` before measuring cleared it. That is the same trap already recorded for contrast probes, hit again on geometry (Claude Code)
 - 2026-08-04 11:04 CT — spun off **FIX-032**: `t56-presence-lifecycle` is flaky, measured at 2/6 on `main` versus 5/6 with this change. Pre-existing and improved here, not cured; raised rather than folded in silently (Claude Code)
 - 2026-08-04 11:23 CT — **`a6f4da6`: a 25s grace period on a presence DROP.** Divyam asked whether the fix accounted for the issue appearing on BOTH mobile and desktop; checking properly showed the two platforms fail by different mechanisms and only one was covered. A desktop tab behind a window gets its heartbeat THROTTLED and is falsely reaped — the TTL fix. An iPhone whose screen goes off fires `pagehide` and disconnects CLEANLY, so the room is right to say one viewer; the TTL cannot help and should not. Holding a drop for 25s makes a pocket trip invisible while a real departure still resolves. Rises are never delayed, a deliberate leave bypasses it, and a repeated identical drop does not restart the clock — a reconnect re-sends room state, so re-arming per frame would stretch the hold forever. t58 now 44 assertions (22 per viewport), **7/7 mutants caught** (Claude Code)
+- 2026-08-04 11:33 CT — **DONE, merged and live** (`74f2c84`, `--no-ff`, branch deleted). Worker deployed by Divyam and verified before the merge — not by trying to read the TTL back (it is an internal constant and not externally observable), but by confirming the deployment landed at 16:26:28Z **from this branch**, with `PRESENCE_TTL_MS = 300000` in the tree and no uncommitted worker changes. API healthy, reference list `PeeXTko` still 99 permits. Re-verified on the MERGED tree before pushing: 190 Worker + 175 client unit tests, t58 and t57 green. Pages rebuilt and the live page confirmed to carry `applyPresence`, the 25s grace, the no-rearm guard, the reserved row height, and **no** trace of the old socket gate (Claude Code)
 - 2026-08-04 11:23 CT — **CORRECTION: the 11:04 note above is wrong about FIX-032 and is left standing so the error is visible.** "2/6 vs 5/6, improved by this change" came from a sample far too small for a ~40% flake — a later run of the same tree gave 1/6, which by the same reasoning would have said this change made it three times worse. Re-measured at **n=15 per tree: 6/15 both ways, no difference**. FIX-031 does not affect that flake in either direction. I measured, which was right, but then drew a directional conclusion the sample size could not support (Claude Code)
 
 ### FIX-030 · closure.js: the 404 guard is written with real backspace bytes, so it never matches
