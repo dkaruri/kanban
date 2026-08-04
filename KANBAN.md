@@ -1068,7 +1068,7 @@ Two candidate approaches, both noted but neither built:
 - **Priority:** P2-Medium
 - **Status:** done
 - **Created:** 2026-08-03 11:03 CT
-- **Updated:** 2026-08-04 14:41 CT
+- **Updated:** 2026-08-04 14:51 CT
 - **Tags:** Chicago Permit Search Tool
 
 The permit view's "Property use" line is a guess. `permitUse()` (FEAT-013) reads `permit_type` + `work_description` and is rendered with an "approx" badge because the permits dataset carries no occupancy field. Over a real month it can classify only **32%** of permits; the other 68% read "Unclear".
@@ -1102,7 +1102,8 @@ Measured over July 2026 (2,384 open geocoded permits): 2,101 (88.1%) carry a usa
 - 2026-08-04 14:41 CT — **measured on the shipped code**, July 2026, 2,382 open geocoded permits: **87.7% now show a sourced Assessor class**, 5.2% fall back to the text heuristic still badged approx, and **7.1% still read "—"** — against **32.5%** that the text heuristic could classify at all. Better than this card's 11.5% estimate for the remainder. Sourced split: 62.9% residential, 12.3% commercial/industrial, 5.6% exempt, 5.0% mixed, 1.8% vacant. **Zero** class codes appeared in that month that the table does not cover (Claude Code)
 - 2026-08-04 14:41 CT — **decision on checklist item 8: FEAT-024's map filter STAYS on zoning, and the two are now deliberately different sources.** This card's own log already made the argument and it still holds — zoning answers "show me residential AREAS" and the Assessor class answers "what IS this parcel", and the class is only available per-permit via a live lookup that a map filter over thousands of points must not make. `resolveGeoForRows` was given an explicit comment saying it must not resolve the class, so an export cannot quietly turn the on-demand lookup into a bulk one. For the same reason the saved-list table's "Use" column stays on `permitUse()` — a column is a bulk fetch by another name (Claude Code)
 - 2026-08-04 14:41 CT — verified: 14 unit assertions **extracted from the shipping page at test time** (`verify-tmp/feat038-use.mjs`, the feat024 pattern, and it also asserts the block is byte-identical on both pages); **7 mutants, all caught** — including bucketing 991 by its leading digit, taking the first bucket instead of Mixed use, caching a network failure, and badging a sourced class approximate; 21 browser assertions across index.html, list.html and iPhone 13 (`verify-tmp/t62-property-use.js`); contrast **6.32:1 light / 8.51:1 dark** with a poisoned control proving the probe still discriminates; and **6/6 live unstubbed permits** where the overlay's class matched Cook County read independently. Worker suite still 200/200 (Claude Code)
-- 2026-08-04 14:41 CT — **DONE.** `289e834` on branch `feat-038-assessor-class`, pushed. NOT merged and NOT live — merging to main is Divyam's call (Claude Code)
+- 2026-08-04 14:41 CT — `289e834` on branch `feat-038-assessor-class`, pushed. Held there pending Divyam's merge approval (Claude Code)
+- 2026-08-04 14:51 CT — **DONE and LIVE.** Divyam approved the merge; `--no-ff` merge `67a4ca5` on `main`, branch deleted locally and on origin. Re-ran the full battery against the MERGED tree before pushing (14 unit, 21 browser, 200 worker) — not just against the branch. Verified at the destination rather than trusting the push: polled the live Pages files until `ASSESSOR_CLASS_USE` actually appeared in both `index.html` and `list.html` (~2 min), then drove the **production site** with 6 real permits and no stubs — every one rendered the class that Cook County returns when read independently (Claude Code)
 
 ### FEAT-025 · Contractor detail view in the permit overlay
 
