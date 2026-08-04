@@ -1063,9 +1063,9 @@ Connect the Search Tool to HighLevel (GoHighLevel) CRM so contractor/sub profile
 ### FEAT-031 · My Permit List: filter by visited / called
 
 - **Priority:** P1-High
-- **Status:** in-progress
+- **Status:** done
 - **Created:** 2026-07-29 11:28 CT
-- **Updated:** 2026-08-04 10:16 CT
+- **Updated:** 2026-08-04 10:23 CT
 - **Tags:** Chicago Permit Search Tool
 
 In a list in My Permit List (`docs/list.html`), let people filter permits by whether someone has visited or called them. The visited checkmark (FEAT-008) and the Call action (FEAT-025 cards) already exist — this adds a tracked "called" state alongside visited and exposes both as list filters.
@@ -1078,8 +1078,8 @@ In a list in My Permit List (`docs/list.html`), let people filter permits by whe
 - [x] Verify on desktop and mobile — 116 assertions across desktop + iPhone 13, plus a 60-check a11y sweep
 - [x] Split the single "Visited/Called" column into two (added — one control for two facts was the thing this card exists to separate)
 - [x] Raise the checkbox hit target to 44px (added — measured at 38px, and this doubles the number of them)
-- [ ] **Verify a shared list with MULTIPLE VIEWERS — not done, and it cannot be until the Worker is deployed (see the log)**
-- [ ] Deploy the Worker, then merge (deploy-order hazard — see the log)
+- [x] Deploy the Worker, then merge (deploy-order hazard — Worker deployed by Divyam and confirmed live BEFORE the merge)
+- [ ] **Verify a shared list with two real viewers on two devices — still open.** The sync path is covered by unit and headless tests, and the Worker is live, but a genuine two-device check has not been done. Flagged rather than counted as passed.
 
 **Log:**
 - 2026-07-29 11:28 CT — created (Divyam)
@@ -1093,6 +1093,8 @@ In a list in My Permit List (`docs/list.html`), let people filter permits by whe
 - 2026-08-04 10:16 CT — **two existing suites went red BY DESIGN and were updated, not silenced.** `t47-visitedlabel` is FIX-018's guard and asserted the header reads `"Visited/Called"` — that single column is what this card splits; its real requirement (a visible, legible, non-overflowing word label) is unchanged and is now asserted for BOTH columns. `t44-followup` and `t45-uiux-followup` used a bare `.pm-fu` selector, which the new call toggle also matches, so they were silently driving the wrong button — fixed at the source too: **the follow-up button now carries `.pm-followup`**. Separately, `verify-tmp/pb-reducer-impl.mjs` claimed "AUTO-EXTRACTED" but was a hand copy that **had already lost FEAT-034's `fu` case**, so the live-sync reducer had been tested against a stale transcription for weeks; it now extracts from `docs/list.html` at test time and covers all three flags (Claude Code)
 - 2026-08-04 10:16 CT — verification. **190 Worker + 175 client unit tests**, `verify-tmp/t57-visited-called.js` at **116 assertions** across desktop and iPhone 13 (renamed from t54, which collided with FIX-028's suite), `_t57-audit.js` at 60 a11y checks, and `_feat031-mutants.js` at **10/10 caught** — each predicate broken in turn on a working build, because a suite that only aborts on missing markup has not tested behaviour. Full browser sweep: 65 scripts, all green (t44's one red in the batch was the documented `:8791` port contention — it passes in isolation, unlike t45, which was a real failure and is fixed). CSV column alignment asserted too, since header and row are two separate literals (Claude Code)
 - 2026-08-04 10:16 CT — **DEPLOY-ORDER HAZARD, verified against production rather than assumed.** `GET https://chi-permits-api.divyam-c-karuri.workers.dev/` still advertises `PUT /api/lists/:id/ticks | /follow` with no `/called`, so the deployed Worker predates this. Merging the client first means every call mark stays local and never reaches a shared list — not destructive (it resyncs later), but silently single-player. **Deploy the Worker with or before the merge: `npx wrangler deploy --config wrangler.toml` from `worker/`** — the bare `npx wrangler deploy` is not safe in this repo. Same class as FEAT-034's hazard. This is also why the "shared list with multiple viewers" checklist item is still open: it cannot be honestly verified until the Worker is live. **Awaiting approval to merge** (Claude Code)
+- 2026-08-04 10:23 CT — **DONE, merged and live.** Divyam deployed the Worker; confirmed at the destination before merging rather than taken on trust — the API now advertises `PUT /api/lists/:id/ticks | /follow | /called` and returns `called` in the list shape. Existing data re-read after the deploy: reference list `PeeXTko` still holds **99 permits**, `called` present and empty, ticks and follow-ups untouched. Merged `--no-ff` (`abe825f`), branch deleted, Pages rebuilt. Re-verified on the MERGED tree before pushing — 190 Worker + 175 client unit tests, t57/t44/t45/t47 and the a11y sweep all green (Claude Code)
+- 2026-08-04 10:23 CT — one item deliberately left unticked: **a real two-device check of a shared list has not been done.** The sync path is covered by unit tests, the reducer tests, and headless runs, and the Worker is live, so there is no known gap — but "two people watching one list on two phones" is not something these suites actually prove, and marking it passed would be a claim I have not earned (Claude Code)
 
 ### FEAT-024 · Map Search: filter out work types and filter to residential only
 
