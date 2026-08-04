@@ -85,6 +85,58 @@ NEVER
 
 > **Purpose:** Things to fix on current projects — currently the Chicago Permit Search tool. Bugs, regressions, broken behavior, and cleanup on what already exists. This is Claude Code's default work queue.
 
+### FIX-032 · t56-presence-lifecycle is flaky: pagehide sometimes leaves the socket open
+
+- **Priority:** P2-Medium
+- **Status:** todo
+- **Created:** 2026-08-04 11:04 CT
+- **Updated:** 2026-08-04 11:04 CT
+- **Tags:** Chicago Permit Search Tool
+
+`verify-tmp/t56-presence-lifecycle.js` fails intermittently on the iPhone 13 leg with `pagehide left the socket open` and `expected exactly one new socket on resume`. **Measured, not eyeballed: 2/6 passing on `main`, 5/6 with FIX-031 applied** — so it is PRE-EXISTING, it is not caused by FIX-031, and FIX-031 improves it without curing it.
+
+Worth chasing into the product rather than the test, per the standing rule that a flaky test accuses the product. The suspicion to start from: `liveDisconnect()` calls `ws.close()` and returns immediately, so on a real `pagehide` the close frame may not be flushed before the page is frozen — which is exactly the ungraceful-death case the server-side TTL exists to catch. If that is what the test is catching, the flake is telling the truth about production and the fix belongs in the client's unload path, not in a `waitForTimeout`.
+
+**Checklist:**
+- [ ] Reproduce with the rate measured before and after any change (a single green run proves nothing about a flake)
+- [ ] Determine whether the close frame genuinely fails to flush on pagehide, or whether the test merely reads the socket count too early
+- [ ] If it is the product: make the unload path close deterministically, or accept it and document that the TTL is the backstop
+- [ ] Only if it is the test: fix the race without a bare sleep
+
+**Log:**
+- 2026-08-04 11:04 CT — created while fixing FIX-031; found by running the suite six times on each tree rather than once (Claude Code)
+
+### FIX-031 · Live-presence pill flickers in and out and shoves the page
+
+- **Priority:** P1-High
+- **Status:** in-progress
+- **Created:** 2026-08-04 10:40 CT
+- **Updated:** 2026-08-04 11:04 CT
+- **Tags:** Chicago Permit Search Tool
+
+Reported by Divyam: with the list open on both mobile and desktop, the "2 here" presence pill keeps disappearing and reappearing, moving the page each time. **The count itself is correct** — both viewers really are there the whole time.
+
+Two independent defects, both from FIX-009.
+
+**1. The pill was bound to SOCKET state, not to who is in the room.** Three places turned a socket blip into a visible pop: `renderPresence` read `live.connected ? count : 0`, so the viewer's OWN momentary disconnect blanked it; `liveDisconnect()` zeroed presence before every reconnect; and `ws.onclose` repainted on the way down. None of those mean anybody left.
+
+**2. Sockets churn on their own.** The room's 90s presence TTL is enforced against a client-side `setInterval`, and browsers throttle that in a hidden tab (Chrome to ~1/minute after 5 minutes hidden). Running the real `presenceFrom`, **one throttled tick was enough to reap a viewer who was sitting right there** — the survivor's count dropped to 1, the reaped client reconnected, and the cycle repeated every ~90s forever.
+
+**Checklist:**
+- [x] Diagnose why the count changes when the viewers do not
+- [x] Stop the pill blanking on a transient reconnect (hold the last known count; only a deliberate leave clears it)
+- [x] Stop the false reaping — TTL 90s → 300s, with the trade-off written into the source
+- [x] Stop the layout movement — measured 5.9px on iPhone 13 / 3.7px desktop; `.title-row-end` now reserves the pill's 22.72px box
+- [x] Regression test asserting geometry, desktop + iPhone 13, with mutants proving it discriminates
+- [ ] Deploy the Worker, then merge (the TTL lives in the Worker; the client half stands alone without it)
+- [ ] Confirm on-device that the flicker is gone across a real mobile/desktop pair
+
+**Log:**
+- 2026-08-04 10:40 CT — reported by Divyam (Claude Code)
+- 2026-08-04 11:04 CT — **built on branch `fix-031-presence-flicker` (`9b1c978`), pushed, NOT merged, Worker NOT deployed.** Verified with `verify-tmp/t58-presence-jiggle.js` — 24 assertions across desktop and iPhone 13, asserting that the element below the title row does not move on a socket blip, on a real 2→1 change, or going 1→3. **3/3 mutants caught**, including one that first exposed a genuine gap: the original suite never drove `liveConnect()`, so half the fix was unverified until an assertion was added for the real reconnect path. 190 Worker unit tests pass; the presence tests reference `PRESENCE_TTL_MS` symbolically so they follow the new value (Claude Code)
+- 2026-08-04 11:04 CT — one measurement worth keeping: the remaining "1.4px of movement" after the layout fix was **not the pill at all** — it was `#user-list-panel`'s `listRise` animation still running while the first measurement was taken, drifting the whole panel. Waiting on `getAnimations()` before measuring cleared it. That is the same trap already recorded for contrast probes, hit again on geometry (Claude Code)
+- 2026-08-04 11:04 CT — spun off **FIX-032**: `t56-presence-lifecycle` is flaky, measured at 2/6 on `main` versus 5/6 with this change. Pre-existing and improved here, not cured; raised rather than folded in silently (Claude Code)
+
 ### FIX-030 · closure.js: the 404 guard is written with real backspace bytes, so it never matches
 
 - **Priority:** P3-Low
