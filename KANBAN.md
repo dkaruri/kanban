@@ -1496,9 +1496,9 @@ Also includes a **follow-up tag for GCs**: from a permit, tag its General Contra
 ### FEAT-035 · Permit lists: 1000-permit cap with 100-per-page pagination that remembers your page
 
 - **Priority:** P1-High
-- **Status:** in-progress
+- **Status:** done
 - **Created:** 2026-07-29 13:50 CT
-- **Updated:** 2026-08-04 12:52 CT
+- **Updated:** 2026-08-04 13:05 CT
 - **Tags:** Chicago Permit Search Tool
 
 In My Permit List (`docs/list.html`), cap each list at 1000 permits and paginate the list view at 100 permits per page with click-through page controls. Pagination must keep its memory: clicking into a permit and coming back returns you to the same page (and scroll position), consistent with the existing last-view persistence (FEAT-025 Phase 3). Critically, pagination is a presentation layer only — Optimize Route must account for the full scope of the list (all pages, up to 1000), not just the visible page; same for exports and drive distances. FIX-004 (done on branch `fix-004-route-scope`) already un-bounded the optimizer via a tiled OSRM matrix, but set a practical ceiling of 400 stops (`MAX_SORT_STOPS`, main-thread local-search cost) — this task must reconcile that ceiling with the 1000-permit cap (raise it per FIX-004's noted path: incremental delta evaluation and/or a worker thread, or clearly message the limit).
@@ -1525,6 +1525,8 @@ In My Permit List (`docs/list.html`), cap each list at 1000 permits and paginate
 - 2026-08-04 12:40 CT — measured at the 1000 ceiling: open a full list 140ms, re-render 101ms, change page 248ms, 100 rows in the DOM. Verified 197 Worker + 191 client unit tests, t59 (48 assertions) and t60 (24 a11y assertions, contrast 7.76-9.11:1 in both themes with a poisoned control) on desktop AND iPhone 13. 13 mutants applied and all caught — one initially SURVIVED and exposed that nothing tested the reload restore path, which is a checklist requirement; the test was added (Claude Code)
 - 2026-08-04 12:52 CT — committed to branch `feat-035-list-pagination` (e256b87) and pushed. Full browser suite: 69 of 70 green. The one red, t12, is NOT from this work — it fails 3/3 identically on HEAD on a quiet machine, and the assertion it fails (`closed.hidden`: the presence pill must hide when the socket closes) is exactly the behaviour FIX-031 deliberately inverted this morning, so t12 encodes the pre-FIX-031 contract. Raised separately rather than changed here (Claude Code)
 - 2026-08-04 12:52 CT — NOT yet done: the Worker must deploy BEFORE this client change reaches Pages, or a 1000-permit list published against the old Worker is silently re-capped to 220 and loses its tail. Awaiting Divyam's go-ahead to deploy the Worker and merge (Claude Code)
+- 2026-08-04 13:05 CT — Worker deployed FIRST (version d1f056b8) and verified against production before merging, end to end rather than by inference: a 17,066-byte body publishing a full 1000-permit list came back with all 1000 — the old MAX_BODY of 8192 would have 413'd that request outright and the old MAX_PERMITS of 220 would have truncated it. Both check lists were deleted afterwards (soft-delete, gone from the directory, 404 on read). Health check clean and existing user lists intact (Claude Code)
+- 2026-08-04 13:05 CT — merged to main with --no-ff (44b28a6) and pushed; origin/main had an unrelated README edit which was merged in first (be8ebc9). GitHub Pages rebuilt and the live list.html was checked for every piece of the implementation AND for the absence of the three old values. Then the real production site was driven at desktop and iPhone 13: page 1 shows 100 of 250, both pagers render, stop numbers continue at 101 on page 2, route and exports still see all 250, every pager target >=44px, no sideways scroll. **DONE and live** (Claude Code)
 
 ### FEAT-036 · My Permit List: stat tiles should reflect the currently viewed list
 
