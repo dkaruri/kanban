@@ -85,6 +85,28 @@ NEVER
 
 > **Purpose:** Things to fix on current projects — currently the Chicago Permit Search tool. Bugs, regressions, broken behavior, and cleanup on what already exists. This is Claude Code's default work queue.
 
+### FIX-033 · t12 presence-pill suite still asserts the pre-FIX-031 contract
+
+- **Priority:** P2-Medium
+- **Status:** todo
+- **Created:** 2026-08-04 12:52 CT
+- **Updated:** 2026-08-04 12:52 CT
+- **Tags:** Chicago Permit Search Tool
+
+`verify-tmp/t12.js` fails deterministically on `main` — 3 runs out of 3 on a quiet machine, and identically on a FEAT-035 branch, so it is not caused by either. The assertion it fails is `closed.hidden`: after the live socket closes, the "N here" presence pill must be hidden. That is exactly the behaviour **FIX-031 deliberately inverted** on 2026-08-04: the pill is now bound to room membership rather than socket state, and a drop is held for a 25s grace period, because gating on the socket made the pill flash in and out while the actual viewers never changed. So t12 encodes the pre-FIX-031 contract and is asserting the bug FIX-031 fixed.
+
+Found while verifying FEAT-035 (the full 70-script suite was 69 green, this the only red). Not fixed there because it is a question about the product contract, not about pagination.
+
+**Checklist:**
+- [ ] Confirm the intended contract: after a genuine, deliberate leave the pill SHOULD clear — the FIX-031 change was about transient socket drops, not real departures. Decide what t12's "closed" case is actually simulating (a transient close, or a real leave)
+- [ ] Rewrite t12's `closed` case to match: if it simulates a transient drop, assert the pill PERSISTS through the grace period; if a real leave, drive `liveDisconnect()` and assert it clears
+- [ ] Cover the grace period explicitly — a drop then a reconnect inside 25s should never blank the pill
+- [ ] Re-run t12 3x to confirm it is deterministic, not just green once
+- [ ] Check the other presence suites (t56, t57, t58) for the same stale assumption
+
+**Log:**
+- 2026-08-04 12:52 CT — created while verifying FEAT-035; t12 is a stale test, not a regression (Claude Code)
+
 ### FIX-032 · t56-presence-lifecycle is flaky: pagehide sometimes leaves the socket open
 
 - **Priority:** P2-Medium
@@ -1474,25 +1496,35 @@ Also includes a **follow-up tag for GCs**: from a permit, tag its General Contra
 ### FEAT-035 · Permit lists: 1000-permit cap with 100-per-page pagination that remembers your page
 
 - **Priority:** P1-High
-- **Status:** todo
+- **Status:** in-progress
 - **Created:** 2026-07-29 13:50 CT
-- **Updated:** 2026-07-29 13:50 CT
+- **Updated:** 2026-08-04 12:52 CT
 - **Tags:** Chicago Permit Search Tool
 
 In My Permit List (`docs/list.html`), cap each list at 1000 permits and paginate the list view at 100 permits per page with click-through page controls. Pagination must keep its memory: clicking into a permit and coming back returns you to the same page (and scroll position), consistent with the existing last-view persistence (FEAT-025 Phase 3). Critically, pagination is a presentation layer only — Optimize Route must account for the full scope of the list (all pages, up to 1000), not just the visible page; same for exports and drive distances. FIX-004 (done on branch `fix-004-route-scope`) already un-bounded the optimizer via a tiled OSRM matrix, but set a practical ceiling of 400 stops (`MAX_SORT_STOPS`, main-thread local-search cost) — this task must reconcile that ceiling with the 1000-permit cap (raise it per FIX-004's noted path: incremental delta evaluation and/or a worker thread, or clearly message the limit).
 
 **Checklist:**
-- [ ] Enforce a 1000-permit cap per list: block adds past the cap with a clear message (single adds and "Add all N" bulk adds — cap-aware partial add with a count of what was skipped)
-- [ ] Paginate the list view at 100 per page with page controls (prev/next + page numbers, current page and total count visible)
-- [ ] Persist the current page in last-view state: opening a permit and returning restores the same page and scroll position; reloads restore it too
-- [ ] Keep Optimize Route, drive distances, and exports (Google Maps/KML/CSV) scoped to the FULL list across all pages — verify with a multi-page list (FIX-004's tiled matrix)
-- [ ] Reconcile FIX-004's 400-stop optimizer ceiling with the 1000 cap: raise the ceiling (delta-evaluated local search, off-main-thread) or surface an honest limit message when a list exceeds it
-- [ ] Make pagination play well with reordering, visited/called state, and shared lists (viewers see consistent pages)
-- [ ] Check performance at the 1000-permit ceiling (render, OSRM request count, share/live sync)
-- [ ] Verify page memory and full-scope route optimization on desktop and mobile
+- [x] Enforce a 1000-permit cap per list: block adds past the cap with a clear message (single adds and "Add all N" bulk adds — cap-aware partial add with a count of what was skipped)
+- [x] Paginate the list view at 100 per page with page controls (prev/next + page numbers, current page and total count visible)
+- [x] Persist the current page in last-view state: opening a permit and returning restores the same page and scroll position; reloads restore it too
+- [x] Keep Optimize Route, drive distances, and exports (Google Maps/KML/CSV) scoped to the FULL list across all pages — verify with a multi-page list (FIX-004's tiled matrix)
+- [x] Reconcile FIX-004's 400-stop optimizer ceiling with the 1000 cap: raise the ceiling (delta-evaluated local search, off-main-thread) or surface an honest limit message when a list exceeds it
+- [x] Make pagination play well with reordering, visited/called state, and shared lists (viewers see consistent pages)
+- [x] Check performance at the 1000-permit ceiling (render, OSRM request count, share/live sync)
+- [x] Verify page memory and full-scope route optimization on desktop and mobile
+- [x] Raise the Worker's own caps to match: MAX_PERMITS 220 -> 1000 and MAX_BODY 8 KB -> 64 KB, or a full list 413s on publish and loses its tail
+- [x] Split the live-sync Durable Object doc across storage keys — one blob is 179 KiB worst case at the new cap, over the 128 KiB per-value limit
 
 **Log:**
 - 2026-07-29 13:50 CT — created (Divyam)
+- 2026-08-04 11:45 CT — started: mapping list.html render/cap/route paths and worker list caps (Claude Code)
+- 2026-08-04 12:40 CT — implemented. Pagination is a VIEW concern only: renderUserList slices what it hands to permitTable and everything else (exports, drive distances, Optimize Route, live sync) still reads userListRows(), the same contract FEAT-031's row filters hold to. permitTable gained indexOffset/total so stop ordinals keep counting across pages and the move buttons measure against the whole list. Page memory lives in the shared chi_permit_last_view key under its own listPage/listScroll/listId fields, guarded by list id so one list's page is never applied to another; index.html's search pager keeps `page`/`scroll` untouched (Claude Code)
+- 2026-08-04 12:40 CT — two bugs found beyond the card's text, both fixed: (1) adding to a full list ran `next.slice(0, limit)` AFTER unshifting, which trims the TAIL — so an add silently DELETED the permits saved longest ago; it now fills to the cap and reports what was skipped. (2) "Add all N" on a contact card announced the requested count over the top of the cap message, so a capped bulk add claimed success (Claude Code)
+- 2026-08-04 12:40 CT — optimizer ceiling reconciled by making the 2-opt/Or-opt local search INCREMENTAL (was rebuilding and re-summing the whole path per candidate, ~O(n^3) a pass; now ~O(n^2)). Measured 6.9s -> 0.58s at 400 stops and 1.35s at 1000, so CPU is no longer the limit. MAX_SORT_STOPS raised 400 -> 500 rather than 1000 because what binds now is the OSRM matrix at ceil(n/50)^2 requests — 100 at 500 stops but 400 at 1000, against a public demo server. Above the ceiling the existing honest message states the limit. Lifting it further means fetching fewer CELLS (sparse k-nearest, or FIX-004's noted cluster-then-route), not faster search — flagged for Divyam as a deliberate, measured choice (Claude Code)
+- 2026-08-04 12:40 CT — Worker caps raised in step: MAX_PERMITS 220 -> 1000 (a unit test asserts it equals the client's userListLimit by reading both files) and MAX_BODY 8 KB -> 64 KB, without which every full list 413s on publish. The live-sync Durable Object doc is now split across doc:core/doc:ticks/doc:fu/doc:called — measured 179 KiB worst case as one value against a 128 KiB per-value limit; old rooms keep the single "doc" key until their next write, so no migration pass (Claude Code)
+- 2026-08-04 12:40 CT — measured at the 1000 ceiling: open a full list 140ms, re-render 101ms, change page 248ms, 100 rows in the DOM. Verified 197 Worker + 191 client unit tests, t59 (48 assertions) and t60 (24 a11y assertions, contrast 7.76-9.11:1 in both themes with a poisoned control) on desktop AND iPhone 13. 13 mutants applied and all caught — one initially SURVIVED and exposed that nothing tested the reload restore path, which is a checklist requirement; the test was added (Claude Code)
+- 2026-08-04 12:52 CT — committed to branch `feat-035-list-pagination` (e256b87) and pushed. Full browser suite: 69 of 70 green. The one red, t12, is NOT from this work — it fails 3/3 identically on HEAD on a quiet machine, and the assertion it fails (`closed.hidden`: the presence pill must hide when the socket closes) is exactly the behaviour FIX-031 deliberately inverted this morning, so t12 encodes the pre-FIX-031 contract. Raised separately rather than changed here (Claude Code)
+- 2026-08-04 12:52 CT — NOT yet done: the Worker must deploy BEFORE this client change reaches Pages, or a 1000-permit list published against the old Worker is silently re-capped to 220 and loses its tail. Awaiting Divyam's go-ahead to deploy the Worker and merge (Claude Code)
 
 ### FEAT-036 · My Permit List: stat tiles should reflect the currently viewed list
 
