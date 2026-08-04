@@ -179,9 +179,9 @@ Two independent defects, both from FIX-009.
 ### FIX-030 · closure.js: the 404 guard is written with real backspace bytes, so it never matches
 
 - **Priority:** P3-Low
-- **Status:** in-progress
+- **Status:** done
 - **Created:** 2026-08-03 15:59 CT
-- **Updated:** 2026-08-04 13:34 CT
+- **Updated:** 2026-08-04 13:37 CT
 - **Tags:** Chicago Permit Search Tool
 
 `worker/src/closure.js:156` writes the word-boundary `404` guard inside `isKeyMissingError` using two REAL 0x08 backspace bytes instead of escape sequences, so the regex tests for a literal backspace character and can never match. The 404 branch of that function is dead code.
@@ -197,7 +197,7 @@ Found by a repo-wide sweep for NUL/backspace bytes during FIX-009, which turned 
 - [x] Add a cheap repo-wide guard against NUL/backspace bytes in tracked source, so the next one is caught at commit rather than by chance
 - [x] Worker tests green (200 pass) — **but there is nothing to deploy**, see the log
 - [x] Correct the test fixture that hid this: it used a key name that never occurs in production
-- [ ] Merge to main (awaiting Divyam's go-ahead)
+- [x] Merge to main
 
 **Log:**
 - 2026-08-03 15:59 CT — created from a FIX-009 side finding; reported to Divyam, who asked for a card (Claude Code)
@@ -208,6 +208,7 @@ Found by a repo-wide sweep for NUL/backspace bytes during FIX-009, which turned 
 - 2026-08-04 13:34 CT — guard added as `worker/test/control-bytes.test.mjs`: scans every tracked text file for 0x08/0x00, reports file:line, and carries a probe proving the scan can fire. It runs in the normal `node --test test/*.test.mjs`, which CI already executes BEFORE the daily seed writes to production KV. Proved by poisoning a DIFFERENT file (`worker/src/stats.js`) with each byte in turn — both caught. This is test/CI-time, not literally commit-time: a pre-commit hook lives in `.git/hooks`, is untracked, and cannot be shared through the repo — offered to Divyam as a local extra. Its own sanity assertion earned its keep at once: `git ls-files` is CWD-relative, so run from `worker/` the first version saw 30 files instead of 316 and would have guarded almost nothing (Claude Code)
 - 2026-08-04 13:34 CT — **nothing to deploy.** The checklist assumed this code ships in the Worker; it does not. Traced the entry point's transitive imports: `closure.js` is absent from the `src/index.js` bundle and is imported only by `seed-kv.js`, which runs in GitHub Actions. The fix reaches production on the next scheduled seed once merged, so the Worker was deliberately NOT redeployed rather than taking a no-op production action (Claude Code)
 - 2026-08-04 13:34 CT — note: the preceding board commit (beead92) carries a message describing all of this, but its content was only the in-progress marker — the script that wrote the detail aborted on the backslash trap above after the commit had been staged. Corrected here rather than by rewriting pushed history (Claude Code)
+- 2026-08-04 13:37 CT — merged to main with --no-ff (641b309) and pushed; branch deleted. 200 Worker tests green on the merged tree and the committed `closure.js` blob confirmed to hold zero 0x08 and zero NUL. No deploy and no Pages rebuild are involved: `closure.js` ships in neither, so the fix takes effect on the next scheduled GitHub Actions seed, which now also runs the new control-byte guard before it writes to production KV. **DONE.** (Claude Code)
 
 ### FIX-029 · Map search "clear" button is a 44×28 touch target, under the 44×44 minimum
 
