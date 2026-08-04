@@ -179,9 +179,9 @@ Two independent defects, both from FIX-009.
 ### FIX-030 · closure.js: the 404 guard is written with real backspace bytes, so it never matches
 
 - **Priority:** P3-Low
-- **Status:** todo
+- **Status:** in-progress
 - **Created:** 2026-08-03 15:59 CT
-- **Updated:** 2026-08-03 15:59 CT
+- **Updated:** 2026-08-04 13:22 CT
 - **Tags:** Chicago Permit Search Tool
 
 `worker/src/closure.js:156` writes the word-boundary `404` guard inside `isKeyMissingError` using two REAL 0x08 backspace bytes instead of escape sequences, so the regex tests for a literal backspace character and can never match. The 404 branch of that function is dead code.
@@ -199,6 +199,7 @@ Found by a repo-wide sweep for NUL/backspace bytes during FIX-009, which turned 
 
 **Log:**
 - 2026-08-03 15:59 CT — created from a FIX-009 side finding; reported to Divyam, who asked for a card (Claude Code)
+- 2026-08-04 13:22 CT — started (Claude Code)
 
 ### FIX-029 · Map search "clear" button is a 44×28 touch target, under the 44×44 minimum
 
