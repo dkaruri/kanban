@@ -1015,6 +1015,36 @@ Not fixed inside FEAT-021 on purpose: the new value-range fields were matched to
 
 > **Purpose:** New features and ideas to be added to the existing Chicago Permit Search tool. Enhancements that extend the current project rather than repair it.
 
+### FEAT-039 · Lift the route-optimizer ceiling to the full 1000-permit cap by fetching fewer matrix cells
+
+- **Priority:** P2-Medium
+- **Status:** todo
+- **Created:** 2026-08-04 13:06 CT
+- **Updated:** 2026-08-04 13:06 CT
+- **Tags:** Chicago Permit Search Tool
+
+FEAT-035 raised the list cap to 1000 but left `MAX_SORT_STOPS` at 500, so Optimize Route is unavailable on the largest lists the tool now lets you build. It says so honestly rather than failing, but the feature is simply absent above 500 stops.
+
+**The CPU ceiling is already gone — do not re-solve it.** FIX-004 set the 400 limit because the 2-opt/Or-opt local search was ~O(n^3) on the main thread (6.2s at 400, 25s at 600). FEAT-035 made that search evaluate moves incrementally instead of rebuilding and re-summing the whole path per candidate, which is ~O(n^2) a pass: **measured 0.58s at 400 stops and 1.35s at 1000**. A worker thread is not needed and would be wasted effort.
+
+**What actually binds now is the OSRM matrix request count.** The matrix tiles at 50x50 (the split that yields the most cells per 100-coordinate request), costing `ceil(n/50)^2` requests: 64 at 400 stops, **100 at 500, and 400 at 1000** — against the public OSRM demo server, at 4-way concurrency. That is minutes of traffic to a shared host and an invitation to be rate limited, which is why 500 was chosen rather than a number the arithmetic allowed. The fix is to fetch fewer CELLS, not to route faster.
+
+Two candidate approaches, both noted but neither built:
+- **Sparse k-nearest matrix** — a stop only ever needs durations to its plausible neighbours, so fetch a band around each stop rather than the full square. Both the greedy seed and the local search read the matrix through `legDuration(a, b)`, which already returns `Infinity` for a missing pair, so a sparse matrix may drop in behind that accessor with little change to the search itself. Needs care: too sparse and 2-opt/Or-opt cannot see the moves that untangle a bad greedy path.
+- **Cluster-then-route** — FIX-004's originally noted path: partition the stops geographically, solve each cluster, then stitch. Changes route quality in a way a user would notice, so it needs a quality comparison, not just a speed one.
+
+**Checklist:**
+- [ ] Decide sparse-k-nearest vs cluster-then-route on measured route quality, not just request count — reuse FEAT-035's harness (`verify-tmp/feat035-impl.mjs` has `randomInstance`/`routeCost` and a full-recompute reference; compare the paired distribution over ~200 instances, not one run, since two correct local optima can differ 10% either way)
+- [ ] Confirm the neighbour band is wide enough that 2-opt and Or-opt still find their moves — a sparse matrix that hides an improving move degrades the route silently
+- [ ] Keep `legDuration`'s `Infinity`-for-missing contract, and re-check the guards that depend on it (a `-Infinity` delta must not be accepted; the local search's restart budget must still terminate)
+- [ ] Bring the request count for 1000 stops down to the same order as today's 64-100, and state the new number in the `MAX_SORT_STOPS` comment the way the current one does
+- [ ] Raise `MAX_SORT_STOPS` to 1000 only once the request count justifies it; if it lands somewhere between, set it to what was measured and keep the honest message above it
+- [ ] Be a good citizen of the public OSRM demo server — keep the concurrency cap, and check whether the volume warrants a self-hosted or paid routing endpoint instead
+- [ ] Verify on a real 1000-permit list end to end: route completes, progress reporting stays sane, and the resulting order is not visibly worse than the same list sorted at 500
+
+**Log:**
+- 2026-08-04 13:06 CT — created from FEAT-035's deliberate deviation: the CPU ceiling was removed, the routing-service budget is what remains (Claude Code)
+
 ### FEAT-038 · Source property use from the Cook County Assessor class, so the permit view stops approximating
 
 - **Priority:** P2-Medium
