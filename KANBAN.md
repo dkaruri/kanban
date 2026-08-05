@@ -85,7 +85,7 @@ NEVER
 
 > **Purpose:** Things to fix on current projects — currently the Chicago Permit Search tool. Bugs, regressions, broken behavior, and cleanup on what already exists. This is Claude Code's default work queue.
 
-### FIX-034 · Adding to a full list from Search or the Permit Map silently deletes the oldest saved permits
+### FIX-037 · Adding to a full list from Search or the Permit Map silently deletes the oldest saved permits
 
 - **Priority:** P1-High
 - **Status:** todo
@@ -113,6 +113,7 @@ Found while implementing FEAT-032, which had to work around it: the provenance l
 
 **Log:**
 - 2026-08-05 10:34 CT — found while implementing FEAT-032; filed rather than folded into it (Claude Code)
+- 2026-08-05 11:00 CT — renumbered FIX-034 → FIX-037: FIX-034 was already taken by the "Attach permit notes to GCs and Open Subs" card; this card was filed under the same id by a separate session (Claude Code)
 
 ### FIX-033 · t12 presence-pill suite still asserts the pre-FIX-031 contract
 
