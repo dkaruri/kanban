@@ -1277,9 +1277,9 @@ The design question this card must answer first: **those flags live on a LIST, a
 ### FEAT-039 · Lift the route-optimizer ceiling to the full 1000-permit cap by fetching fewer matrix cells
 
 - **Priority:** P2-Medium
-- **Status:** in-progress
+- **Status:** done
 - **Created:** 2026-08-04 13:06 CT
-- **Updated:** 2026-08-04 14:55 CT
+- **Updated:** 2026-08-05 11:58 CT
 - **Tags:** Chicago Permit Search Tool
 
 FEAT-035 raised the list cap to 1000 but left `MAX_SORT_STOPS` at 500, so Optimize Route is unavailable on the largest lists the tool now lets you build. It says so honestly rather than failing, but the feature is simply absent above 500 stops.
@@ -1293,17 +1293,23 @@ Two candidate approaches, both noted but neither built:
 - **Cluster-then-route** — FIX-004's originally noted path: partition the stops geographically, solve each cluster, then stitch. Changes route quality in a way a user would notice, so it needs a quality comparison, not just a speed one.
 
 **Checklist:**
-- [ ] Decide sparse-k-nearest vs cluster-then-route on measured route quality, not just request count — reuse FEAT-035's harness (`verify-tmp/feat035-impl.mjs` has `randomInstance`/`routeCost` and a full-recompute reference; compare the paired distribution over ~200 instances, not one run, since two correct local optima can differ 10% either way)
-- [ ] Confirm the neighbour band is wide enough that 2-opt and Or-opt still find their moves — a sparse matrix that hides an improving move degrades the route silently
-- [ ] Keep `legDuration`'s `Infinity`-for-missing contract, and re-check the guards that depend on it (a `-Infinity` delta must not be accepted; the local search's restart budget must still terminate)
-- [ ] Bring the request count for 1000 stops down to the same order as today's 64-100, and state the new number in the `MAX_SORT_STOPS` comment the way the current one does
-- [ ] Raise `MAX_SORT_STOPS` to 1000 only once the request count justifies it; if it lands somewhere between, set it to what was measured and keep the honest message above it
-- [ ] Be a good citizen of the public OSRM demo server — keep the concurrency cap, and check whether the volume warrants a self-hosted or paid routing endpoint instead
-- [ ] Verify on a real 1000-permit list end to end: route completes, progress reporting stays sane, and the resulting order is not visibly worse than the same list sorted at 500
+- [x] Decide sparse-k-nearest vs cluster-then-route on measured route quality, not just request count — reuse FEAT-035's harness (`verify-tmp/feat035-impl.mjs` has `randomInstance`/`routeCost` and a full-recompute reference; compare the paired distribution over ~200 instances, not one run, since two correct local optima can differ 10% either way)
+- [x] Confirm the neighbour band is wide enough that 2-opt and Or-opt still find their moves — a sparse matrix that hides an improving move degrades the route silently
+- [x] Keep `legDuration`'s `Infinity`-for-missing contract, and re-check the guards that depend on it (a `-Infinity` delta must not be accepted; the local search's restart budget must still terminate)
+- [x] Bring the request count for 1000 stops down to the same order as today's 64-100, and state the new number in the `MAX_SORT_STOPS` comment the way the current one does
+- [x] Raise `MAX_SORT_STOPS` to 1000 only once the request count justifies it; if it lands somewhere between, set it to what was measured and keep the honest message above it
+- [x] Be a good citizen of the public OSRM demo server — keep the concurrency cap, and check whether the volume warrants a self-hosted or paid routing endpoint instead
+- [x] Verify on a real 1000-permit list end to end: route completes, progress reporting stays sane, and the resulting order is not visibly worse than the same list sorted at 500
 
 **Log:**
 - 2026-08-04 13:06 CT — created from FEAT-035's deliberate deviation: the CPU ceiling was removed, the routing-service budget is what remains (Claude Code)
 - 2026-08-04 14:55 CT — started: read `fetchDurationMatrix`, `greedyRouteOrder` and the `MAX_SORT_STOPS` guards end to end before choosing an approach (Claude Code)
+- 2026-08-04 ~15:53 CT — session ended mid-task with the work uncommitted; parked on branch `feat-039-sparse-matrix` as commit `0e2baac` on 2026-08-05 so FEAT-032 could start from a clean `main`. Nothing lost (Claude Code)
+- 2026-08-05 11:42 CT — **resolved the three red assertions.** Root cause was an off-by-one in request accounting, not in the sparse strategy: `fetchDurationMatrix` passed the FULL `MATRIX_REQUEST_BUDGET` to `bandTilePairs` and then spent `fillCoarseDurations`' request on top, so every sparse sort cost budget + 1 — a flat 101 against a budget of 100 at both 600 and 1000 stops, which is exactly what the assertions reported. The line's own comment ("One request of the budget is spent on the coarse layer below") and the `MAX_SORT_STOPS` comment's live measurement of 99 both already described the intended behaviour; the code had drifted from them, most likely during the span/radius ranking rework. Fix is `MATRIX_REQUEST_BUDGET - 1` at that one call site. Commit `a5bfe64`, pushed (Claude Code)
+- 2026-08-05 11:42 CT — 1000 stops now costs **99 requests** (was 101), 500 and under still take the dense path at 100 and are byte-for-byte untouched. `feat039-matrix.mjs` 17/17, including the route-quality comparison against the full matrix and the local-search termination check (Claude Code)
+- 2026-08-05 11:42 CT — `t63-sparse-matrix` was not a product failure at all: it targets `:8793`, which nothing serves during a sweep, so it died on a connection error that read like a timeout. Pointed at `:8791` like every other `t*.js`; it now passes in the real page — 1000 stops, 99 requests, no request over the 100-coordinate limit, order improved 94.96%, progress reporting sane (Claude Code)
+- 2026-08-05 11:55 CT — **re-ran the live probe against the real OSRM demo server rather than inheriting the number.** The `MAX_SORT_STOPS` comment claimed "99 requests, 13s, no failures" while the code was costing 101, so the claim needed re-earning: `_live39-osrm.js` with 1000 real Chicago permit coordinates now measures **99 requests, 0 failures, 13.2s wall (12.5s matrix), 1000 stops / 999 legs, 664 mi / 32 hr**. Matches the shipped comment exactly. The 4-way concurrency cap is unchanged and the volume is what a 500-stop sort already sent, so no self-hosted or paid routing endpoint is warranted (Claude Code)
+- 2026-08-05 11:58 CT — **done.** Commit `a5bfe64` on `feat-039-sparse-matrix`, pushed. Full browser sweep (73 scripts): 70 green; `t41-notes-feed` passes in isolation (batch port contention), `t64-list-provenance` is FEAT-032's suite on a branch without FEAT-032, and `t9` fails identically on `main` (pre-existing, unrelated). Unit suites 229 pass. **Not merged — awaiting approval** (Claude Code)
 
 ### FEAT-038 · Source property use from the Cook County Assessor class, so the permit view stops approximating
 
