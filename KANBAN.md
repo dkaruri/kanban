@@ -85,6 +85,28 @@ NEVER
 
 > **Purpose:** Things to fix on current projects — currently the Chicago Permit Search tool. Bugs, regressions, broken behavior, and cleanup on what already exists. This is Claude Code's default work queue.
 
+### FIX-040 · Search result count and "add to list" total don't update when work types are included/excluded
+
+- **Priority:** P3-Low
+- **Status:** todo
+- **Created:** 2026-08-05 11:30 CT
+- **Updated:** 2026-08-05 11:30 CT
+- **Tags:** Chicago Permit Search Tool
+
+Reported by Divyam: when a search is narrowed by including or excluding work types, the "how many found" count does not update to reflect the filtered set, and the count on the add-to-list action is likewise stale. The filter changes which permits show, but the two counts keep reporting the pre-filter total — so the numbers disagree with what's actually on screen and with what an "add all" would add.
+
+Pairs with FIX-038 (tri-state include/exclude): whatever recomputes the visible result set on an include/exclude change must also drive both counts from that same set, so they can't drift. Find the single place the filtered result set is produced and derive the "found" count and the add-to-list count from it rather than from the unfiltered list.
+
+**Checklist:**
+- [ ] Reproduce: exclude (and, per FIX-038, include) a work type and confirm both the results-found count and the add-to-list count stay at the pre-filter number; note where each count is computed today
+- [ ] Drive both counts from the same filtered result set the map/list actually renders, recomputed on every filter change (include, exclude, and the other filters too — check whether date/value/neighborhood filters have the same stale-count bug while you're here)
+- [ ] Make "add to list" add exactly the counted set — the number shown and the number added must match
+- [ ] Root-cause, not per-symptom: fix it where the count is derived so every filter path stays honest, rather than patching the work-type path alone
+- [ ] Verify on desktop and mobile: the count updates live as work types are included/excluded and matches both the visible pins/rows and what add-to-list adds
+
+**Log:**
+- 2026-08-05 11:30 CT — created (Divyam)
+
 ### FIX-038 · Permit Map work-type filter: make each work type include-only, exclude, or neutral via a tri-state checkbox
 
 - **Priority:** P2-Medium
