@@ -85,6 +85,57 @@ NEVER
 
 > **Purpose:** Things to fix on current projects — currently the Chicago Permit Search tool. Bugs, regressions, broken behavior, and cleanup on what already exists. This is Claude Code's default work queue.
 
+### FIX-038 · Permit Map work-type filter: make each work type include-only, exclude, or neutral via a tri-state checkbox
+
+- **Priority:** P2-Medium
+- **Status:** todo
+- **Created:** 2026-08-05 11:20 CT
+- **Updated:** 2026-08-05 11:20 CT
+- **Tags:** Chicago Permit Search Tool
+
+Requested by Divyam: the Permit Map work-type filter (`docs/map.html`, the exclusions behind the collapsed `<details>` from FEAT-024) is exclude-only today. Make each work type a **tri-state** control instead of a plain checkbox:
+
+1. **Neutral** (default, empty box) — the work type does not constrain the search.
+2. **Include** (one click, green check) — focus the search to this work type; only permits of the checked include types show.
+3. **Exclude** (second click, red ✕) — permits of this type are removed from the results, as exclusions do today.
+
+A third click returns to neutral. When any work type is set to Include, the result set is the union of the included types minus any excluded types — an explicit Include is a whitelist, so a search with includes set does NOT also show the untouched neutral types.
+
+**Checklist:**
+- [ ] Replace the exclude-only checkbox with a tri-state control cycling neutral → include (green check) → exclude (red ✕) → neutral; make the three states visually unmistakable and accessible (not color alone — the check/✕ glyph must carry the meaning too, with an accessible label/`aria` state)
+- [ ] Define and implement the semantics: with no includes set, neutral means "shown" and excludes subtract (today's behavior); with any include set, only included types show, minus excludes — write the rule in the Log so include+exclude interaction is unambiguous
+- [ ] Keep the collapsed `<details>` summary honest: show how many types are included vs excluded so a hidden filter is not invisible (ties into FIX-035's "exclusion behind a collapsed details" concern)
+- [ ] Persist all three states with the rest of the map filters (see FIX-035), not just the excluded set
+- [ ] Reflect the active include/exclude counts in the status strip alongside the other filters
+- [ ] Degrade safely if a saved include/exclude names a work type that no longer exists — drop it rather than emptying the map
+- [ ] Verify on desktop and mobile in both themes: include alone, exclude alone, include+exclude together, and all-neutral matching today's default result set
+
+**Log:**
+- 2026-08-05 11:20 CT — created (Divyam)
+
+### FIX-039 · Make the tagging system more discoverable — creating a second tag is not intuitive
+
+- **Priority:** P2-Medium
+- **Status:** todo
+- **Created:** 2026-08-05 11:20 CT
+- **Updated:** 2026-08-05 11:20 CT
+- **Tags:** Chicago Permit Search Tool
+
+Reported by Divyam: the current tagging system relies on comma separators and colors, and adding a **second** tag is not intuitive — nothing signals that a comma is how you start a new tag, and the color-only distinction does little to help. Rework the tag input so making multiple tags is obvious without instructions.
+
+Reproduce and inventory first: find where tags are entered and rendered today (which pages, which control), and record what the current comma/color affordance actually is before changing it — the fix is a UX change to an existing control, not a new tagging model.
+
+**Checklist:**
+- [ ] Reproduce: locate the tag input(s) and note exactly why adding a second tag is unclear (no visible "add" affordance? comma-as-separator undiscoverable? tags not shown as distinct chips?) — write it in the Log
+- [ ] Replace the bare comma-separated text field with a chip/pill input: each committed tag becomes a removable chip, and Enter (and comma) commits the current tag — the standard, discoverable pattern
+- [ ] Show clearly how to add another tag (placeholder text, an explicit add affordance, or the chip pattern making it self-evident) so a second tag needs no explanation
+- [ ] Don't rely on color alone to distinguish tags — give each chip a shape/label/remove control so it reads without color (accessibility)
+- [ ] Preserve existing tags and their data on migration — the change is to input/display, not to what a tag is or how it's stored
+- [ ] Verify on desktop and mobile in both themes: adding the first tag, adding a second and third, removing one, and editing an item that already has several tags
+
+**Log:**
+- 2026-08-05 11:20 CT — created (Divyam)
+
 ### FIX-037 · Adding to a full list from Search or the Permit Map silently deletes the oldest saved permits
 
 - **Priority:** P1-High
