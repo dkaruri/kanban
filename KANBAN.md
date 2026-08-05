@@ -1129,6 +1129,30 @@ Not fixed inside FEAT-021 on purpose: the new value-range fields were matched to
 
 > **Purpose:** New features and ideas to be added to the existing Chicago Permit Search tool. Enhancements that extend the current project rather than repair it.
 
+### FEAT-042 · Surface Closed permits: a Search Directory option and a Closed-permits list per GC
+
+- **Priority:** P1-High
+- **Status:** todo
+- **Created:** 2026-08-05 11:00 CT
+- **Updated:** 2026-08-05 11:00 CT
+- **Tags:** Chicago Permit Search Tool
+
+Requested by Divyam: the app currently centers on open/active permits; closed permits should be reachable too. Two surfaces: (1) add **Closed Permits** as a search option in the Search Directory so a user can look them up the way they look up open ones, and (2) under each General Contractor in the General Contractors view, list that GC's Closed permits so their full scope of work is visible — not just what's currently open. The point is the complete picture of a contractor: open plus closed.
+
+Confirm first where closed permits live: whether the dataset the app already ingests carries closed/completed records (a status field) or whether closed permits are a separate pull that isn't currently loaded — that decision (filter existing data vs. ingest more) drives the size of this and should be written in the Log before building.
+
+**Checklist:**
+- [ ] Establish the data source: does the ingested permit data already include closed/completed permits (a status the app filters out today), or do they need a separate fetch? Record the answer in the Log — it decides whether this is a filter change or an ingestion change
+- [ ] Search Directory: add a Closed Permits option so users can search closed permits, consistent with how open permits are searched (same fields/filters where they make sense); make clear in the UI which status is being searched
+- [ ] General Contractor view: add a Closed permits section per GC alongside their open permits, so both together show the full scope of the GC's work; label the two clearly so an open and a closed permit are not confused
+- [ ] Keep it consistent on both index.html and list.html card stacks, matching the existing open-permit presentation (details, contractor attribution, notes where they apply)
+- [ ] Handle the empty and mixed cases: a GC with only open permits, only closed, or both; no empty/zero-count section that reads as broken
+- [ ] Watch volume — closed permits can be a large historical set; page/limit rather than rendering an unbounded list, and measure the added load cost
+- [ ] Verify on desktop and mobile in both themes: searching closed permits from the directory, and viewing a GC's open + closed permits together
+
+**Log:**
+- 2026-08-05 11:00 CT — created (Divyam)
+
 ### FEAT-041 · General Contractor view: embed a map of the GC's open permits
 
 - **Priority:** P2-Medium
