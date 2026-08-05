@@ -85,6 +85,35 @@ NEVER
 
 > **Purpose:** Things to fix on current projects — currently the Chicago Permit Search tool. Bugs, regressions, broken behavior, and cleanup on what already exists. This is Claude Code's default work queue.
 
+### FIX-034 · Adding to a full list from Search or the Permit Map silently deletes the oldest saved permits
+
+- **Priority:** P1-High
+- **Status:** todo
+- **Created:** 2026-08-05 10:34 CT
+- **Updated:** 2026-08-05 10:34 CT
+- **Tags:** Chicago Permit Search Tool
+
+FEAT-035 found and fixed this in `docs/list.html`, but the same add path exists on `docs/index.html` and `docs/map.html` and was **not** fixed there. Both still do:
+
+```js
+numbers.forEach(number => { if (!next.includes(number)) next.unshift(number); });
+state.userPermitNumbers = next.slice(0, userListLimit);
+```
+
+New permits are unshifted onto the head, then the list is sliced back to the 1000 cap — which trims the **tail**, i.e. the permits the user has had saved the longest. Adding 40 permits to a full list therefore destroys 40 older ones with no warning, no count, and no undo. `list.html`'s version instead fills to the cap and reports what did not fit (`{ added, skipped }`), which is the behaviour all three pages should share.
+
+Found while implementing FEAT-032, which had to work around it: the provenance line records `Math.min(added, userListLimit)` so the count it writes is at least honest about what landed. Not fixed there because it changes add semantics on two pages and deserves its own verification.
+
+**Checklist:**
+- [ ] Port `list.html`'s cap-aware add (fill to the cap, count `added`/`skipped`, never trim the tail) into `docs/index.html` and `docs/map.html`
+- [ ] Report the refusal to the user on both pages, the way `list.html` announces it
+- [ ] Simplify FEAT-032's `Math.min(added, userListLimit)` back to `added` once the three paths agree
+- [ ] Regression test: a full list plus an add loses nothing, on all three pages
+- [ ] Check whether any other add path (drag-and-drop onto the list panel, "Add all" from a contractor card) shares the bug
+
+**Log:**
+- 2026-08-05 10:34 CT — found while implementing FEAT-032; filed rather than folded into it (Claude Code)
+
 ### FIX-033 · t12 presence-pill suite still asserts the pre-FIX-031 contract
 
 - **Priority:** P2-Medium
@@ -1392,23 +1421,31 @@ In Map Search (`docs/map.html`), let the user exclude certain types of work and 
 ### FEAT-032 · Feed the search conditions/filters into the list description
 
 - **Priority:** P2-Medium
-- **Status:** in-progress
+- **Status:** done
 - **Created:** 2026-07-29 11:28 CT
-- **Updated:** 2026-08-05 09:51 CT
+- **Updated:** 2026-08-05 10:49 CT
 - **Tags:** Chicago Permit Search Tool
 
 When permits are pulled into a list from Search or Map Search, record the conditions and filters that produced them (ward, date range, work types, value range, etc.) in the list's description, so anyone opening the list later can see how it was built.
 
 **Checklist:**
-- [ ] Capture the active filters/conditions at the moment permits are added or a list is pulled
-- [ ] Render them as a compact human-readable summary in the list description (e.g. "Ward 47 · Jun–Jul 2026 · renovation excluded · $50k–$250k")
-- [ ] Append rather than overwrite when adds come from different searches; keep the description editable by hand
-- [ ] Show the summary on shared/opened lists too
-- [ ] Verify with adds from both Search and Map Search, and with manually added permits (which should note no filters)
+- [x] Capture the active filters/conditions at the moment permits are added or a list is pulled
+- [x] Render them as a compact human-readable summary in the list description (e.g. "Ward 47 · Jun–Jul 2026 · renovation excluded · $50k–$250k")
+- [x] Append rather than overwrite when adds come from different searches; keep the description editable by hand
+- [x] Show the summary on shared/opened lists too
+- [x] Verify with adds from both Search and Map Search, and with manually added permits (which should note no filters)
+- [x] Render the description on the list itself — it was previously only visible in the Edit-details dialog and on the directory card
 
 **Log:**
 - 2026-07-29 11:28 CT — created (Divyam)
 - 2026-08-05 09:51 CT — started; branch `feat-032-list-provenance` (Claude Code)
+- 2026-08-05 10:29 CT — implemented. Provenance is stored **in the description** rather than in a field of its own: the description already syncs to the shared doc, renders on the directory card and is hand-editable, so a parallel "sources" store would have meant building all three again. Each add appends one line, e.g. `• Aug 5 — 12 from Permit Map: Jul 1–Aug 5, 2026 · $50k–$250k · 1 work type excluded`; a hand-typed stop records `added by hand: no filters`. A repeat add from the same search on the same day bumps that line's count instead of stacking a duplicate; a different search always appends. Only the last line is ever rewritten, so hand-written text is never touched, and past the 2000-char cap the OLDEST provenance is evicted rather than the string being sliced (Claude Code)
+- 2026-08-05 10:29 CT — the description had no on-page surface at all, so "show it on shared/opened lists" needed one built: read-only block under the list title, clamped to 3 lines with a Show more/less expander (a 2000-char description would otherwise push the toolbar off the first screen) (Claude Code)
+- 2026-08-05 10:29 CT — Search and the Permit Map hold no live socket, so a description appended there would have been overwritten by the room's older copy on the next `state` frame. Appends set `descPending`; `list.html` holds the local text across that frame and pushes it as a `meta` op. **Known gap:** the KV directory blurb still only refreshes on an Edit-details save, so a shared list's card in "All lists" can show a stale blurb until then (Claude Code)
+- 2026-08-05 10:29 CT — verified: 20 unit tests (`verify-tmp/feat032-source.mjs`, extracted from the shipped source at test time, incl. a check that the block is byte-identical on all three pages) with a 6-mutant control proving they discriminate; 29 browser assertions (`verify-tmp/t64-list-provenance.js`) at desktop + iPhone 13 covering both add paths, the manual add, clamp/expand, Tab-reachability, Enter activation, 44px target, no h-scroll, and 4.5:1 contrast in both themes (measured 6.32:1 light / 8.51:1 dark; probe proved to discriminate by a poisoned control run) (Claude Code)
+- 2026-08-05 10:29 CT — filed **FIX-034**: `index.html`/`map.html` still carry the full-list data-loss bug FEAT-035 fixed in `list.html`. Worked around here (the count records what actually landed) rather than fixed, because it changes add semantics on two pages (Claude Code)
+- 2026-08-05 10:45 CT — caught a bug of my own in review: the expanded state persisted across a change of list, so a second list opened pre-expanded reading "Show less". Now reset on a change of list only — resetting on every repaint would have collapsed the description mid-read, since this also runs after each add and on every live frame. Regression test added and proved to fail against the bug (Claude Code)
+- 2026-08-05 10:49 CT — **done.** Commit `9707131` on branch `feat-032-list-provenance`, pushed. Full browser sweep run (73 scripts): 70 green; the 3 reds — `t9`, `t40-mapstate`, `t63-sparse-matrix` — were each re-run in isolation and fail identically on `main`, so none is caused by this change (`t63` belongs to the parked FEAT-039 work). Worker suite 200/200. **Not merged — awaiting approval** (Claude Code)
 
 ### FEAT-026 · Enrich profiles with deed/title, MLS, LLC, VA loan, and licensing data sources
 
