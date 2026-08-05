@@ -1100,6 +1100,29 @@ Not fixed inside FEAT-021 on purpose: the new value-range fields were matched to
 
 > **Purpose:** New features and ideas to be added to the existing Chicago Permit Search tool. Enhancements that extend the current project rather than repair it.
 
+### FEAT-041 · General Contractor view: embed a map of the GC's open permits
+
+- **Priority:** P2-Medium
+- **Status:** todo
+- **Created:** 2026-08-05 11:00 CT
+- **Updated:** 2026-08-05 11:00 CT
+- **Tags:** Chicago Permit Search Tool
+
+Requested by Divyam: inside the General Contractor view, show a map of that GC's open permits. Use the existing Permit Map (`docs/map.html`) as the reference build — same tile/marker/cluster stack — rather than a second mapping approach, but scoped to just this GC's open permits instead of the whole city. The permits and their coordinates are already resolved for the GC view; this is a rendering/embedding job, not a new data pull.
+
+The core risk is layout: an embedded map must size to its container and must NOT overflow or introduce nested/duplicate scrolling on either mobile or desktop. Map libraries grab scroll/touch to pan, so getting the container sizing, height, and gesture handling right is the actual work here.
+
+**Checklist:**
+- [ ] Reuse the Permit Map's map setup (tiles, markers, clustering, theme handling) rather than forking a parallel implementation; feed it only this GC's open permits
+- [ ] Give the embedded map a bounded, explicit height that fits the GC view's layout on both desktop and mobile — no page-level horizontal overflow, no nested scrollbar fighting the page scroll
+- [ ] Handle map pan/zoom gestures inside the card without hijacking the page scroll on mobile (e.g. the usual embedded-map scroll/touch handling)
+- [ ] Fit the initial viewport to the GC's open permits (bounds of the set), and handle the edge cases: a single permit, permits far apart, and a GC with zero open permits (no empty/broken map — hide or show a clear empty state)
+- [ ] Keep pins consistent with the main Permit Map (same marker meaning, popup/click behavior) so the two don't drift
+- [ ] Verify on desktop and mobile in both themes: the map loads, sizes correctly, pans without breaking page scroll, and causes no overflow
+
+**Log:**
+- 2026-08-05 11:00 CT — created (Divyam)
+
 ### FEAT-040 · Permit Map: filter by visited / not visited / called / not called
 
 - **Priority:** P1-High
