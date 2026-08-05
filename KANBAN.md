@@ -1036,9 +1036,9 @@ Not fixed inside FEAT-021 on purpose: the new value-range fields were matched to
 ### FEAT-039 · Lift the route-optimizer ceiling to the full 1000-permit cap by fetching fewer matrix cells
 
 - **Priority:** P2-Medium
-- **Status:** todo
+- **Status:** in-progress
 - **Created:** 2026-08-04 13:06 CT
-- **Updated:** 2026-08-04 13:06 CT
+- **Updated:** 2026-08-04 14:55 CT
 - **Tags:** Chicago Permit Search Tool
 
 FEAT-035 raised the list cap to 1000 but left `MAX_SORT_STOPS` at 500, so Optimize Route is unavailable on the largest lists the tool now lets you build. It says so honestly rather than failing, but the feature is simply absent above 500 stops.
@@ -1062,6 +1062,7 @@ Two candidate approaches, both noted but neither built:
 
 **Log:**
 - 2026-08-04 13:06 CT — created from FEAT-035's deliberate deviation: the CPU ceiling was removed, the routing-service budget is what remains (Claude Code)
+- 2026-08-04 14:55 CT — started: read `fetchDurationMatrix`, `greedyRouteOrder` and the `MAX_SORT_STOPS` guards end to end before choosing an approach (Claude Code)
 
 ### FEAT-038 · Source property use from the Cook County Assessor class, so the permit view stops approximating
 
@@ -1277,9 +1278,9 @@ In Map Search (`docs/map.html`), let the user exclude certain types of work and 
 ### FEAT-032 · Feed the search conditions/filters into the list description
 
 - **Priority:** P2-Medium
-- **Status:** todo
+- **Status:** in-progress
 - **Created:** 2026-07-29 11:28 CT
-- **Updated:** 2026-07-29 11:28 CT
+- **Updated:** 2026-08-05 09:51 CT
 - **Tags:** Chicago Permit Search Tool
 
 When permits are pulled into a list from Search or Map Search, record the conditions and filters that produced them (ward, date range, work types, value range, etc.) in the list's description, so anyone opening the list later can see how it was built.
@@ -1293,6 +1294,7 @@ When permits are pulled into a list from Search or Map Search, record the condit
 
 **Log:**
 - 2026-07-29 11:28 CT — created (Divyam)
+- 2026-08-05 09:51 CT — started; branch `feat-032-list-provenance` (Claude Code)
 
 ### FEAT-026 · Enrich profiles with deed/title, MLS, LLC, VA loan, and licensing data sources
 
