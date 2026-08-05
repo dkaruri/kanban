@@ -586,6 +586,73 @@ Two desktop problems around GC/Open Sub rows. (1) In the Permit View, the WHOLE 
 - 2026-07-31 18:10 CT — merged to main (`fbd54fa`, --no-ff) at Divyam's request and pushed; branch deleted. Re-verified on the merged tree, then LIVE on GitHub Pages after the Pages build completed: permit B200480349 → "Read more about STEVE PEREZ & COMPANY INC" is a 44px target, the row does not navigate, the GC View name is unclipped and the actions sit right-aligned on one row. Zero page errors (Claude Code)
 - 2026-07-31 18:01 CT — verified: t18 rewritten to assert the row does NOT navigate and the link is a 44px target right of the details with the right accessible name; t19 + t37 now drive the link. Both fail against the unfixed tree and pass against the fix. New `verify-tmp/_shotreadmore.js` covers desktop + iPhone 13 × light/dark with hostile names. Full regression green: 55/55 browser scripts, 128 client + 158 Worker unit tests. Link contrast measured 7.76:1 light / 8.61:1 dark (Claude Code)
 
+### FIX-035 · Permit Map: remember every filter and exclusion across reload and page exit
+
+- **Priority:** P1-High
+- **Status:** todo
+- **Created:** 2026-08-05 10:33 CT
+- **Updated:** 2026-08-05 10:33 CT
+- **Tags:** Chicago Permit Search Tool
+
+Reported by Divyam: the filters and exclusions set on Map Search (`docs/map.html`) are not remembered — leaving the page or refreshing loses them. Persistence has been claimed twice already, so **reproduce and inventory before writing anything**: FIX-008 covered the date/GC/neighborhood/radius controls, the layer toggles and the viewport (`chi_permit_map_settings`, `chi_permit_map_layers`, `chi_permit_map_view`), and FEAT-024's log says its work-type exclusions and property-use select persist and re-apply on first render. Something in that chain is either not saving, not restoring, or newer than the code that saves — FEAT-021's value range and FEAT-040's visited/called chips are the obvious candidates for having no persistence at all. Done when every control in the Filters drawer survives a reload and a full page exit, and the map that comes back matches the one that was left.
+
+**Checklist:**
+- [ ] Reproduce on the live site first and write the inventory in this task's Log: for EVERY control on the map (date from/to, GC min/max, neighborhood/street, radius, value range, work-type exclusions, property use, layer toggles, viewport, and FEAT-040's visited/called chips if it has landed) record save / restore / re-apply-on-first-render as three separate yes-or-no answers
+- [ ] Fix the ones that fail, keyed into the existing `chi_permit_map_*` storage rather than a fourth parallel key
+- [ ] Make restore APPLY, not just repopulate: a control that shows its saved value while the map ignores it is the worse bug, because it lies
+- [ ] Cover exclusions specifically — they live behind a collapsed `<details>`, so a silently-dropped exclusion is invisible until someone counts the pins
+- [ ] Degrade safely on stale/corrupt saved state (an excluded work type that no longer exists, a value range with min > max) — fall back rather than rendering an empty map
+- [ ] One guard suite that drives every control, reloads, and asserts both the control state AND the rendered result set — asserting the input value alone would pass the "shows but doesn't apply" bug
+- [ ] Verify on desktop and mobile, on a reload and on a genuine page exit and return
+
+**Log:**
+- 2026-08-05 10:33 CT — created (Divyam)
+
+### FIX-036 · Permit Map: draw and label zoning-district boundaries so each district's extent is unmistakable
+
+- **Priority:** P1-High
+- **Status:** todo
+- **Created:** 2026-08-05 10:33 CT
+- **Updated:** 2026-08-05 10:33 CT
+- **Tags:** Chicago Permit Search Tool
+
+On the Map Search zoning layer (`docs/map.html`, `docs/data/zoning.geojson`), where one district ends and the next begins is not clear. Divyam's example: an **RM-4.5** label appears in the middle of what reads as an **RS-3** area, with nothing showing how far the RM-4.5 actually extends. Each district polygon should carry a visible outline marking its exact border, with the district's own label attached to that outlined shape, so a small pocket of one zoning class inside another is obviously its own bounded area rather than a stray label. The data is already loaded — the same `zoning.geojson` FEAT-024's residential filter indexes — so this is a rendering job, not an ingestion one.
+
+**Checklist:**
+- [ ] Reproduce with Divyam's case: find an RM-4.5 polygon surrounded by RS-3 and screenshot what it looks like today at the zoom where the confusion happens
+- [ ] Add a distinct outline (line layer) per district polygon so boundaries read at a glance; make sure neighbouring same-class districts do not merge visually into one blob
+- [ ] Bind the label to its polygon so the text belongs to the outlined shape — one label per district, placed inside it, not floating between two
+- [ ] Handle small polygons and dense downtown areas: labels must not collide, disappear entirely, or spill outside the district they name
+- [ ] Check legibility over the permit pins, clusters and heat layers in BOTH themes — the outline must not fight the markers it sits under
+- [ ] Check zoom behaviour: outlines and labels should stay useful zoomed out and not clutter zoomed in
+- [ ] Verify performance — this is a large polygon set; measure render/pan cost before and after rather than assuming it is free
+- [ ] Verify on desktop and mobile, and confirm the zoning layer toggle still turns everything (fill, outline, labels) on and off as one unit
+
+**Log:**
+- 2026-08-05 10:33 CT — created (Divyam)
+
+### FIX-034 · Attach permit notes to the permit's General Contractors and Open Subs as well
+
+- **Priority:** P2-Medium
+- **Status:** todo
+- **Created:** 2026-08-05 09:50 CT
+- **Updated:** 2026-08-05 09:50 CT
+- **Tags:** Chicago Permit Search Tool
+
+Every note attached to a permit should also attach to that permit's General Contractors and Open Subs, so the note is reachable from the contractor side, not just the permit side. Builds directly on FEAT-034's notes infrastructure (`GET /api/notes/bulk`, note timestamps) and overlaps with FEAT-037's roll-up model (a GC's notes = notes on their permits + notes written directly on the GC) — extend that association to Open Subs too, and coordinate the two rather than building parallel plumbing. The association should ride the same normalized contractor-name key the rest of the app uses.
+
+**Checklist:**
+- [ ] Decide the association mechanics with FEAT-034/FEAT-037's data layer: when a note is created (or already exists) on a permit, make it queryable by each GC and each Open Sub named on that permit — roll-up by contractor key, not a copied/duplicated note
+- [ ] Backfill: existing permit notes become visible from their permits' GCs and Open Subs, not just notes written from now on
+- [ ] Surface them in the GC View and the Open Sub View (Notes section per FEAT-037: text, timestamp, author, and which permit each note came from, newest first)
+- [ ] Respect FEAT-034's visibility rules (public thread posts vs. private notes; on shared lists show public + your own private ones) — attaching to a contractor must never widen who can see a note
+- [ ] Handle multi-contractor permits: a note on a permit with 2 GCs and 3 Open Subs appears under all 5, clearly attributed to the one permit
+- [ ] Keep it consistent on both index.html and list.html card stacks
+- [ ] Verify on desktop and mobile: a contractor with notes across several permits, a contractor with none (no empty section/zero badge), and both themes
+
+**Log:**
+- 2026-08-05 09:50 CT — created (Divyam)
+
 ### FIX-006 · Shared permit-list link should layer over the directory with a back button
 
 - **Priority:** P2-Medium
@@ -1032,6 +1099,30 @@ Not fixed inside FEAT-021 on purpose: the new value-range fields were matched to
 ## ✨ Features
 
 > **Purpose:** New features and ideas to be added to the existing Chicago Permit Search tool. Enhancements that extend the current project rather than repair it.
+
+### FEAT-040 · Permit Map: filter by visited / not visited / called / not called
+
+- **Priority:** P1-High
+- **Status:** todo
+- **Created:** 2026-08-05 10:33 CT
+- **Updated:** 2026-08-05 10:33 CT
+- **Tags:** Chicago Permit Search Tool
+
+Bring FEAT-031's visited/called filtering to Map Search (`docs/map.html`): filter the map to visited, not visited, called or not called. The states already exist and already sync — they are per-permit flags on a saved list (`ticks`, `called`), stored with the actor's name and shared through the Worker.
+
+The design question this card must answer first: **those flags live on a LIST, and the map shows every permit in the city.** A permit that is in no list has no visited state at all, so "not visited" cannot honestly mean "every unvisited permit in Chicago". The likely answer is that the filter scopes the map to a chosen list (or to all listed permits) the way the list page does, and says so on screen — but decide it deliberately and write the decision in the Log before building. Reuse FEAT-031's chip pattern: mutually exclusive within a pair, combinable across pairs, pressing the active chip clears its facet.
+
+**Checklist:**
+- [ ] Decide and record the scope: which permits the filter can speak about, and what the map shows when a filter is on (only listed permits? a list picker? a clear on-screen statement of the scope?) — an honest "not called" is impossible over permits with no list
+- [ ] Add the chips to the map's filter drawer, matching FEAT-031's semantics and wording exactly so the two pages do not drift
+- [ ] Compose correctly with the existing map filters (date, GC range, neighborhood/radius, value range, work-type exclusions, property use) and say in the status strip what is active
+- [ ] Reflect the state on the pins themselves where it helps (a visited permit reading as unvisited on the map would be worse than no filter)
+- [ ] Keep the flags live: a permit ticked on the list page should reach the map through the same sync path, not a stale copy
+- [ ] Persist with the rest of the map's filters (see FIX-035) — a filter that silently resets on reload is how permits get missed
+- [ ] Verify on desktop and mobile: each facet alone, combined across pairs, with an empty result set, and on a shared list where someone else did the visiting
+
+**Log:**
+- 2026-08-05 10:33 CT — created (Divyam)
 
 ### FEAT-039 · Lift the route-optimizer ceiling to the full 1000-permit cap by fetching fewer matrix cells
 
