@@ -85,6 +85,31 @@ NEVER
 
 > **Purpose:** Things to fix on current projects — currently the Chicago Permit Search tool. Bugs, regressions, broken behavior, and cleanup on what already exists. This is Claude Code's default work queue.
 
+### FIX-041 · Liv Renovations does not come up in search — find the lapse and fix it at the root
+
+- **Priority:** P1-High
+- **Status:** todo
+- **Created:** 2026-08-06 09:19 CT
+- **Updated:** 2026-08-06 09:19 CT
+- **Tags:** Chicago Permit Search Tool
+
+Reported by Divyam: searching for **Liv Renovations** returns nothing. Establish first whether the contractor is genuinely absent from the underlying data or merely unreachable through search — those are different bugs with different fixes, and only one of them is a search bug.
+
+Do not fix the symptom by special-casing this name. A contractor that exists in the data but cannot be found is a class of failure, and however Liv Renovations is being lost, other names are being lost the same way. The likely culprits, in order of suspicion: name normalization dropping or mangling a token; the search matching on a prefix or an exact string where a substring match is needed; the licensed-contractor match (FEAT-004/FEAT-014) failing to join a registry record so the entity never enters the index; the "open permits only" scope excluding a contractor whose work has all closed (which FEAT-042 is separately addressing); or dedup collapsing the entity under a variant spelling.
+
+**Checklist:**
+- [ ] Reproduce and record exactly what was searched, on which surface (Search Directory, GC view, Permit Map), and what came back — write it in this task's Log
+- [ ] Query the raw dataset directly (DuckDB against the permits source, plus the contractor registry) for every name variant — "Liv", "LIV Renovations", "Liv Renovations Inc/LLC", with and without punctuation — and establish whether the records exist at all
+- [ ] If the records exist: trace where they are lost — pipeline ingest, name normalization, the licence match, the open-permit scope filter, dedup, or the client-side search itself. Name the exact stage in the Log before changing anything
+- [ ] If the records do not exist: determine why (data vintage, permit type out of scope, contractor never pulled a permit under that name) and say so plainly rather than treating it as a search defect
+- [ ] Fix at the stage that loses it, not at the surface that reports it — a name-specific patch is not a fix
+- [ ] Quantify the blast radius: how many other contractors does the same lapse hide? Run the corrected logic against the full index and report the count of entities recovered
+- [ ] Add a regression test covering the failing case class (whatever the root cause turns out to be — a normalization case, a substring match, a join miss), so this specific lapse cannot return silently
+- [ ] Verify on desktop and mobile: Liv Renovations is findable from the Search Directory and appears wherever contractors are listed
+
+**Log:**
+- 2026-08-06 09:19 CT — created (Divyam)
+
 ### FIX-040 · Search result count and "add to list" total don't update when work types are included/excluded
 
 - **Priority:** P3-Low
@@ -1037,7 +1062,7 @@ In the General Contractor view, the numbers on Specialties bubbles overflow past
 - **Updated:** 2026-07-30 18:10 CT
 - **Tags:** Chicago Permit Search Tool
 
-Wherever a General Contractor company shows up (directory rows, profile cards, permit detail, overlay cards, map popups, list rows, exports), display the name of the person in charge of that company. Same for Open Subs that are LLCs or companies: show the responsible person alongside the business name. Likely sources: the city contractor registry / licensing data already ingested (FEAT-004/FEAT-014 surfaced titles), and IL Secretary of State LLC registrations (manager/registered agent) — FEAT-026 covers deeper LLC ingestion; this task uses whatever fields are available now and leaves richer enrichment to FEAT-026.
+Wherever a General Contractor company shows up (directory rows, profile cards, permit detail, overlay cards, map popups, list rows, exports), display the name of the person in charge of that company. Same for Open Subs that are LLCs or companies: show the responsible person alongside the business name. Likely sources: the city contractor registry / licensing data already ingested (FEAT-004/FEAT-014 surfaced titles), and IL Secretary of State LLC registrations (manager/registered agent) — FEAT-029 covers deeper LLC ingestion (originally FEAT-026, consolidated 2026-08-06); this task uses whatever fields are available now and leaves richer enrichment to FEAT-029.
 
 **Checklist:**
 - [x] Identify where a "person in charge" name exists in current data (contractor registry contact/licensee name, permit contact fields) for GCs and for Open Sub companies; note coverage in this task's Log
@@ -1202,6 +1227,34 @@ Not fixed inside FEAT-021 on purpose: the new value-range fields were matched to
 ## ✨ Features
 
 > **Purpose:** New features and ideas to be added to the existing Chicago Permit Search tool. Enhancements that extend the current project rather than repair it.
+
+### FEAT-043 · Contractor background verification: how long they take to finish, and whether they pay their subs
+
+- **Priority:** P2-Medium
+- **Status:** todo
+- **Created:** 2026-08-06 09:19 CT
+- **Updated:** 2026-08-06 09:19 CT
+- **Tags:** Chicago Permit Search Tool
+
+Requested by Divyam: give each contractor a background-verification view answering two questions a person hiring them would actually ask — **how long do their jobs take**, and **do they pay their open subs**.
+
+Half of this is already built. FIX-012 established the closure metric: time-to-close is OBSERVED, not published — the City's data records *that* a permit closed, never *when* — so every seed since 2026-07-30 books issue-date → first-seen-COMPLETE per contractor into `closure:stats`. That is the duration signal; this card turns it from a pill into a verification view, adds distribution rather than just a mean, and adds the still-open dimension (jobs sitting open far past this contractor's own typical close time).
+
+The payment half has no direct source and must not be faked. Nothing in the permits data records whether a sub was paid. The honest proxy is the **mechanics lien** — a sub who is not paid records one against the property with the Cook County Recorder — which is exactly the deed/title source now in FEAT-029's checklist, so this card is gated on that ingestion. Absence of a lien is weak evidence of payment and must never be displayed as "pays subs"; a recorded lien is strong evidence of a dispute and can be shown as the record it is.
+
+**Checklist:**
+- [ ] Define what "background verification" shows before building it — write the field list and the exact claim each field is entitled to make in this task's Log
+- [ ] Duration: build on FIX-012's observed closure stats rather than recomputing. Show the distribution (median and spread, not just the mean over `{n, days}`) and the observation count, so a contractor with three observations does not read like one with sixty
+- [ ] Duration: add currently-open job age — jobs open well beyond this contractor's own observed typical close, which is the live signal a stalled job produces before any closure is ever booked
+- [ ] Suppress the metric entirely below a minimum observation count rather than showing a thin average — FIX-012 already established that absent beats misleading here, and the pill is omitted rather than zeroed
+- [ ] Payment: gate on FEAT-029's Cook County Recorder ingestion; match mechanics liens to contractors by name normalization (the licensed-contractor match) and to properties by PIN/address
+- [ ] Payment: show recorded liens as records with date, claimant, property and amount — never derive a "pays / does not pay" verdict, and never render absence of liens as evidence of payment
+- [ ] Check what else is available and honest before settling: IDFPR licence status and any disciplinary record, licence lapses, and the City's own registry status (FEAT-004/FEAT-014 already ingest this)
+- [ ] Surface the view wherever a contractor appears — GC profile first, then directory row and permit detail — with a per-source caveat naming the source and its vintage
+- [ ] Verify against contractors whose history is independently known, and confirm a low-observation contractor and a lien-free contractor both render honestly rather than favorably
+
+**Log:**
+- 2026-08-06 09:19 CT — created (Divyam)
 
 ### FEAT-042 · Surface Closed permits: a Search Directory option and a Closed-permits list per GC
 
@@ -1551,27 +1604,6 @@ When permits are pulled into a list from Search or Map Search, record the condit
 - 2026-08-05 10:45 CT — caught a bug of my own in review: the expanded state persisted across a change of list, so a second list opened pre-expanded reading "Show less". Now reset on a change of list only — resetting on every repaint would have collapsed the description mid-read, since this also runs after each add and on every live frame. Regression test added and proved to fail against the bug (Claude Code)
 - 2026-08-05 10:49 CT — **done.** Commit `9707131` on branch `feat-032-list-provenance`, pushed. Full browser sweep run (73 scripts): 70 green; the 3 reds — `t9`, `t40-mapstate`, `t63-sparse-matrix` — were each re-run in isolation and fail identically on `main`, so none is caused by this change (`t63` belongs to the parked FEAT-039 work). Worker suite 200/200. **Not merged — awaiting approval** (Claude Code)
 
-### FEAT-026 · Enrich profiles with deed/title, MLS, LLC, VA loan, and licensing data sources
-
-- **Priority:** P2-Medium
-- **Status:** todo
-- **Created:** 2026-07-28 14:06 CT
-- **Updated:** 2026-07-28 14:06 CT
-- **Tags:** Chicago Permit Search Tool
-
-Cross-reference and enrich permit, property, and contractor profiles with additional data sources: deed/title records (mortgages, liens), MLS data, Illinois LLC registrations (Secretary of State), VA loan data, licensing bodies, and IDFPR (Illinois Department of Financial and Professional Regulation).
-
-**Checklist:**
-- [ ] Evaluate each source: access method, coverage for Chicago, licensing/cost, and terms of use (Cook County Recorder of Deeds for mortgages/liens; MLS access rules; IL SoS LLC data; VA loan records; IDFPR license lookup)
-- [ ] Rank sources by enrichment value vs. effort and note findings in this task's Log
-- [ ] Design join keys per source (address/PIN for deeds and MLS, name-normalization for LLC/IDFPR, mirroring the licensed-contractor match)
-- [ ] Ingest the first approved source(s) into the pipeline and export enriched fields into the JSON indexes
-- [ ] Surface enrichments on profiles and permit detail with per-source data caveats
-- [ ] Verify sample records against each source of record
-
-**Log:**
-- 2026-07-28 14:06 CT — created (Divyam)
-
 ### FEAT-028 · Classify permit lenders: private/small lender vs small, medium, or large bank
 
 - **Priority:** P2-Medium
@@ -1592,47 +1624,38 @@ For the lender recorded on a permit (builds on FEAT-023), determine whether it i
 **Log:**
 - 2026-07-28 14:06 CT — created (Divyam)
 
-### FEAT-029 · Airbnb licensees layer: density map and management-outreach view
+### FEAT-029 · Property intelligence: STR/Airbnb licensees cross-referenced with MLS listing history, zoning, HOA rules, and deed/LLC/licensing records
 
 - **Priority:** P2-Medium
 - **Status:** todo
 - **Created:** 2026-07-28 14:06 CT
-- **Updated:** 2026-07-28 14:06 CT
+- **Updated:** 2026-08-06 09:19 CT
 - **Tags:** Chicago Permit Search Tool
 
-Include Chicago short-term rental / Airbnb licensees, shown as a Map Search layer, with the goals of seeing where Airbnb density is concentrated and identifying hosts who may want property management.
+Consolidates FEAT-026 (deed/title, MLS, LLC, VA loan, IDFPR enrichment), FEAT-029 (Airbnb/short-term-rental licensee layer) and FEAT-030 (HOA locations, fees, rental rules) into one card — they were three views of the same join: take an address or PIN and say **what this property is, what it is allowed to be, and what it has been marketed as**. Both source cards are in the Archive with their bodies intact; their IDs are retired.
+
+The STR layer on its own answers "where is Airbnb density concentrated" and nothing more. Cross-referenced with MLS listing history (list/delist cycles, price cuts, days on market, sale history, whether it was ever marketed as an investment or furnished/short-term unit), zoning, and HOA rental rules, the same layer answers the question actually worth asking of a permit or a parcel: is this property being run as a short-term rental, could it be, and is the owner someone who wants a property manager.
+
+**Sequencing:** the source-evaluation gate comes first and MLS is the one with real constraints — IDX/RETS/RESO feeds carry redistribution and display terms, and an unlicensed scrape is not an option. Settle terms before anything is built on it. Zoning is the cheapest piece and already shipped: `docs/data/zoning.geojson` is loaded for the zoning layer and indexed by FEAT-024, so the zoning half of this card is a join, not an ingestion.
 
 **Checklist:**
-- [ ] Source the City of Chicago shared housing / short-term rental registration data
-- [ ] Ingest licensees with locations into the pipeline and export a map-ready index
-- [ ] Add an Airbnb layer to Map Search with a density view (clusters or heat) and per-license markers
-- [ ] Show available license details in the marker popup for outreach use
-- [ ] Make the layer respect existing filters where sensible and persist with FIX-008's remembered map state
-- [ ] Verify density hotspots against known short-term-rental neighborhoods
+- [ ] Evaluate every source before building: access method, Chicago coverage, cost, and terms of use — City shared-housing/STR registrations; MLS (which feed, what redistribution/display terms, what listing *history* depth is actually licensed); Cook County Recorder of Deeds for deeds, mortgages, liens; IL Secretary of State LLC registrations; VA loan records; IDFPR licence lookup; HOA sources (MLS association/fee fields, county records, condo declarations). Rank by enrichment value vs. effort and write the findings in this task's Log
+- [ ] Design the join keys per source: PIN/address for STR, MLS, deeds and HOA (the permits dataset already carries `pin_list`, the key FEAT-025 uses to reach the Assessor's parcel universe); name normalization for LLC/IDFPR, mirroring the licensed-contractor match
+- [ ] Ingest the City STR/shared-housing registrations with locations and export a map-ready index
+- [ ] Add the STR layer to Map Search: density view (clusters or heat) plus per-licence markers, licence details in the popup for outreach, respecting existing filters where sensible and persisting with the remembered map state (FIX-008 / FIX-035)
+- [ ] Add MLS listing history per property: current status, list and delist events, price changes, days on market, sale history, and any signal that it was marketed as furnished / short-term / investment. History over snapshot — a single current listing state is not what this card is for
+- [ ] Cross-reference STR licensees against zoning using the already-shipped `zoning.geojson` index rather than a new fetch, and show the district alongside the registration
+- [ ] **Do not compute a legality verdict.** Chicago's shared-housing rules live in the ordinance and in per-precinct/per-building restrictions, not in the zoning district code, so district + registration status can be shown side by side but "this STR is illegal" cannot be derived from them. State what each source says and leave the conclusion to the reader — same rule as [[chi-permits-neighborhood]]'s never-invent-a-classification and FEAT-025's zoning-vs-Assessor split
+- [ ] Associate permits and addresses with an HOA where one exists; show HOA presence and fee amount on permit detail and list pulls, and add a rentals-allowed check where the data supports it — "unknown" shown honestly wherever it does not
+- [ ] Ingest the approved deed/title, LLC, VA loan and IDFPR sources into the pipeline and export the enriched fields into the JSON indexes (FIX-015 already surfaces whatever person-in-charge data exists today; the deeper LLC manager/registered-agent enrichment belongs here)
+- [ ] Surface every enrichment with a per-source caveat naming the source and its vintage — an MLS field and a Recorder field carry very different confidence and must not read alike
+- [ ] Keep per-property enrichment an on-demand cached lookup, never a bulk fetch across a result set — the constraint FEAT-025 established for the Assessor class applies to all of these, and a table column is a bulk fetch by another name
+- [ ] Verify a sample against each source of record: density hotspots against known short-term-rental neighborhoods, fees and rental rules against known condo/HOA buildings, and listing history against a handful of properties whose sale history is independently known
 
 **Log:**
 - 2026-07-28 14:06 CT — created (Divyam)
-
-### FEAT-030 · HOA data: locations vs permits, fees, MLS cross-reference, rental rules
-
-- **Priority:** P2-Medium
-- **Status:** todo
-- **Created:** 2026-07-28 14:06 CT
-- **Updated:** 2026-07-28 14:06 CT
-- **Tags:** Chicago Permit Search Tool
-
-Include HOA data: where HOAs sit relative to permits, what their fees are, cross-referenced with MLS data (see FEAT-026 for the MLS source). When pulling a list for a building permit, check whether the HOA allows rentals.
-
-**Checklist:**
-- [ ] Identify HOA data sources (MLS fee/association fields, county records, condo declarations) and their coverage/terms
-- [ ] Associate permits/addresses with an HOA where one exists
-- [ ] Show HOA presence and fee amount on permit detail and list pulls
-- [ ] Add a rentals-allowed check to permit list pulls where the data supports it; show unknown honestly otherwise
-- [ ] Cross-reference against MLS data once FEAT-026's MLS source lands
-- [ ] Verify a sample of known condo/HOA buildings for fee and rental-rule accuracy
-
-**Log:**
-- 2026-07-28 14:06 CT — created (Divyam)
+- 2026-08-06 09:19 CT — expanded at Divyam's request to cross-reference MLS listing history and zoning, and consolidated with FEAT-026 and FEAT-030 into this single card. FEAT-026 and FEAT-030 moved to the Archive with full bodies preserved; their IDs are retired and must not be reused. FIX-015's pointer to FEAT-026 for deeper LLC ingestion now points here (Claude)
+- 2026-08-06 09:19 CT — scope note carried over from FEAT-030: the HOA rentals-allowed check was always dependent on the MLS source that was in FEAT-026, which is why the two are now one card rather than two with a cross-reference between them (Claude)
 
 ### FEAT-017 · Address search for permits
 
@@ -2187,7 +2210,50 @@ Investigate Polyscan and whether it can be used with the Search Tool.
 
 > **Purpose:** Completed or retired tasks moved here to keep the active lists short. Preserve full task bodies when archiving.
 
-*Empty.*
+### FEAT-026 · Enrich profiles with deed/title, MLS, LLC, VA loan, and licensing data sources
+
+- **Priority:** P2-Medium
+- **Status:** todo
+- **Created:** 2026-07-28 14:06 CT
+- **Updated:** 2026-07-28 14:06 CT
+- **Tags:** Chicago Permit Search Tool
+
+Cross-reference and enrich permit, property, and contractor profiles with additional data sources: deed/title records (mortgages, liens), MLS data, Illinois LLC registrations (Secretary of State), VA loan data, licensing bodies, and IDFPR (Illinois Department of Financial and Professional Regulation).
+
+**Checklist:**
+- [ ] Evaluate each source: access method, coverage for Chicago, licensing/cost, and terms of use (Cook County Recorder of Deeds for mortgages/liens; MLS access rules; IL SoS LLC data; VA loan records; IDFPR license lookup)
+- [ ] Rank sources by enrichment value vs. effort and note findings in this task's Log
+- [ ] Design join keys per source (address/PIN for deeds and MLS, name-normalization for LLC/IDFPR, mirroring the licensed-contractor match)
+- [ ] Ingest the first approved source(s) into the pipeline and export enriched fields into the JSON indexes
+- [ ] Surface enrichments on profiles and permit detail with per-source data caveats
+- [ ] Verify sample records against each source of record
+
+**Log:**
+- 2026-07-28 14:06 CT — created (Divyam)
+- 2026-08-06 09:19 CT — ARCHIVED: consolidated into FEAT-029 at Divyam's request. Not completed and not dropped — every source listed here is carried in FEAT-029's checklist. This ID is retired (Claude)
+
+### FEAT-030 · HOA data: locations vs permits, fees, MLS cross-reference, rental rules
+
+- **Priority:** P2-Medium
+- **Status:** todo
+- **Created:** 2026-07-28 14:06 CT
+- **Updated:** 2026-07-28 14:06 CT
+- **Tags:** Chicago Permit Search Tool
+
+Include HOA data: where HOAs sit relative to permits, what their fees are, cross-referenced with MLS data (see FEAT-026 for the MLS source). When pulling a list for a building permit, check whether the HOA allows rentals.
+
+**Checklist:**
+- [ ] Identify HOA data sources (MLS fee/association fields, county records, condo declarations) and their coverage/terms
+- [ ] Associate permits/addresses with an HOA where one exists
+- [ ] Show HOA presence and fee amount on permit detail and list pulls
+- [ ] Add a rentals-allowed check to permit list pulls where the data supports it; show unknown honestly otherwise
+- [ ] Cross-reference against MLS data once FEAT-026's MLS source lands
+- [ ] Verify a sample of known condo/HOA buildings for fee and rental-rule accuracy
+
+**Log:**
+- 2026-07-28 14:06 CT — created (Divyam)
+- 2026-08-06 09:19 CT — ARCHIVED: consolidated into FEAT-029 at Divyam's request. Not completed and not dropped — the HOA fee, rental-rule and MLS cross-reference items are carried in FEAT-029's checklist. This ID is retired (Claude)
+
 
 ---
 
