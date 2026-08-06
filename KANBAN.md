@@ -2153,6 +2153,32 @@ Remember what list you were last on when returning to the list site.
 
 > **Purpose:** Ideas outside the scope of the current project — things that may or may not become future projects or add-ons. Not actionable now. Claude Code must never implement from this list unless explicitly instructed.
 
+### FUT-004 · Research Chicago Cityscape through its 14-day free trial
+
+- **Priority:** P0-Critical
+- **Status:** todo
+- **Created:** 2026-08-06 14:02 CT
+- **Updated:** 2026-08-06 14:02 CT
+
+Sign up for the Chicago Cityscape 14-day free trial and work out what it
+actually does — both as a source of features/data that could feed the Search
+Tool, and as a standalone product worth understanding on its own terms.
+
+Note the trial is time-boxed: once it starts, the clock runs 14 days, so plan
+the evaluation before activating it rather than after.
+
+**Checklist:**
+- [ ] Plan what to evaluate BEFORE activating the trial (the 14 days start on signup)
+- [ ] Activate the trial and record the start/end dates here
+- [ ] Catalog the features, datasets and coverage it offers for Chicago
+- [ ] Identify which capabilities could enrich the Search Tool, and how they'd integrate
+- [ ] Assess it standalone: what it does well, where it falls short, who it's for
+- [ ] Note pricing, licensing and any API/export access after the trial
+- [ ] Write up findings and decide whether to pursue
+
+**Log:**
+- 2026-08-06 14:02 CT — created (Divyam)
+
 ### FUT-001 · Fill in forms for buy offers based on base price and other factors
 
 - **Priority:** P1-High
