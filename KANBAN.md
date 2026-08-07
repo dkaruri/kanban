@@ -808,9 +808,9 @@ Two desktop problems around GC/Open Sub rows. (1) In the Permit View, the WHOLE 
 ### FIX-035 · Permit Map: remember every filter and exclusion across reload and page exit
 
 - **Priority:** P1-High
-- **Status:** todo
+- **Status:** in-progress
 - **Created:** 2026-08-05 10:33 CT
-- **Updated:** 2026-08-05 10:33 CT
+- **Updated:** 2026-08-07 11:46 CT
 - **Tags:** Chicago Permit Search Tool
 
 Reported by Divyam: the filters and exclusions set on Map Search (`docs/map.html`) are not remembered — leaving the page or refreshing loses them. Persistence has been claimed twice already, so **reproduce and inventory before writing anything**: FIX-008 covered the date/GC/neighborhood/radius controls, the layer toggles and the viewport (`chi_permit_map_settings`, `chi_permit_map_layers`, `chi_permit_map_view`), and FEAT-024's log says its work-type exclusions and property-use select persist and re-apply on first render. Something in that chain is either not saving, not restoring, or newer than the code that saves — FEAT-021's value range and FEAT-040's visited/called chips are the obvious candidates for having no persistence at all. Done when every control in the Filters drawer survives a reload and a full page exit, and the map that comes back matches the one that was left.
