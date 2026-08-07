@@ -276,9 +276,9 @@ Reproduce and inventory first: find where tags are entered and rendered today (w
 ### FIX-037 · Adding to a full list from Search or the Permit Map silently deletes the oldest saved permits
 
 - **Priority:** P1-High
-- **Status:** todo
+- **Status:** in-progress
 - **Created:** 2026-08-05 10:34 CT
-- **Updated:** 2026-08-05 10:34 CT
+- **Updated:** 2026-08-07 13:32 CT
 - **Tags:** Chicago Permit Search Tool
 
 FEAT-035 found and fixed this in `docs/list.html`, but the same add path exists on `docs/index.html` and `docs/map.html` and was **not** fixed there. Both still do:
@@ -293,15 +293,17 @@ New permits are unshifted onto the head, then the list is sliced back to the 100
 Found while implementing FEAT-032, which had to work around it: the provenance line records `Math.min(added, userListLimit)` so the count it writes is at least honest about what landed. Not fixed there because it changes add semantics on two pages and deserves its own verification.
 
 **Checklist:**
-- [ ] Port `list.html`'s cap-aware add (fill to the cap, count `added`/`skipped`, never trim the tail) into `docs/index.html` and `docs/map.html`
-- [ ] Report the refusal to the user on both pages, the way `list.html` announces it
-- [ ] Simplify FEAT-032's `Math.min(added, userListLimit)` back to `added` once the three paths agree
-- [ ] Regression test: a full list plus an add loses nothing, on all three pages
-- [ ] Check whether any other add path (drag-and-drop onto the list panel, "Add all" from a contractor card) shares the bug
+- [x] Port `list.html`'s cap-aware add (fill to the cap, count `added`/`skipped`, never trim the tail) into `docs/index.html` and `docs/map.html`
+- [x] Report the refusal to the user on both pages, the way `list.html` announces it
+- [x] Simplify FEAT-032's `Math.min(added, userListLimit)` back to `added` once the three paths agree
+- [x] Regression test: a full list plus an add loses nothing, on all three pages
+- [x] Check whether any other add path (drag-and-drop onto the list panel, "Add all" from a contractor card) shares the bug
 
 **Log:**
 - 2026-08-05 10:34 CT — found while implementing FEAT-032; filed rather than folded into it (Claude Code)
 - 2026-08-05 11:00 CT — renumbered FIX-034 → FIX-037: FIX-034 was already taken by the "Attach permit notes to GCs and Open Subs" card; this card was filed under the same id by a separate session (Claude Code)
+- 2026-08-07 13:32 CT — in-progress; branch `fix-037-cap-aware-add` (Claude Code)
+- 2026-08-07 13:32 CT — **fixed**, `8c597f3` on `fix-037-cap-aware-add`, **pushed, NOT merged**. The card's diagnosis was exact. **TWO add paths per page were affected, not one:** `addPermitsToUserList` (bulk — selection, "Add all", contractor cards) and `addPermitNumberToUserList` (single add **and drag-and-drop onto the list**), each ending in the same tail-trimming `.slice(0, userListLimit)`. Both now fill to the cap and count `{added, skipped}` exactly as `list.html` does. **The single-add path needed care the card did not anticipate:** that function does double duty — it also REPOSITIONS an already-saved permit on drop — so a blanket cap check would have frozen reordering on a full list. Only a genuinely new permit is refused, and there is a control test asserting a full list can still be reordered. Refusals are reported through `#user-route-summary`, the aria-live region both pages already use; silence is what made the loss invisible. FEAT-032's `Math.min(added, userListLimit)` is simplified back to `added` on both pages. **Checklist item 5 (other add paths):** every caller routes through one of these two functions — including drag-and-drop and the contractor "Add all" — so all are covered; `map.html`'s "add all filtered" was **already** cap-aware (computes room, alerts when full, confirms a partial add) and is untouched. Remaining `.slice(0, userListLimit)` calls are the legacy-import migration and the `saveUserListCookie` backstop, both present identically on all three pages including `list.html`, both left alone. **Note a divergence this surfaced:** `userListLimit` is **220** on index/map but **1000** on list.html (FEAT-035 raised only that page) — not in scope here, but the three pages do not agree on the cap. Verified `verify-tmp/t72-cap-aware-add.js`: 12 checks × 2 pages × desktop and iPhone 13, every one asserting the **survivors** rather than the length, because a list still exactly at the cap can have had its oldest silently replaced. **The mutation control is worth reading:** the first four mutants MISSED, and they were wrong mutants rather than weak tests — re-adding the `.slice()` alone is a no-op while the cap guard stands, so the original bug had to be restored in BOTH halves (`t72-mutants2.js`) before it could be caught; all four then CAUGHT, plus six more covering the guard, the silence and the reposition case. 228/228 worker; t46, t64, t67, t69, t71 green (Claude Code)
 
 ### FIX-033 · t12 presence-pill suite still asserts the pre-FIX-031 contract
 
