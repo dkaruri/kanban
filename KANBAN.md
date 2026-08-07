@@ -894,25 +894,28 @@ That is why this reads as "filters are not remembered": the filters ARE applied 
 ### FIX-036 · Permit Map: draw and label zoning-district boundaries so each district's extent is unmistakable
 
 - **Priority:** P1-High
-- **Status:** todo
+- **Status:** in-progress
 - **Created:** 2026-08-05 10:33 CT
-- **Updated:** 2026-08-05 10:33 CT
+- **Updated:** 2026-08-07 15:03 CT
 - **Tags:** Chicago Permit Search Tool
 
 On the Map Search zoning layer (`docs/map.html`, `docs/data/zoning.geojson`), where one district ends and the next begins is not clear. Divyam's example: an **RM-4.5** label appears in the middle of what reads as an **RS-3** area, with nothing showing how far the RM-4.5 actually extends. Each district polygon should carry a visible outline marking its exact border, with the district's own label attached to that outlined shape, so a small pocket of one zoning class inside another is obviously its own bounded area rather than a stray label. The data is already loaded — the same `zoning.geojson` FEAT-024's residential filter indexes — so this is a rendering job, not an ingestion one.
 
 **Checklist:**
-- [ ] Reproduce with Divyam's case: find an RM-4.5 polygon surrounded by RS-3 and screenshot what it looks like today at the zoom where the confusion happens
-- [ ] Add a distinct outline (line layer) per district polygon so boundaries read at a glance; make sure neighbouring same-class districts do not merge visually into one blob
-- [ ] Bind the label to its polygon so the text belongs to the outlined shape — one label per district, placed inside it, not floating between two
-- [ ] Handle small polygons and dense downtown areas: labels must not collide, disappear entirely, or spill outside the district they name
-- [ ] Check legibility over the permit pins, clusters and heat layers in BOTH themes — the outline must not fight the markers it sits under
-- [ ] Check zoom behaviour: outlines and labels should stay useful zoomed out and not clutter zoomed in
-- [ ] Verify performance — this is a large polygon set; measure render/pan cost before and after rather than assuming it is free
-- [ ] Verify on desktop and mobile, and confirm the zoning layer toggle still turns everything (fill, outline, labels) on and off as one unit
+- [x] Reproduce with Divyam's case: find an RM-4.5 polygon surrounded by RS-3 and screenshot what it looks like today at the zoom where the confusion happens
+- [x] Add a distinct outline (line layer) per district polygon so boundaries read at a glance; make sure neighbouring same-class districts do not merge visually into one blob
+- [x] Bind the label to its polygon so the text belongs to the outlined shape — one label per district, placed inside it, not floating between two
+- [x] Handle small polygons and dense downtown areas: labels must not collide, disappear entirely, or spill outside the district they name
+- [x] Check legibility over the permit pins, clusters and heat layers in BOTH themes — the outline must not fight the markers it sits under
+- [x] Check zoom behaviour: outlines and labels should stay useful zoomed out and not clutter zoomed in
+- [x] Verify performance — this is a large polygon set; measure render/pan cost before and after rather than assuming it is free
+- [x] Verify on desktop and mobile, and confirm the zoning layer toggle still turns everything (fill, outline, labels) on and off as one unit
 
 **Log:**
 - 2026-08-05 10:33 CT — created (Divyam)
+- 2026-08-07 14:20 CT — in-progress; branch `fix-036-zoning-boundaries` (Claude Code)
+- 2026-08-07 15:03 CT — **REPRODUCED FIRST, from the data rather than by eye (checklist item 1).** Scanned `zoning.geojson` for the RM-4.5 polygon with the most RS-3 neighbours per unit area: **-87.68890 / 41.91419**. Screenshotted at z14 and z15.5, desktop and iPhone. The cause is visible immediately: most residential classes are near-identical pale tans, and **`zoning-outline` was painted in each district's OWN fill colour** at 0.6px / 0.55 opacity — an invisible border against the very thing it borders. Only the strongly tinted classes (PD, B3, M1) ever read as bounded shapes, so a label had nothing to belong to. Note both an outline layer and a label layer already existed; the card's premise that they were missing was not quite right, they were just ineffective.
+- 2026-08-07 15:03 CT — **fixed**, `b2d2f3f` on `fix-036-zoning-boundaries`, **pushed, NOT merged**. `docs/map.html` only — a rendering change, as the card said. **(1) Boundary:** a neutral dark stroke (`#374151`) contrasting with every fill instead of matching it, so it reads between two districts of the SAME class as well as different ones; width and opacity interpolate with zoom so 14.9k polygons do not become a mesh zoomed out. **(2) Labels:** derived point source, one point per district, instead of labelling the polygons. Labelling polygons cannot satisfy "one label inside its own shape" — MapLibre places the symbol at the centroid of the geometry **as clipped into each tile**, so a district spanning a tile edge gets a label per tile, and a concave district's centroid can land outside it entirely, which is exactly how an RM-4.5 label ends up over what looks like RS-3. The point is the midpoint of the widest span at the polygon's centroid latitude — inside by construction, one pass over the ring, no geometry library. `symbol-sort-key` is negated area so a small pocket cannot lose its label to a bigger neighbour. **Verified by measurement, not by eye:** `verify-tmp/t74-zoning-boundaries.js` queries every rendered label's screen position against the zoning fill underneath it — desktop + iPhone 13, at the reported case and in the Loop, **76 / 45 / 34 / 11 labels checked and EVERY one sits inside a district of its own class**, zero duplicate label points. **Performance measured, not assumed (item 7):** deriving 14,873 label points costs **17-18ms** once at layer-on; four pans at z15, **median of three runs, 5947ms before → 6344ms after** (~+100ms per pan, +6.7%, ranges overlapping). **Both themes (item 5):** the basemap is a raster source with `filter: none`, so the map surface is pixel-identical in light and dark — only the surrounding chrome changes, confirmed by screenshot, so one colour set genuinely serves both. **Data note:** four districts carry an EMPTY MultiPolygon (2× RS-3, B2-3, RT-4) — they cannot be filled, outlined or labelled because they have no inside, so 14,873 of 14,877 get a label point and that is correct, not a gap; my first assertion was too strict and was corrected. **Probe correction:** an early run reported "0 labels on iPhone" — a race, not the product; a fixed 3s wait was replaced with waiting on the map's `idle` event, after which the same build renders 45. Five mutants all caught, including the two that restore the original bugs. 232/232 worker; t40, t62, t69, t71 green (Claude Code)
 
 ### FIX-034 · Attach permit notes to the permit's General Contractors and Open Subs as well
 
