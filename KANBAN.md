@@ -1418,9 +1418,9 @@ The core risk is layout: an embedded map must size to its container and must NOT
 ### FEAT-040 · Permit Map: filter by visited / not visited / called / not called
 
 - **Priority:** P1-High
-- **Status:** todo
+- **Status:** in-progress
 - **Created:** 2026-08-05 10:33 CT
-- **Updated:** 2026-08-05 10:33 CT
+- **Updated:** 2026-08-07 11:10 CT
 - **Tags:** Chicago Permit Search Tool
 
 Bring FEAT-031's visited/called filtering to Map Search (`docs/map.html`): filter the map to visited, not visited, called or not called. The states already exist and already sync — they are per-permit flags on a saved list (`ticks`, `called`), stored with the actor's name and shared through the Worker.
@@ -1440,6 +1440,7 @@ The design question this card must answer first: **those flags live on a LIST, a
 - 2026-08-05 10:33 CT — created (Divyam)
 - 2026-08-07 09:30 CT — note, no work done: branch `origin/feat-040-lift-directory-caps` wrongly claims this ID for unrelated work (lifting the directory result caps). This card keeps FEAT-040 — it was created first — and that branch has been renumbered to **FEAT-044** (Claude Code)
 - 2026-08-07 10:14 CT — that branch no longer exists under the old name: renamed to `feat-044-lift-directory-caps` and its spec renumbered, so the line above is history, not current state. FEAT-040 is unambiguously this card. Still no work done here (Claude Code)
+- 2026-08-07 11:10 CT — in-progress. **SCOPE DECIDED (checklist item 1), Divyam's call, recorded before any code as this card requires.** Three facts established first, all measured rather than assumed: (a) the flags are already reachable on the map — they live INSIDE the list object (`list.ticks` / `list.called`, keyed by `tickKeyFor`), and `state.lists` is already loaded on `map.html` from the same `chi_permit_lists` localStorage key, so no new storage, endpoint or sync is needed to read them; (b) **`map.html` has NO live sync at all** — zero `liveConnect` / `applyListOp` / `sendListOp`, unlike `list.html`, so it reads lists once at init (see the live-flags risk below); (c) there is no "saved permits only" filter on the map today, so this is the map's first list-scoped filter. **The decision:** the chips scope the map **implicitly** — pressing any visited/called chip narrows the map to saved permits, with the scope stated on screen in the status strip (e.g. "Showing only your 120 saved permits | Not visited (86)"). Scope is **every listed permit across ALL lists**, not just the active one. That union raises a conflict `list.html` never has — a permit can sit in two lists and be visited in only one — resolved as **visited = visited in ANY list**: the flag records a real-world action (you went to the address / called the GC), and which list it was written on is bookkeeping. So **"not visited" means: in at least one list, and visited in none.** This is the one place the map deliberately diverges from `list.html`, whose chips are per-active-list; the divergence is the price of the union scope and is stated on screen. Rejected: treating unlisted permits as "not visited" — dishonest over 40,868 permits with no flag, as the card itself notes (Claude Code)
 
 ### FEAT-039 · Lift the route-optimizer ceiling to the full 1000-permit cap by fetching fewer matrix cells
 
