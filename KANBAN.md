@@ -1412,6 +1412,7 @@ The design question this card must answer first: **those flags live on a LIST, a
 **Log:**
 - 2026-08-05 10:33 CT — created (Divyam)
 - 2026-08-07 09:30 CT — note, no work done: branch `origin/feat-040-lift-directory-caps` wrongly claims this ID for unrelated work (lifting the directory result caps). This card keeps FEAT-040 — it was created first — and that branch has been renumbered to **FEAT-044** (Claude Code)
+- 2026-08-07 10:14 CT — that branch no longer exists under the old name: renamed to `feat-044-lift-directory-caps` and its spec renumbered, so the line above is history, not current state. FEAT-040 is unambiguously this card. Still no work done here (Claude Code)
 
 ### FEAT-039 · Lift the route-optimizer ceiling to the full 1000-permit cap by fetching fewer matrix cells
 
