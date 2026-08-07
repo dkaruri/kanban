@@ -810,13 +810,13 @@ Two desktop problems around GC/Open Sub rows. (1) In the Permit View, the WHOLE 
 - **Priority:** P1-High
 - **Status:** in-progress
 - **Created:** 2026-08-05 10:33 CT
-- **Updated:** 2026-08-07 11:46 CT
+- **Updated:** 2026-08-07 11:59 CT
 - **Tags:** Chicago Permit Search Tool
 
 Reported by Divyam: the filters and exclusions set on Map Search (`docs/map.html`) are not remembered — leaving the page or refreshing loses them. Persistence has been claimed twice already, so **reproduce and inventory before writing anything**: FIX-008 covered the date/GC/neighborhood/radius controls, the layer toggles and the viewport (`chi_permit_map_settings`, `chi_permit_map_layers`, `chi_permit_map_view`), and FEAT-024's log says its work-type exclusions and property-use select persist and re-apply on first render. Something in that chain is either not saving, not restoring, or newer than the code that saves — FEAT-021's value range and FEAT-040's visited/called chips are the obvious candidates for having no persistence at all. Done when every control in the Filters drawer survives a reload and a full page exit, and the map that comes back matches the one that was left.
 
 **Checklist:**
-- [ ] Reproduce on the live site first and write the inventory in this task's Log: for EVERY control on the map (date from/to, GC min/max, neighborhood/street, radius, value range, work-type exclusions, property use, layer toggles, viewport, and FEAT-040's visited/called chips if it has landed) record save / restore / re-apply-on-first-render as three separate yes-or-no answers
+- [x] Reproduce on the live site first and write the inventory in this task's Log: for EVERY control on the map (date from/to, GC min/max, neighborhood/street, radius, value range, work-type exclusions, property use, layer toggles, viewport, and FEAT-040's visited/called chips if it has landed) record save / restore / re-apply-on-first-render as three separate yes-or-no answers
 - [ ] Fix the ones that fail, keyed into the existing `chi_permit_map_*` storage rather than a fourth parallel key
 - [ ] Make restore APPLY, not just repopulate: a control that shows its saved value while the map ignores it is the worse bug, because it lies
 - [ ] Cover exclusions specifically — they live behind a collapsed `<details>`, so a silently-dropped exclusion is invisible until someone counts the pins
@@ -826,6 +826,30 @@ Reported by Divyam: the filters and exclusions set on Map Search (`docs/map.html
 
 **Log:**
 - 2026-08-05 10:33 CT — created (Divyam)
+- 2026-08-07 11:46 CT — in-progress; branch `fix-035-map-filter-persistence` (Claude Code)
+- 2026-08-07 11:59 CT — **INVENTORY (checklist item 1), reproduced before touching anything.** Harness `verify-tmp/t70-inventory.js` drives each control, applies, then does a GENUINE page exit (navigate to `disclaimer.html` and back), and answers three questions separately. APPLY is measured from `state.map.filteredRows`, never from the input value, so the "shows but does not apply" bug cannot pass.
+
+| Control | SAVE | RESTORE | APPLY |
+|---|---|---|---|
+| date range (from/to) | yes | yes | yes |
+| GC open-job range | yes | yes | yes |
+| value range [FEAT-021] | yes | yes | yes |
+| neighborhood / street | yes | yes | yes |
+| radius (miles) | yes | yes | yes |
+| search text (q) | yes | yes | yes |
+| property use [FEAT-024] | yes | yes | yes |
+| work-type exclusions [FEAT-024] | yes | yes | yes |
+| visited / called [FEAT-040] | yes | yes | yes |
+| layer toggles | yes | yes | yes |
+| **viewport (centre/zoom)** | **yes** | **yes** | **NO** |
+
+**Ten of eleven controls already persist correctly. The card's two suspects were both wrong** — FEAT-021's value range and FEAT-040's chips save, restore AND apply. There is exactly ONE defect, and it is the viewport.
+
+**Root cause.** The viewport IS saved (`moveend` → `saveMapView`) and IS restored (the map is *constructed* with the saved centre/zoom, deliberately, to avoid a visible lurch). But `updateMapSource` then runs `fitBounds` over every filtered pin. The `skipRecentreOnce` guard added by FIX-008 covers only the two `state.map.searchLocation` branches — so a restored viewport survives **only if a search query was also saved**. With no query, which is the common case, control falls through to `fitBounds`, the camera is reframed to all pins, and the `moveend` listener then **writes that framing back over the saved one**, destroying the user's position permanently rather than merely ignoring it once.
+
+That is why this reads as "filters are not remembered": the filters ARE applied on return (all ten of them), but the map jumps back to a whole-city view, so the whole thing looks reset. Measured: left at zoom 13.5 centred on -87.72/41.93, returned at **zoom 9.2** centred on -87.721/41.836.
+
+**Two probe corrections worth recording, both of which reported clean failures for working code** ([[unreproduced-is-unfixed]]): (1) the first run showed all eleven controls RESTORE=NO — that was `addInitScript` re-seeding the baseline on every navigation, clobbering what had just been saved; it now seeds only when storage is empty. (2) The second run showed five APPLY=NO with **identical row counts** — the comparison included row ORDER, which depends on the search-match flag and an async geocode; comparing the sorted result SET cleared all five. I also initially recorded "layer toggles: nothing stored" without ever toggling a layer, and asserted in passing that `saveMapView()` had zero call sites — both wrong, corrected above; it is wired at map construction (`map.on("moveend", saveMapView)`), which a grep for `saveMapView()` with parentheses misses.
 
 ### FIX-036 · Permit Map: draw and label zoning-district boundaries so each district's extent is unmistakable
 
