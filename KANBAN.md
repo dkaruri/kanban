@@ -108,6 +108,36 @@ Reported by Divyam: in My Permit List, the remove control does nothing on an add
 - 2026-08-07 09:58 CT — done; `0501dfc` on `fix-042-custom-stop-remove`, **pushed, NOT merged**. `docs/list.html` only — custom stops exist on no other page. **Root cause:** custom stops live in `list.custom`, not `state.userPermitNumbers`, and `customToRow` deliberately sets `permit_number: ""` (never fabricate a permit number). The saved-list row template keyed every control off `row.permit_number`, so on a hand-typed stop the X called `removePermitFromUserList("")` — a no-op — while **`removeCustomStop()` sat with ZERO call sites, dead since the feature shipped**; `clearUserList()` only ever emptied `userPermitNumbers`, so custom stops survived every clear, and a list of nothing but added addresses answered "The permit list is already empty." and refused to clear at all. One rule — how a row is identified — was applied in one place and not the other; `tickKeyFor(row)` already encodes it for the visited/called ticks, so the X now passes `tickKeyFor(row)` into a single `removeStopFromUserList()` dispatch and `removeCustomStop` runs the same commit tail and the same FIX-003 undo (removing a stop must invalidate the route too). The restored stop keeps its `pos` and `mergeCustomStops` sorts by pos, so undo brings back its stop number for free. **Third symptom found while tracing:** the ↑/↓ arrows were silently dead on a hand-typed stop for the same reason — real reordering is a feature, not a bug fix, so the arrows now carry the existing aria-disabled + spoken-reason treatment instead of pretending to work → **FIX-043**. `removePermitFromUserList` also no longer returns silently on an unknown key; that silence is what hid this. **Not affected:** the map search box only filters/highlights existing permits, so anything reached that way carries a real permit number — asserted by explicit controls. Verified `verify-tmp/t66-custom-stop-remove.js` desktop + iPhone 13, 38 checks green, **red first (5 failures)**; five mutants all caught. t65, t46, t47, t57, t59, t64 still green; control-byte scan clean (Claude Code)
 - 2026-08-07 10:09 CT — **MERGED to main** (`0bce3df`, `--no-ff`) on Divyam's approval, pushed, and **confirmed LIVE** on Pages. Merged tree re-verified before pushing (t66 + t65 green, control bytes clean), then verified at the destination rather than at the build: live `list.html` serves `removeStopFromUserList` (×2), the `list.custom = []` clear, the custom-aware emptiness guard, and the blocked-arrow reason. Client-only, no Worker deploy (Claude Code)
 
+### FIX-046 · The three pages disagree on the saved-list cap: 220 on Search and Map, 1000 on My Permit List
+
+- **Priority:** P2-Medium
+- **Status:** todo
+- **Created:** 2026-08-07 13:37 CT
+- **Updated:** 2026-08-07 13:37 CT
+- **Tags:** Chicago Permit Search Tool
+
+Found while implementing FIX-037, **pre-existing and out of that card's scope**. `userListLimit` is declared separately on each page and the three no longer agree:
+
+| Page | `userListLimit` |
+|---|---|
+| `docs/index.html:3432` | **220** |
+| `docs/map.html:3235` | **220** |
+| `docs/list.html:4088` | **1000** |
+
+FEAT-035 raised the cap to 1000 on My Permit List only. So the same list is subject to two different limits depending on which page you are standing on: a list holding 900 permits is normal on My Permit List, but Search and the Permit Map consider it 680 over the limit and will refuse every add — and, before FIX-037, would have silently trimmed it back to 220 on the next save. FIX-037 stopped the trimming, so the failure mode now is a confusing refusal rather than data loss, which is why this is P2 and not P1.
+
+The number is a bare `const` repeated in three files with no shared source, which is how it drifted. Note `saveUserListCookie` on every page still does `Array.from(new Set(...)).slice(0, userListLimit)` as a backstop — harmless while adds respect the cap, but with 220 on two pages it is a live tail-trimmer for any list that grew past 220 on the list page.
+
+**Checklist:**
+- [ ] Reproduce: build a list of ~400 permits on My Permit List, then try to add one from Search — record what actually happens on each page
+- [ ] Decide the real cap and the reason for it (FEAT-035 measured the 1000 against a Durable Object 128 KiB per-value limit and an OSRM request budget — check whether those bounds apply to the other two pages)
+- [ ] Make the three pages agree, ideally without three separate declarations that can drift again
+- [ ] Re-check the `saveUserListCookie` backstop: with a correct shared cap it should never fire, and if it ever does it must not trim the tail silently
+- [ ] Verify a list built on one page behaves identically on the other two
+
+**Log:**
+- 2026-08-07 13:37 CT — created while implementing FIX-037; not part of that change (Claude Code)
+
 ### FIX-045 · Two headless suites are red on main: t9 (zoning/TIF) and t44-followup
 
 - **Priority:** P2-Medium
