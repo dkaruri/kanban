@@ -110,10 +110,10 @@ Reported by Divyam: in My Permit List, the remove control does nothing on an add
 
 ### FIX-046 · The three pages disagree on the saved-list cap: 220 on Search and Map, 1000 on My Permit List
 
-- **Priority:** P2-Medium
+- **Priority:** P1-High
 - **Status:** in-progress
 - **Created:** 2026-08-07 13:37 CT
-- **Updated:** 2026-08-07 13:47 CT
+- **Updated:** 2026-08-07 14:09 CT
 - **Tags:** Chicago Permit Search Tool
 
 Found while implementing FIX-037, **pre-existing and out of that card's scope**. `userListLimit` is declared separately on each page and the three no longer agree:
@@ -124,19 +124,22 @@ Found while implementing FIX-037, **pre-existing and out of that card's scope**.
 | `docs/map.html:3235` | **220** |
 | `docs/list.html:4088` | **1000** |
 
-FEAT-035 raised the cap to 1000 on My Permit List only. So the same list is subject to two different limits depending on which page you are standing on: a list holding 900 permits is normal on My Permit List, but Search and the Permit Map consider it 680 over the limit and will refuse every add — and, before FIX-037, would have silently trimmed it back to 220 on the next save. FIX-037 stopped the trimming, so the failure mode now is a confusing refusal rather than data loss, which is why this is P2 and not P1.
+FEAT-035 raised the cap to 1000 on My Permit List only. So the same list is subject to two different limits depending on which page you are standing on: a list holding 900 permits is normal on My Permit List, but Search and the Permit Map consider it 680 over the limit and will refuse every add — and, before FIX-037, would have silently trimmed it back to 220 on the next save. ~~FIX-037 stopped the trimming, so the failure mode now is a confusing refusal rather than data loss, which is why this is P2 and not P1.~~ **Wrong — corrected 2026-08-07 14:09 after reproducing it.** FIX-037 fixed the ADD paths only; `saveUserListCookie` still trimmed, and a page load saves, so this remained live data loss requiring no user action. Raised to P1.
 
 The number is a bare `const` repeated in three files with no shared source, which is how it drifted. Note `saveUserListCookie` on every page still does `Array.from(new Set(...)).slice(0, userListLimit)` as a backstop — harmless while adds respect the cap, but with 220 on two pages it is a live tail-trimmer for any list that grew past 220 on the list page.
 
 **Checklist:**
-- [ ] Reproduce: build a list of ~400 permits on My Permit List, then try to add one from Search — record what actually happens on each page
-- [ ] Decide the real cap and the reason for it (FEAT-035 measured the 1000 against a Durable Object 128 KiB per-value limit and an OSRM request budget — check whether those bounds apply to the other two pages)
-- [ ] Make the three pages agree, ideally without three separate declarations that can drift again
-- [ ] Re-check the `saveUserListCookie` backstop: with a correct shared cap it should never fire, and if it ever does it must not trim the tail silently
-- [ ] Verify a list built on one page behaves identically on the other two
+- [x] Reproduce: build a list of ~400 permits on My Permit List, then try to add one from Search — record what actually happens on each page
+- [x] Decide the real cap and the reason for it (FEAT-035 measured the 1000 against a Durable Object 128 KiB per-value limit and an OSRM request budget — check whether those bounds apply to the other two pages)
+- [x] Make the three pages agree, ideally without three separate declarations that can drift again
+- [x] Re-check the `saveUserListCookie` backstop: with a correct shared cap it should never fire, and if it ever does it must not trim the tail silently
+- [x] Verify a list built on one page behaves identically on the other two
 
 **Log:**
 - 2026-08-07 13:37 CT — created while implementing FIX-037; not part of that change (Claude Code)
+- 2026-08-07 13:47 CT — in-progress; branch `fix-046-shared-list-cap` (Claude Code)
+- 2026-08-07 14:09 CT — **REPRODUCED FIRST, and the card understated it — my own P2 triage was wrong, raised to P1.** I wrote that FIX-037 had converted this into "a confusing refusal". It had not. Measured: a 400-permit list built on My Permit List is cut to **220 by merely OPENING the Permit Map — 180 permits destroyed with no user action at all**, before any add. FIX-037 made the *add* paths cap-aware, but `saveUserListCookie`'s `.slice(0, userListLimit)` quietly undid that guarantee for any list already over the cap, and a page load saves.
+- 2026-08-07 14:09 CT — **fixed**, `563261c` on `fix-046-shared-list-cap`, **pushed, NOT merged**. Two changes. (1) index/map move to **1000**, matching list.html. Checked before raising, per [[raising-a-cap-breaches-a-platform-limit]]: 1000 is FEAT-035's ceiling measured against a Durable Object 128 KiB per-value limit and an OSRM request budget, and **both bind on `list.html` alone** — index/map run no publish, live-sync, optimizer, OSRM or export path (their Google Maps URL already slices to 5 stops), so they add no new pressure. (2) `saveUserListCookie` on **all three** pages deduplicates but no longer trims: **a save must never destroy data**, and the cap belongs where an add happens because only that code knows it is adding rather than persisting what the user already has. The number cannot be shared in code (three self-contained pages, no build step), so **`worker/test/list-cap.test.mjs`** enforces the agreement instead — the three declarations must match, must be the measured 1000, and no page's save may trim. It runs in the `node --test` CI already executes, same pattern as the control-bytes guard. Verified `verify-tmp/t73-shared-cap.js`, desktop + iPhone 13: **opening** each page leaves all 400 permits untouched (the assertion that matters, since this needed no user action); adding to a 400-permit list from any page keeps all 400 and lands the new one; a list at the cap refuses identically on all three; and a stored list **200 OVER** the cap survives being opened and saved. Seven mutants all caught — two initially MISSED as **weak mutants, not a gap** (with the cap at 1000 and lists at 400/1000, restoring the slice is unreachable code; the over-cap case made it reachable and both were then caught — [[a-half-restored-bug-proves-nothing]]). 232/232 worker, 4 new; t72, t46, t59, t64, t67 green (Claude Code)
 
 ### FIX-045 · Two headless suites are red on main: t9 (zoning/TIF) and t44-followup
 
