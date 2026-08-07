@@ -85,6 +85,48 @@ NEVER
 
 > **Purpose:** Things to fix on current projects — currently the Chicago Permit Search tool. Bugs, regressions, broken behavior, and cleanup on what already exists. This is Claude Code's default work queue.
 
+### FIX-042 · A hand-typed "+ Add address" stop cannot be removed, and Clear list leaves it behind
+
+- **Priority:** P1-High
+- **Status:** done
+- **Created:** 2026-08-07 09:58 CT
+- **Updated:** 2026-08-07 09:58 CT
+- **Tags:** Chicago Permit Search Tool
+
+Reported by Divyam: in My Permit List, the remove control does nothing on an address added by hand, and "Clear list" leaves it in place. Permits added through the map or the directory are unaffected.
+
+**Checklist:**
+- [x] Reproduce the failure on a hand-typed stop before changing anything
+- [x] Make the row's remove control work on a hand-typed stop, with the same undo a permit removal gets
+- [x] Make Clear list empty hand-typed stops too, including a list that holds only them
+- [x] Confirm permits added via map search / the directory are not affected
+- [x] Stop the removal path failing silently
+- [x] Cover with a headless suite at desktop and iPhone 13, with a mutation control
+
+**Log:**
+- 2026-08-07 09:58 CT — created from Divyam's report; reproduced immediately — 5 red checks on a hand-typed stop (Claude Code)
+- 2026-08-07 09:58 CT — done; `0501dfc` on `fix-042-custom-stop-remove`, **pushed, NOT merged**. `docs/list.html` only — custom stops exist on no other page. **Root cause:** custom stops live in `list.custom`, not `state.userPermitNumbers`, and `customToRow` deliberately sets `permit_number: ""` (never fabricate a permit number). The saved-list row template keyed every control off `row.permit_number`, so on a hand-typed stop the X called `removePermitFromUserList("")` — a no-op — while **`removeCustomStop()` sat with ZERO call sites, dead since the feature shipped**; `clearUserList()` only ever emptied `userPermitNumbers`, so custom stops survived every clear, and a list of nothing but added addresses answered "The permit list is already empty." and refused to clear at all. One rule — how a row is identified — was applied in one place and not the other; `tickKeyFor(row)` already encodes it for the visited/called ticks, so the X now passes `tickKeyFor(row)` into a single `removeStopFromUserList()` dispatch and `removeCustomStop` runs the same commit tail and the same FIX-003 undo (removing a stop must invalidate the route too). The restored stop keeps its `pos` and `mergeCustomStops` sorts by pos, so undo brings back its stop number for free. **Third symptom found while tracing:** the ↑/↓ arrows were silently dead on a hand-typed stop for the same reason — real reordering is a feature, not a bug fix, so the arrows now carry the existing aria-disabled + spoken-reason treatment instead of pretending to work → **FIX-043**. `removePermitFromUserList` also no longer returns silently on an unknown key; that silence is what hid this. **Not affected:** the map search box only filters/highlights existing permits, so anything reached that way carries a real permit number — asserted by explicit controls. Verified `verify-tmp/t66-custom-stop-remove.js` desktop + iPhone 13, 38 checks green, **red first (5 failures)**; five mutants all caught. t65, t46, t47, t57, t59, t64 still green; control-byte scan clean (Claude Code)
+
+### FIX-043 · Let a hand-typed stop be reordered with the up/down arrows
+
+- **Priority:** P3-Low
+- **Status:** todo
+- **Created:** 2026-08-07 09:58 CT
+- **Updated:** 2026-08-07 09:58 CT
+- **Tags:** Chicago Permit Search Tool
+
+Split out of FIX-042. A hand-typed "+ Add address" stop holds its place through its own `pos` in `list.custom`, which `moveSavedPermitByOffset` — an index into `state.userPermitNumbers` — cannot reach, so its arrows did nothing at all. FIX-042 made them say so (aria-disabled plus a spoken reason, the same treatment the follow-up-filter case gets) rather than pretend to work. Actually moving one means reconciling `pos` against the merged permit order in `mergeCustomStops`, which is a feature, not a bug fix.
+
+**Checklist:**
+- [ ] Decide how a custom stop's `pos` should behave when the permits around it move
+- [ ] Make the up/down arrows move a hand-typed stop within the merged order
+- [ ] Keep drag-and-drop reorder consistent with the arrows
+- [ ] Remove the aria-disabled fallback and its message once the arrows really work
+- [ ] Cover with a headless suite at desktop and iPhone 13
+
+**Log:**
+- 2026-08-07 09:58 CT — created; split out of FIX-042 (Claude Code)
+
 ### FIX-041 · Liv Renovations does not come up in search — find the lapse and fix it at the root
 
 - **Priority:** P1-High
