@@ -111,9 +111,9 @@ Reported by Divyam: in My Permit List, the remove control does nothing on an add
 ### FIX-046 · The three pages disagree on the saved-list cap: 220 on Search and Map, 1000 on My Permit List
 
 - **Priority:** P2-Medium
-- **Status:** todo
+- **Status:** in-progress
 - **Created:** 2026-08-07 13:37 CT
-- **Updated:** 2026-08-07 13:37 CT
+- **Updated:** 2026-08-07 13:47 CT
 - **Tags:** Chicago Permit Search Tool
 
 Found while implementing FIX-037, **pre-existing and out of that card's scope**. `userListLimit` is declared separately on each page and the three no longer agree:
