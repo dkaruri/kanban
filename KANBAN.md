@@ -1299,20 +1299,19 @@ Before/after diffing for a change that edits **one rule covering many elements**
 - **Priority:** P2-Medium
 - **Status:** todo
 - **Created:** 2026-08-07 09:30 CT
-- **Updated:** 2026-08-07 09:30 CT
+- **Updated:** 2026-08-07 10:14 CT
 - **Tags:** Chicago Permit Search Tool
 
-**This card exists to resolve an ID collision — read this before resuming the work.** Branch `origin/feat-040-lift-directory-caps` carries a 148-line design spec (`docs/superpowers/specs/2026-08-06-lift-directory-caps-design.md`, commit `54f6ada`) that claims the ID **FEAT-040**. FEAT-040 was already taken on this board by "Permit Map: filter by visited / not visited / called / not called", created 2026-08-05 10:33 — a day before that spec. The board has priority and IDs are never reused, so the directory-caps work is **FEAT-044** from here on.
-
-Not yet reconciled in the code repo: the branch name and the spec's own heading still say FEAT-040. Rename both when this work resumes — the spec is design only, no product code, so nothing else depends on the ID.
+**This card exists to resolve an ID collision.** Branch `origin/feat-044-lift-directory-caps` carries a 148-line design spec (`docs/superpowers/specs/2026-08-06-lift-directory-caps-design.md`, commit `54f6ada`) that originally claimed the ID **FEAT-040**. FEAT-040 was already taken on this board by "Permit Map: filter by visited / not visited / called / not called", created 2026-08-05 10:33 — a day before that spec. The board has priority and IDs are never reused, so the directory-caps work is **FEAT-044** from here on. The collision is now resolved on both sides; the work itself has not started.
 
 **Checklist:**
-- [ ] Rename the spec's ID to FEAT-044 and rename the branch (`feat-044-lift-directory-caps`); no code depends on the old name
+- [x] Rename the spec's ID to FEAT-044 and rename the branch (`feat-044-lift-directory-caps`); no code depends on the old name
 - [ ] Read the existing spec before designing further — it is 148 lines and predates this card
 - [ ] Apply the ceiling discipline this repo has already learned: multiply any new cap through every serialisation boundary and MEASURE it (see FEAT-035's Durable Object 128 KiB per-value split and the request-body cap that a 220→1000 change breached)
 
 **Log:**
 - 2026-08-07 09:30 CT — created during a board/git reconciliation audit, purely to give the branch a non-colliding ID. No work done on the feature itself (Claude Code)
+- 2026-08-07 10:14 CT — collision resolved in the code repo: branch renamed `feat-040-lift-directory-caps` → **`feat-044-lift-directory-caps`** (old remote deleted), and the spec's heading renumbered to FEAT-044 with a note recording why (`238b846`). The spec is design only — no product code referenced the old ID. Feature itself still not started (Claude Code)
 
 ### FEAT-043 · Contractor background verification: how long they take to finish, and whether they pay their subs
 
