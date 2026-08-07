@@ -928,7 +928,7 @@ On desktop, the tags listed at the top stretch to the width of the list/containe
 - **Priority:** P2-Medium
 - **Status:** done
 - **Created:** 2026-07-27 15:53 CT
-- **Updated:** 2026-08-07 09:32 CT
+- **Updated:** 2026-08-07 09:37 CT
 - **Tags:** Chicago Permit Search Tool
 
 Removing a permit from My Permit List (`docs/list.html`) is slow because of the confirmation step, and the remove tap sometimes opens the permit instead — the click appears to fall through to the row's open/detail handler.
@@ -945,6 +945,7 @@ Removing a permit from My Permit List (`docs/list.html`) is slow because of the 
 - 2026-07-27 15:53 CT — created (Divyam)
 - 2026-08-07 09:14 CT — in-progress; branch `fix-003-fast-remove` (Claude Code)
 - 2026-08-07 09:32 CT — done; `de22170` on `fix-003-fast-remove`, **pushed, NOT merged** (merges need Divyam's approval). Two separate causes under one card. **Accidental opens:** the `event.stopPropagation()` was on the BUTTON, but the whole `<td class="select-cell">` sits inside a `<tr onclick>` that opens the permit — measured 60×110 for the cell around a 44×44 button on desktop, so **62% of the remove cell opened the permit**, and `td.select-cell { cursor: pointer }` plus a hover highlight advertised the whole thing as the target. Reproduced first: clicks above/below/left/right of the button all opened the permit. The guard now sits on the cell, where every miss routes through, and the cursor/hover is scoped to the select cell that genuinely is clickable. The same row template ships on `index.html` and `map.html`, so all three are fixed, not just the page the ticket named. **Mobile** had no dead zone at all (cell == button, 44×44) — no margin for error instead; its 8px inset moved from `top`/`right` into `padding`, so the × renders in the same place but the cell absorbs an 8px halo (60×60). **Slowness:** `window.confirm()` per permit made clearing a route's worth of stops a dialog-per-tap. Removal is instant now, with a 12s Undo in the existing `#list-action-status` aria-live line (reused `.linkish`, no new DOM or CSS surface) that restores the permit at its **original stop number** — the list is a route, so position is data — with its note and edit time, through the same commit path the removal used. Undo is 50×44, tab-reachable in 4 hops, 7.48:1 light / 8.96:1 dark. Verified `verify-tmp/t65-fast-remove.js` desktop + iPhone 13, all green, with three mutants (cell guard removed / undo appends instead of restoring position / undo drops the note) all caught, plus a control proving the row body still opens the permit. 204/204 worker + 250/250 unit; t46, t47, t57, t59, t64 still green. A dark-mode contrast read of 2.32:1 was the known theme-transition race, not a real failure — 8.96:1 once settled (Claude Code)
+- 2026-08-07 09:37 CT — **MERGED to main** (`4870547`, `--no-ff`) on Divyam's approval and pushed; Pages deploy triggered. Client-only change (`docs/*.html`), no Worker deploy needed. Merged tree re-verified before pushing: t65 all green, control-byte scan clean (Claude Code)
 
 ### FIX-001 · General bug and compatibility fixes
 
