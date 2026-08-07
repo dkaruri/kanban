@@ -309,7 +309,7 @@ Two independent defects, both from FIX-009.
 - **Priority:** P3-Low
 - **Status:** done
 - **Created:** 2026-08-03 15:59 CT
-- **Updated:** 2026-08-04 13:37 CT
+- **Updated:** 2026-08-07 09:30 CT
 - **Tags:** Chicago Permit Search Tool
 
 `worker/src/closure.js:156` writes the word-boundary `404` guard inside `isKeyMissingError` using two REAL 0x08 backspace bytes instead of escape sequences, so the regex tests for a literal backspace character and can never match. The 404 branch of that function is dead code.
@@ -338,6 +338,7 @@ Found by a repo-wide sweep for NUL/backspace bytes during FIX-009, which turned 
 - 2026-08-04 13:34 CT — note: the preceding board commit (beead92) carries a message describing all of this, but its content was only the in-progress marker — the script that wrote the detail aborted on the backslash trap above after the commit had been staged. Corrected here rather than by rewriting pushed history (Claude Code)
 - 2026-08-04 13:37 CT — merged to main with --no-ff (641b309) and pushed; branch deleted. 200 Worker tests green on the merged tree and the committed `closure.js` blob confirmed to hold zero 0x08 and zero NUL. No deploy and no Pages rebuild are involved: `closure.js` ships in neither, so the fix takes effect on the next scheduled GitHub Actions seed, which now also runs the new control-byte guard before it writes to production KV. **DONE.** (Claude Code)
 - 2026-08-04 13:41 CT — pre-commit hook installed at Divyam's request, as the commit-time half the tracked test cannot cover: `.git/hooks/pre-commit` plus `.git/hooks/control-bytes-check.mjs`. It scans STAGED content (what is actually being committed, not the working tree), reports file:line, and explains that an editor and `sed` will both render the file as though it were already correct. Verified five ways: a clean commit still passes; a backspace is blocked; a NUL is blocked; `--no-verify` still overrides; and a tracked PNG containing 810 backspace bytes and 2,153 NULs is correctly NOT flagged, so the extension allowlist does not false-positive on binaries. **Local to this machine only** — `.git/hooks` is untracked and a re-clone loses it. Making it recoverable would mean committing the script and setting `core.hooksPath`; not done, as it changes repo layout for every clone (Claude Code)
+- 2026-08-07 09:30 CT — **backfilled from git: the 08-04 13:41 decision above was reversed the next day and never logged.** Branch `fix-030-durable-hook` did exactly the thing that entry says was "not done" — the hook script is now tracked at `scripts/hooks/control-bytes-check.mjs` + `scripts/hooks/pre-commit`, with `.gitattributes`, 57 new lines of `worker/test/control-bytes.test.mjs`, and a `CLAUDE.md` line telling a fresh clone to run `git config core.hooksPath scripts/hooks`. Commits `76f7084` + `247282f`, merged to `main` as `5aff824` on 2026-08-06 and pushed. The guard is no longer local to one machine, so the "a re-clone loses it" caveat above is obsolete — it is opt-in per clone via `core.hooksPath` rather than automatic (Claude Code)
 
 ### FIX-029 · Map search "clear" button is a 44×28 touch target, under the 44×44 minimum
 
@@ -925,9 +926,9 @@ On desktop, the tags listed at the top stretch to the width of the list/containe
 ### FIX-003 · Speed up permit removal in My Permit List and stop accidental opens
 
 - **Priority:** P2-Medium
-- **Status:** todo
+- **Status:** in-progress
 - **Created:** 2026-07-27 15:53 CT
-- **Updated:** 2026-07-27 15:53 CT
+- **Updated:** 2026-08-07 09:14 CT
 - **Tags:** Chicago Permit Search Tool
 
 Removing a permit from My Permit List (`docs/list.html`) is slow because of the confirmation step, and the remove tap sometimes opens the permit instead — the click appears to fall through to the row's open/detail handler.
@@ -940,6 +941,7 @@ Removing a permit from My Permit List (`docs/list.html`) is slow because of the 
 
 **Log:**
 - 2026-07-27 15:53 CT — created (Divyam)
+- 2026-08-07 09:14 CT — in-progress; branch `fix-003-fast-remove` (Claude Code)
 
 ### FIX-001 · General bug and compatibility fixes
 
@@ -1228,6 +1230,43 @@ Not fixed inside FEAT-021 on purpose: the new value-range fields were matched to
 
 > **Purpose:** New features and ideas to be added to the existing Chicago Permit Search tool. Enhancements that extend the current project rather than repair it.
 
+### FEAT-045 · Tooling: control-style snapshot harness for blanket CSS changes
+
+- **Priority:** P3-Low
+- **Status:** done
+- **Created:** 2026-08-07 09:30 CT
+- **Updated:** 2026-08-07 09:30 CT
+- **Tags:** Chicago Permit Search Tool, tooling
+
+Card written after the fact — this shipped with no card at all, found by auditing merge commits against the board.
+
+Before/after diffing for a change that edits **one rule covering many elements**: a global `button {}`, a blanket floor (the 16px iOS font floor, the 44px touch-target floor), a specificity change (`:is()`, `:where()`, re-scoping a selector), or anything described as "just a refactor, no visual change". These cannot be checked by looking at the page: the regression is always in the one member the rule was not written for, and it stays invisible until someone opens that surface. This repo has paid for that lesson repeatedly — FIX-025's `:is()` trap let two selects through, and the `:where()` sweep considered during FIX-029 was measured at 364 broken declarations and rejected.
+
+`scripts/verify/snapshot-controls.js` writes a JSON snapshot of every control's computed geometry across the pages; `scripts/verify/diff-snapshots.js` compares two snapshots and **exits 1 if anything changed**, so it can gate a refactor that is meant to be behaviour-preserving. `--all` shows every group. Needs a static server on `docs/` (`npx http-server docs -p 8791 --silent`). Honours `CHROME_PATH`, otherwise picks the newest cached `chromium_headless_shell-*` — Playwright's own default is deliberately not trusted, matching the rest of the verification setup.
+
+**Log:**
+- 2026-08-07 09:30 CT — **backfilled from git.** Commit `efd6851` on branch `tooling-snapshot-harness`, merged to `main` as `91a5116` on 2026-08-06 and pushed; `main` == `origin/main` == `91a5116`, branch gone from local and `origin`. 296 lines across `scripts/verify/{README.md,snapshot-controls.js,diff-snapshots.js}`. Documentation and tooling only — no product code, nothing deployed, nothing user-facing. Filed as done rather than as a todo because the work is already in `main`; the card exists so the board stops disagreeing with the repo (Claude Code)
+
+### FEAT-044 · Lift the directory result caps
+
+- **Priority:** P2-Medium
+- **Status:** todo
+- **Created:** 2026-08-07 09:30 CT
+- **Updated:** 2026-08-07 09:30 CT
+- **Tags:** Chicago Permit Search Tool
+
+**This card exists to resolve an ID collision — read this before resuming the work.** Branch `origin/feat-040-lift-directory-caps` carries a 148-line design spec (`docs/superpowers/specs/2026-08-06-lift-directory-caps-design.md`, commit `54f6ada`) that claims the ID **FEAT-040**. FEAT-040 was already taken on this board by "Permit Map: filter by visited / not visited / called / not called", created 2026-08-05 10:33 — a day before that spec. The board has priority and IDs are never reused, so the directory-caps work is **FEAT-044** from here on.
+
+Not yet reconciled in the code repo: the branch name and the spec's own heading still say FEAT-040. Rename both when this work resumes — the spec is design only, no product code, so nothing else depends on the ID.
+
+**Checklist:**
+- [ ] Rename the spec's ID to FEAT-044 and rename the branch (`feat-044-lift-directory-caps`); no code depends on the old name
+- [ ] Read the existing spec before designing further — it is 148 lines and predates this card
+- [ ] Apply the ceiling discipline this repo has already learned: multiply any new cap through every serialisation boundary and MEASURE it (see FEAT-035's Durable Object 128 KiB per-value split and the request-body cap that a 220→1000 change breached)
+
+**Log:**
+- 2026-08-07 09:30 CT — created during a board/git reconciliation audit, purely to give the branch a non-colliding ID. No work done on the feature itself (Claude Code)
+
 ### FEAT-043 · Contractor background verification: how long they take to finish, and whether they pay their subs
 
 - **Priority:** P2-Medium
@@ -1326,13 +1365,14 @@ The design question this card must answer first: **those flags live on a LIST, a
 
 **Log:**
 - 2026-08-05 10:33 CT — created (Divyam)
+- 2026-08-07 09:30 CT — note, no work done: branch `origin/feat-040-lift-directory-caps` wrongly claims this ID for unrelated work (lifting the directory result caps). This card keeps FEAT-040 — it was created first — and that branch has been renumbered to **FEAT-044** (Claude Code)
 
 ### FEAT-039 · Lift the route-optimizer ceiling to the full 1000-permit cap by fetching fewer matrix cells
 
 - **Priority:** P2-Medium
 - **Status:** done
 - **Created:** 2026-08-04 13:06 CT
-- **Updated:** 2026-08-05 11:58 CT
+- **Updated:** 2026-08-07 09:30 CT
 - **Tags:** Chicago Permit Search Tool
 
 FEAT-035 raised the list cap to 1000 but left `MAX_SORT_STOPS` at 500, so Optimize Route is unavailable on the largest lists the tool now lets you build. It says so honestly rather than failing, but the feature is simply absent above 500 stops.
@@ -1363,6 +1403,7 @@ Two candidate approaches, both noted but neither built:
 - 2026-08-05 11:42 CT — `t63-sparse-matrix` was not a product failure at all: it targets `:8793`, which nothing serves during a sweep, so it died on a connection error that read like a timeout. Pointed at `:8791` like every other `t*.js`; it now passes in the real page — 1000 stops, 99 requests, no request over the 100-coordinate limit, order improved 94.96%, progress reporting sane (Claude Code)
 - 2026-08-05 11:55 CT — **re-ran the live probe against the real OSRM demo server rather than inheriting the number.** The `MAX_SORT_STOPS` comment claimed "99 requests, 13s, no failures" while the code was costing 101, so the claim needed re-earning: `_live39-osrm.js` with 1000 real Chicago permit coordinates now measures **99 requests, 0 failures, 13.2s wall (12.5s matrix), 1000 stops / 999 legs, 664 mi / 32 hr**. Matches the shipped comment exactly. The 4-way concurrency cap is unchanged and the volume is what a 500-stop sort already sent, so no self-hosted or paid routing endpoint is warranted (Claude Code)
 - 2026-08-05 11:58 CT — **done.** Commit `a5bfe64` on `feat-039-sparse-matrix`, pushed. Full browser sweep (73 scripts): 70 green; `t41-notes-feed` passes in isolation (batch port contention), `t64-list-provenance` is FEAT-032's suite on a branch without FEAT-032, and `t9` fails identically on `main` (pre-existing, unrelated). Unit suites 229 pass. **Not merged — awaiting approval** (Claude Code)
+- 2026-08-07 09:30 CT — **backfilled from git: this was merged and the card never said so.** `feat-039-sparse-matrix` went to `main` as merge `725d9e5` on 2026-08-06 and is pushed (`main` == `origin/main` == `91a5116`); the branch is gone from both local and `origin`. The line above it still read "Not merged — awaiting approval" for a day, which was the board's version of the truth while git had the opposite. Approval and merge happened; only the bookkeeping was skipped (Claude Code)
 
 ### FEAT-038 · Source property use from the Cook County Assessor class, so the permit view stops approximating
 
@@ -1580,7 +1621,7 @@ In Map Search (`docs/map.html`), let the user exclude certain types of work and 
 - **Priority:** P2-Medium
 - **Status:** done
 - **Created:** 2026-07-29 11:28 CT
-- **Updated:** 2026-08-05 10:49 CT
+- **Updated:** 2026-08-07 09:30 CT
 - **Tags:** Chicago Permit Search Tool
 
 When permits are pulled into a list from Search or Map Search, record the conditions and filters that produced them (ward, date range, work types, value range, etc.) in the list's description, so anyone opening the list later can see how it was built.
@@ -1603,6 +1644,7 @@ When permits are pulled into a list from Search or Map Search, record the condit
 - 2026-08-05 10:29 CT — filed **FIX-034**: `index.html`/`map.html` still carry the full-list data-loss bug FEAT-035 fixed in `list.html`. Worked around here (the count records what actually landed) rather than fixed, because it changes add semantics on two pages (Claude Code)
 - 2026-08-05 10:45 CT — caught a bug of my own in review: the expanded state persisted across a change of list, so a second list opened pre-expanded reading "Show less". Now reset on a change of list only — resetting on every repaint would have collapsed the description mid-read, since this also runs after each add and on every live frame. Regression test added and proved to fail against the bug (Claude Code)
 - 2026-08-05 10:49 CT — **done.** Commit `9707131` on branch `feat-032-list-provenance`, pushed. Full browser sweep run (73 scripts): 70 green; the 3 reds — `t9`, `t40-mapstate`, `t63-sparse-matrix` — were each re-run in isolation and fail identically on `main`, so none is caused by this change (`t63` belongs to the parked FEAT-039 work). Worker suite 200/200. **Not merged — awaiting approval** (Claude Code)
+- 2026-08-07 09:30 CT — **backfilled from git: this was merged and the card never said so.** `feat-032-list-provenance` went to `main` as merge `aaf598b` on 2026-08-06 and is pushed (`main` == `origin/main` == `91a5116`); the branch is gone from both local and `origin`. Same failure as FEAT-039 — the line above still read "Not merged — awaiting approval" while git had it merged (Claude Code)
 
 ### FEAT-028 · Classify permit lenders: private/small lender vs small, medium, or large bank
 
