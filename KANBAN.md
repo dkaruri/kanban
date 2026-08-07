@@ -108,6 +108,31 @@ Reported by Divyam: in My Permit List, the remove control does nothing on an add
 - 2026-08-07 09:58 CT — done; `0501dfc` on `fix-042-custom-stop-remove`, **pushed, NOT merged**. `docs/list.html` only — custom stops exist on no other page. **Root cause:** custom stops live in `list.custom`, not `state.userPermitNumbers`, and `customToRow` deliberately sets `permit_number: ""` (never fabricate a permit number). The saved-list row template keyed every control off `row.permit_number`, so on a hand-typed stop the X called `removePermitFromUserList("")` — a no-op — while **`removeCustomStop()` sat with ZERO call sites, dead since the feature shipped**; `clearUserList()` only ever emptied `userPermitNumbers`, so custom stops survived every clear, and a list of nothing but added addresses answered "The permit list is already empty." and refused to clear at all. One rule — how a row is identified — was applied in one place and not the other; `tickKeyFor(row)` already encodes it for the visited/called ticks, so the X now passes `tickKeyFor(row)` into a single `removeStopFromUserList()` dispatch and `removeCustomStop` runs the same commit tail and the same FIX-003 undo (removing a stop must invalidate the route too). The restored stop keeps its `pos` and `mergeCustomStops` sorts by pos, so undo brings back its stop number for free. **Third symptom found while tracing:** the ↑/↓ arrows were silently dead on a hand-typed stop for the same reason — real reordering is a feature, not a bug fix, so the arrows now carry the existing aria-disabled + spoken-reason treatment instead of pretending to work → **FIX-043**. `removePermitFromUserList` also no longer returns silently on an unknown key; that silence is what hid this. **Not affected:** the map search box only filters/highlights existing permits, so anything reached that way carries a real permit number — asserted by explicit controls. Verified `verify-tmp/t66-custom-stop-remove.js` desktop + iPhone 13, 38 checks green, **red first (5 failures)**; five mutants all caught. t65, t46, t47, t57, t59, t64 still green; control-byte scan clean (Claude Code)
 - 2026-08-07 10:09 CT — **MERGED to main** (`0bce3df`, `--no-ff`) on Divyam's approval, pushed, and **confirmed LIVE** on Pages. Merged tree re-verified before pushing (t66 + t65 green, control bytes clean), then verified at the destination rather than at the build: live `list.html` serves `removeStopFromUserList` (×2), the `list.custom = []` clear, the custom-aware emptiness guard, and the blocked-arrow reason. Client-only, no Worker deploy (Claude Code)
 
+### FIX-045 · Two headless suites are red on main: t9 (zoning/TIF) and t44-followup
+
+- **Priority:** P2-Medium
+- **Status:** todo
+- **Created:** 2026-08-07 11:31 CT
+- **Updated:** 2026-08-07 11:31 CT
+- **Tags:** Chicago Permit Search Tool
+
+Found while verifying FEAT-040, **pre-existing and unrelated to it**. Two browser suites fail on `main`:
+
+- **`t9`** — the permit overlay's zoning and TIF assertions come back `{"zone":false,"tif":false}` while every other assertion in the suite passes. Failed twice in isolation, so it is not the batch-contention flake. Either the Socrata zoning/TIF lookups are broken, or the suite's expectations are stale.
+- **`t44-followup`** — red on `main`, cause not yet investigated.
+
+Confirmed pre-existing by `git stash`-ing the FEAT-040 branch and re-running both against a clean `main` — both still failed. Re-run each in isolation before believing or dismissing it, per the batch-red rule.
+
+**Checklist:**
+- [ ] Decide for each: is the PRODUCT broken, or has the suite gone stale? (a repaired stale test must keep its discriminating power — prove it with a mutant)
+- [ ] Check whether t9's zoning/TIF failure means the live overlay is missing those fields for real users
+- [ ] Diagnose t44-followup
+- [ ] Grep the rest of the suite for the same pattern before closing — a whole class may be red
+- [ ] Record how long they have been red (check git log against the suites' last edit)
+
+**Log:**
+- 2026-08-07 11:31 CT — created while verifying FEAT-040; not part of that change (Claude Code)
+
 ### FIX-044 · Dollar amounts wrap mid-number in the Open Permits Cost column
 
 - **Priority:** P3-Low
@@ -1420,7 +1445,7 @@ The core risk is layout: an embedded map must size to its container and must NOT
 - **Priority:** P1-High
 - **Status:** in-progress
 - **Created:** 2026-08-05 10:33 CT
-- **Updated:** 2026-08-07 11:10 CT
+- **Updated:** 2026-08-07 11:31 CT
 - **Tags:** Chicago Permit Search Tool
 
 Bring FEAT-031's visited/called filtering to Map Search (`docs/map.html`): filter the map to visited, not visited, called or not called. The states already exist and already sync — they are per-permit flags on a saved list (`ticks`, `called`), stored with the actor's name and shared through the Worker.
@@ -1428,19 +1453,20 @@ Bring FEAT-031's visited/called filtering to Map Search (`docs/map.html`): filte
 The design question this card must answer first: **those flags live on a LIST, and the map shows every permit in the city.** A permit that is in no list has no visited state at all, so "not visited" cannot honestly mean "every unvisited permit in Chicago". The likely answer is that the filter scopes the map to a chosen list (or to all listed permits) the way the list page does, and says so on screen — but decide it deliberately and write the decision in the Log before building. Reuse FEAT-031's chip pattern: mutually exclusive within a pair, combinable across pairs, pressing the active chip clears its facet.
 
 **Checklist:**
-- [ ] Decide and record the scope: which permits the filter can speak about, and what the map shows when a filter is on (only listed permits? a list picker? a clear on-screen statement of the scope?) — an honest "not called" is impossible over permits with no list
-- [ ] Add the chips to the map's filter drawer, matching FEAT-031's semantics and wording exactly so the two pages do not drift
-- [ ] Compose correctly with the existing map filters (date, GC range, neighborhood/radius, value range, work-type exclusions, property use) and say in the status strip what is active
-- [ ] Reflect the state on the pins themselves where it helps (a visited permit reading as unvisited on the map would be worse than no filter)
-- [ ] Keep the flags live: a permit ticked on the list page should reach the map through the same sync path, not a stale copy
-- [ ] Persist with the rest of the map's filters (see FIX-035) — a filter that silently resets on reload is how permits get missed
-- [ ] Verify on desktop and mobile: each facet alone, combined across pairs, with an empty result set, and on a shared list where someone else did the visiting
+- [x] Decide and record the scope: which permits the filter can speak about, and what the map shows when a filter is on (only listed permits? a list picker? a clear on-screen statement of the scope?) — an honest "not called" is impossible over permits with no list
+- [x] Add the chips to the map's filter drawer, matching FEAT-031's semantics and wording exactly so the two pages do not drift
+- [x] Compose correctly with the existing map filters (date, GC range, neighborhood/radius, value range, work-type exclusions, property use) and say in the status strip what is active
+- [x] Reflect the state on the pins themselves where it helps (a visited permit reading as unvisited on the map would be worse than no filter)
+- [x] Keep the flags live: a permit ticked on the list page should reach the map through the same sync path, not a stale copy
+- [x] Persist with the rest of the map's filters (see FIX-035) — a filter that silently resets on reload is how permits get missed
+- [x] Verify on desktop and mobile: each facet alone, combined across pairs, with an empty result set, and on a shared list where someone else did the visiting
 
 **Log:**
 - 2026-08-05 10:33 CT — created (Divyam)
 - 2026-08-07 09:30 CT — note, no work done: branch `origin/feat-040-lift-directory-caps` wrongly claims this ID for unrelated work (lifting the directory result caps). This card keeps FEAT-040 — it was created first — and that branch has been renumbered to **FEAT-044** (Claude Code)
 - 2026-08-07 10:14 CT — that branch no longer exists under the old name: renamed to `feat-044-lift-directory-caps` and its spec renumbered, so the line above is history, not current state. FEAT-040 is unambiguously this card. Still no work done here (Claude Code)
 - 2026-08-07 11:10 CT — in-progress. **SCOPE DECIDED (checklist item 1), Divyam's call, recorded before any code as this card requires.** Three facts established first, all measured rather than assumed: (a) the flags are already reachable on the map — they live INSIDE the list object (`list.ticks` / `list.called`, keyed by `tickKeyFor`), and `state.lists` is already loaded on `map.html` from the same `chi_permit_lists` localStorage key, so no new storage, endpoint or sync is needed to read them; (b) **`map.html` has NO live sync at all** — zero `liveConnect` / `applyListOp` / `sendListOp`, unlike `list.html`, so it reads lists once at init (see the live-flags risk below); (c) there is no "saved permits only" filter on the map today, so this is the map's first list-scoped filter. **The decision:** the chips scope the map **implicitly** — pressing any visited/called chip narrows the map to saved permits, with the scope stated on screen in the status strip (e.g. "Showing only your 120 saved permits | Not visited (86)"). Scope is **every listed permit across ALL lists**, not just the active one. That union raises a conflict `list.html` never has — a permit can sit in two lists and be visited in only one — resolved as **visited = visited in ANY list**: the flag records a real-world action (you went to the address / called the GC), and which list it was written on is bookkeeping. So **"not visited" means: in at least one list, and visited in none.** This is the one place the map deliberately diverges from `list.html`, whose chips are per-active-list; the divergence is the price of the union scope and is stated on screen. Rejected: treating unlisted permits as "not visited" — dishonest over 40,868 permits with no flag, as the card itself notes (Claude Code)
+- 2026-08-07 11:31 CT — **built and verified**, `c8830be` on `feat-040-map-visited-called`, **pushed, NOT merged**. `docs/map.html` only. No new storage, endpoint or sync was needed, as the scope investigation predicted. Chips, wording, semantics and CSS ported from FEAT-031 so the two pages cannot drift; the bar hides itself when nothing has been visited or called anywhere (list.html's "a filter for a state that cannot occur yet is a dead control" — here it would also silently empty the map). **A real bug found during verification:** `.map-drawer button { width: 100% }` (0-1-1, later in the file) beat `button.tag` (also 0-1-1) and stretched every chip to the full drawer width, one per row, **measured 346px — FIX-019's exact signature at 348px**. My first assertion checked only height and sailed straight past it; the suite now asserts the chips share a row. Third occurrence of [[container-scoped-selectors-outrank-element-classes]] on this project. **Also deleted a redundant `localStorage` write** in `setMapFlagFilter` — `applyMapFilters()` already persists the whole settings object. The mutation control PROVED it dead rather than my assuming it, and that mutant was replaced with the hazard that can actually happen: `saveMapSettingsFromControls` rebuilding a facet from an absent control, which is how FEAT-024's work-type exclusions could have been silently cleared. Verified `verify-tmp/t69-map-visited-called.js`, desktop + iPhone 13, **47 checks** — the ANY-list rule across two lists, unlisted permits never counted as "not visited", facets combining across pairs, an empty result still explaining itself, persistence, 44px target, the check glyph so the pressed state is never colour alone, and contrast in both themes (pressed **5.36:1 light / 9.76:1 dark**, matching what list.html's own comment documents for `--accent` — evidence the port is faithful). Eight mutants all caught. **Not caused by this change:** `t9` (zoning/TIF assertions) and `t44-followup` are red on `main` too — confirmed by stashing this branch and re-running against a clean tree → **FIX-045** (Claude Code)
 
 ### FEAT-039 · Lift the route-optimizer ceiling to the full 1000-permit cap by fetching fewer matrix cells
 
