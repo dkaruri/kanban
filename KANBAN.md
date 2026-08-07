@@ -1297,9 +1297,9 @@ Before/after diffing for a change that edits **one rule covering many elements**
 ### FEAT-044 · Lift the directory result caps
 
 - **Priority:** P2-Medium
-- **Status:** todo
+- **Status:** in-progress
 - **Created:** 2026-08-07 09:30 CT
-- **Updated:** 2026-08-07 10:14 CT
+- **Updated:** 2026-08-07 10:27 CT
 - **Tags:** Chicago Permit Search Tool
 
 **This card exists to resolve an ID collision.** Branch `origin/feat-044-lift-directory-caps` carries a 148-line design spec (`docs/superpowers/specs/2026-08-06-lift-directory-caps-design.md`, commit `54f6ada`) that originally claimed the ID **FEAT-040**. FEAT-040 was already taken on this board by "Permit Map: filter by visited / not visited / called / not called", created 2026-08-05 10:33 — a day before that spec. The board has priority and IDs are never reused, so the directory-caps work is **FEAT-044** from here on. The collision is now resolved on both sides; the work itself has not started.
@@ -1312,6 +1312,7 @@ Before/after diffing for a change that edits **one rule covering many elements**
 **Log:**
 - 2026-08-07 09:30 CT — created during a board/git reconciliation audit, purely to give the branch a non-colliding ID. No work done on the feature itself (Claude Code)
 - 2026-08-07 10:14 CT — collision resolved in the code repo: branch renamed `feat-040-lift-directory-caps` → **`feat-044-lift-directory-caps`** (old remote deleted), and the spec's heading renumbered to FEAT-044 with a note recording why (`238b846`). The spec is design only — no product code referenced the old ID. Feature itself still not started (Claude Code)
+- 2026-08-07 10:27 CT — in-progress. Read the spec and **verified every claim it makes against the current code** rather than trusting it ([[plan-code-is-unverified]] — this spec has never run): `profiles.js` computes `total: rows.length` BEFORE the slice and clamps `limit` to 5000; `permits.js` hardcodes `$order: "issue_date DESC"`, returns `row_count` (the page size) and no total, and already accepts `offset`; the client sends `limit=1000` for permits and `limit=5000` for profiles; the pager divides `filteredRows.length`; the processing filter runs client-side after fetch; `state.searchToken` guards the fetch. All confirmed. **Re-measured the live numbers** (the spec's were a day old and have drifted with the daily seed): GCs **5,793** (spec 5,790), open subs **7,432** (spec 7,431), open permits **40,868** (spec 40,785). Proved the clamp is real rather than assuming it — asked the live Worker for `limit=6000` on open_tech and got exactly 5,000 of 7,432, so **2,432 subs (32.7%) are unreachable today**. Design holds; awaiting Divyam's go on Phase 1 per the confirm-before-each-phase rule (Claude Code)
 
 ### FEAT-043 · Contractor background verification: how long they take to finish, and whether they pay their subs
 
