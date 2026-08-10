@@ -1392,6 +1392,73 @@ Not fixed inside FEAT-021 on purpose: the new value-range fields were matched to
 
 > **Purpose:** New features and ideas to be added to the existing Chicago Permit Search tool. Enhancements that extend the current project rather than repair it.
 
+### FEAT-046 · Show each permit's construction stage everywhere a permit is shown
+
+- **Priority:** P2-Medium
+- **Status:** todo
+- **Created:** 2026-08-10 10:30 CT
+- **Updated:** 2026-08-10 10:30 CT
+- **Tags:** Chicago Permit Search Tool, data
+
+`permit_status` says a permit is open; it never says what is happening on
+site. A permit issued last week and one two inspections from a certificate of
+occupancy both read `ACTIVE`. `permit_milestone` is a column on `ydr8-5enu`
+that this project has never selected — the same field Chicago Cityscape
+exposes as its milestone filters. It is **100% populated on open permits**,
+every issue year 2015–2026, and it surfaces two states `permit_status` cannot:
+`STOP WORK` (26 permits) and `PERMIT ISSUED (FEE DUE)` (632). 4,152 open
+permits (10%) read `SUSPENDED` while the milestone says work is live; zero go
+the other way, so milestone is the more current field. Display only — the map
+stage filter is FEAT-047.
+
+Design: `docs/superpowers/specs/2026-08-10-permit-milestones-design.md`
+
+**Checklist:**
+- [ ] Add `permit_milestone` to all 7 `$select` lists and the Worker result map
+- [ ] Add the frozen 11-to-4 stage table to index.html, list.html and map.html
+- [ ] Render the chip in permitTable's Status cell, below the status text
+- [ ] Render the chip in the permit overlay tag row, plus a verbatim Stage fact row
+- [ ] Render the chip on the GC / open-sub card and both map surfaces
+- [ ] Render NO chip for closed, unknown, or absent values — never a placeholder
+- [ ] Add `worker/test/stage-map.test.mjs` so the three copies cannot drift
+- [ ] Cover the mapping for all 11 values plus null, empty and unrecognised
+- [ ] Verify headless at desktop and iPhone 13, asserting geometry
+- [ ] ui-ux-pro-max pass before landing
+
+**Log:**
+- 2026-08-10 10:30 CT — created from Divyam's request; design brainstormed and committed as `979ee7c` on `feat-046-permit-stage`. Vocabulary, status-column treatment, chip colour and mapping location all decided with Divyam; contrast measured at 4.80–8.77:1 across both themes before any code (Claude Code)
+
+### FEAT-047 · Filter the permit map by construction stage
+
+- **Priority:** P2-Medium
+- **Status:** todo
+- **Created:** 2026-08-10 10:30 CT
+- **Updated:** 2026-08-10 10:30 CT
+- **Tags:** Chicago Permit Search Tool, map
+
+Follow-on to FEAT-046, which puts the stage on screen but offers no way to
+filter by it. Four toggle chips — Not started / In progress / Finishing /
+Halted — in the map drawer, built on the FEAT-040 visited/called chip pattern
+rather than a new control. The map is where a user decides where to go today,
+so this is the surface where stage filtering pays off; the directory is
+deliberately excluded because it pages server-side and a client-side filter
+would desynchronise it from `total`, which is the FEAT-044 failure.
+
+Blocked on FEAT-046 landing — there is nothing to filter until the field is
+being selected.
+
+**Checklist:**
+- [ ] Add the four stage chips to the map drawer, reusing the FEAT-040 chip CSS
+- [ ] Compute counts BEFORE the stage exclusion, so ticking one never moves the others
+- [ ] Persist the selection in map settings — FIX-035 established every map control survives reload
+- [ ] State the active stage scope in the map status strip
+- [ ] Confirm 44px touch targets on the chips at iPhone 13 width
+- [ ] Verify headless at desktop and iPhone 13, with a mutation control
+- [ ] ui-ux-pro-max pass before landing
+
+**Log:**
+- 2026-08-10 10:30 CT — created; split from FEAT-046 at Divyam's request so display ships first (Claude Code)
+
 ### FEAT-045 · Tooling: control-style snapshot harness for blanket CSS changes
 
 - **Priority:** P3-Low
