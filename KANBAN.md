@@ -1437,12 +1437,47 @@ Design: `docs/superpowers/specs/2026-08-10-permit-milestones-design.md`
 - 2026-08-10 14:24 CT — **BUILT.** `979ee7c`..`c43806f` on `feat-046-permit-stage`, **pushed, NOT merged**. Executed subagent-driven from `docs/superpowers/plans/2026-08-10-permit-stage.md`: 7 tasks, fresh implementer + reviewer each, then a whole-branch review. Worker returns `permit_milestone`; the 11-value table plus `permitStage`/`permitStageChip` sit in all three pages, raw-byte identical (2,797 bytes, 54 CRLF each) and held in agreement by `worker/test/stage-map.test.mjs`; chip rendered at all six sites. Worker 243/243. **The final review earned its keep — it found two things every per-task review missed, and proved both rather than asserting them.** (1) `.map-result span` (0-1-1) outranked `.stage` (0-1-0), so the map side-list chip rendered as a full-width ~1070px block with **all seven stages in the same grey** — the **fourth** occurrence of the container-scoped-selector trap in this repo, and my own ui-ux pass missed it by measuring the table site only. Fixed with `.map-result > span` and a comment saying why the child combinator is load-bearing; new `verify-tmp/t75-mapchip.js` confirms inline-flex, narrow, one distinct colour per stage, both themes, both viewports. (2) `stage-map.test.mjs` extracted `permitStage` from **index.html only** — the reviewer reordered `list.html`'s copy to read milestone before status and the suite stayed **241/241 green**, on the one page where closed permits actually appear; the assertions now loop over all three pages. (3) Spec gap closed: `mapPermitDetails` had no Stage fact row, so on the map the verbatim city value lived only in a hover-only `title`, unreachable on touch. ui-ux-pro-max pre-landing pass green — 54 checks, **all seven stages measured for contrast in BOTH themes at BOTH viewports**, no cell overflow, no colour-only meaning, no horizontal scroll, `permit_status` retained beside every chip, no animation under reduced motion. Mutants M1–M4 caught; M5 survives by design, recorded as a known gap rather than pinning the suite to today's palette. Note for merge: `docs/list.html` will conflict with `fix-045-red-suites` in the `saveUserListCookie` comment — a lone-LF normalization both branches made independently (Claude Code)
 - 2026-08-10 10:43 CT — Divyam: **Fee due is its own stage — seven total** (`6174e54`). `PERMIT ISSUED (FEE DUE)` is 632 open permits the city has issued but is still owed money on; it is one of only two states `permit_status` cannot express (it reads plain `ACTIVE`), and folding it into a 7,209-permit "Not started" bucket is precisely what kept it invisible. Not started is now `INSPECTION ELIGIBLE` alone (6,577). Fee due takes `--teal`, already defined in both themes and used by no other chip, so still no new token; outlined rather than filled because there is no `--teal-soft` and inventing one for a 632-permit stage is not worth a palette change. All 14 pairs measured ≥4.5:1, and the three transparent-background chips re-measured against `--row-alt` as well, since permitTable stripes its rows (Fee due 5.90 light / 10.64 dark). Open stage counts still reconcile to 41,005 exactly (Claude Code)
 
-### FEAT-047 · Rebuild the map filter drawer around include/exclude dropdowns
+### FEAT-050 · Convert the map's existing filters onto the tri-state control
 
 - **Priority:** P2-Medium
 - **Status:** todo
+- **Created:** 2026-08-10 14:51 CT
+- **Updated:** 2026-08-10 14:51 CT
+- **Tags:** Chicago Permit Search Tool, map
+
+Second half of FEAT-047's design, split off after a scope check found the whole
+thing ran 2–3× FEAT-046: fourteen functions, all triplicated across the three
+pages, and five changes that merely share a control. FEAT-047 now lands the
+control and the Stage dropdown — the genuinely new capability, usable on its
+own. This card converts the three filters that already exist.
+
+The reason for the split line: **redefining Property Use changes what a shipped
+filter MEANS.** It goes from three nested levels (All / Residential /
+Residential+business) to eight flat zoning categories, and it is the only piece
+here that can silently return the *wrong permits* rather than merely look wrong.
+It deserves review on its own, not buried in a ten-task branch.
+
+Design: `docs/superpowers/specs/2026-08-10-filter-restructure-design.md`
+
+**Checklist:**
+- [ ] Work types gain an include — today they can only be excluded
+- [ ] Property use → the 8 zoning categories already in ZONE_COLORS and the on-map legend
+- [ ] PARITY TEST: old `residential` and `residential_business` must return identical rows to the new includes
+- [ ] Visited/Called: 4 chips → 2 tri-state rows, keeping the FEAT-040 saved-list scoping note on screen
+- [ ] Migrate `excludedWorkTypes`, `propertyUse`, `visited`, `called` — all in real users' storage (FIX-035)
+- [ ] Regroup the drawer into Ranges / Include-exclude / Your flags
+- [ ] Verify headless at desktop and iPhone 13, with a mutation control
+- [ ] ui-ux-pro-max pass before landing
+
+**Log:**
+- 2026-08-10 14:51 CT — created; split from FEAT-047 at Divyam's direction after the scope check. Data confirmed first: the 8 `zcat` values in `ZONE_COLORS` match the zoning data exactly — residential 5,093, business 4,561, commercial 2,020, planned_development 1,448, manufacturing 853, open_space 563, downtown 295, transportation 44 — so the new vocabulary introduces nothing the map does not already render in its own legend (Claude Code)
+
+### FEAT-047 · The tri-state filter control, and a Stage filter on the map
+
+- **Priority:** P2-Medium
+- **Status:** in-progress
 - **Created:** 2026-08-10 10:30 CT
-- **Updated:** 2026-08-10 11:13 CT
+- **Updated:** 2026-08-10 14:51 CT
 - **Tags:** Chicago Permit Search Tool, map
 
 Follow-on to FEAT-046, which puts the stage on screen but offers no way to
@@ -1468,6 +1503,14 @@ colours, which makes "manufacturing only" askable for the first time.
 The directory is still deliberately excluded: it pages server-side and a
 client-side filter would desynchronise it from `total`, the FEAT-044 failure.
 
+**Rescoped 2026-08-10.** This card now lands the shared tri-state control, the
+settings key and migration it needs, the include/exclude matching rule, and the
+Stage dropdown — the genuinely new capability, usable on its own. Converting the
+three filters that already exist (work types, property use, visited/called) and
+regrouping the drawer moved to **FEAT-050**, so the property-use redefinition —
+the only piece that can silently return the wrong permits rather than merely look
+wrong — gets reviewed on its own instead of buried in a ten-task branch.
+
 Blocked on FEAT-046 landing — there is nothing to filter until the field is
 being selected. The list half is FEAT-048 and reuses this card's control.
 
@@ -1477,22 +1520,21 @@ Design: `docs/superpowers/specs/2026-08-10-filter-restructure-design.md`
 - [ ] Build the shared tri-state control: off → include → exclude → off
 - [ ] role="button" with the state in the accessible name — NOT aria-checked="mixed", which means "partially checked" and would announce something false
 - [ ] Plain-character ✓ and ✗, never Material Symbols ligatures (FIX-027)
-- [ ] Regroup the drawer into Ranges / Include-exclude / Your flags
-- [ ] Stage, Property use and Work types as tri-state dropdowns
-- [ ] Redefine property use as the 8 zoning categories, reusing the legend's names and swatches
-- [ ] Prove parity: old `residential` and `residential_business` must return the same rows as the new includes
-- [ ] Consolidate the four visited/called chips into two tri-state rows, keeping the FEAT-040 saved-list scoping note on screen
-- [ ] Offer only options present in the result, with counts computed BEFORE that filter's own exclusions
-- [ ] Migrate the four persisted settings — FIX-035 means they are in real users' storage right now
-- [ ] Empty state with a Clear filters action, since includes and excludes can now compose to nothing
+- [ ] Stage as a tri-state dropdown, offering only stages present in the result
+- [ ] Counts computed BEFORE that filter's own exclusions, so ticking one never moves the others
+- [ ] Rule B: includes narrow, excludes remove, and BOTH always apply
+- [ ] Persist `stages` in map settings — FIX-035 means every map control survives reload
+- [ ] Empty state with a Clear filters action, since includes and excludes can compose to nothing
 - [ ] Status strip states DIRECTION, not just presence — "In progress, Finishing, not Halted"
 - [ ] 44px on every option row and dropdown header at iPhone 13 width
 - [ ] Keyboard: cycle by real Enter/Space, never .click()
 - [ ] Verify headless at desktop and iPhone 13, with a mutation control
 - [ ] ui-ux-pro-max pass before landing
+- Moved to FEAT-050: work-type include, property-use redefinition + parity test, visited/called consolidation, drawer regroup, and the migration of those four keys
 
 **Log:**
 - 2026-08-10 10:30 CT — created; split from FEAT-046 at Divyam's request so display ships first (Claude Code)
+- 2026-08-10 14:51 CT — **rescoped again and started.** A scope check before planning found this card ran 2-3x FEAT-046: fourteen functions, all triplicated across the three pages, and five separate changes that merely share a control. Divyam split it — this card keeps the tri-state control, its settings key, the Rule B matcher and the Stage dropdown; **FEAT-050** takes the conversions. The split line is deliberate: redefining Property Use changes what a shipped filter MEANS, and it is the only piece that can silently return the wrong permits rather than merely look wrong. Branch `feat-047-map-filters` cut from `feat-046-permit-stage`, since the Stage filter needs its helpers. Reconnaissance confirmed the spec's assumptions still hold against the post-FEAT-046 code: `defaultMapSettings` carries 13 keys, and the 8 `zcat` values in `ZONE_COLORS` match the zoning data exactly (Claude Code)
 - 2026-08-10 11:13 CT — **rescoped and retitled** after wireframing both filter surfaces with Divyam (`bd344cf`). Started as "four stage chips"; drawing the current drawer showed why that does not fit, and Divyam specified the replacement: dropdowns with tri-state checkboxes for Date Range, Property Use and Work types, visited/called consolidated onto the same control, GC-jobs and Value staying as typed fields. Two corrections came out of the drawing. **Date Range cannot take include/exclude** — it is a continuous range with nothing to put checkboxes on, and excluding a date range has no meaning beside an include, so it stays two date fields in the Ranges group. **Property Use could not either as it stands** — its three levels are nested, each strictly wider than the last, so including Residential while excluding Residential+business asks about a set containing the one being included; Divyam chose to redefine it as the 8 flat zoning categories, which the map's own legend already teaches. Rule B chosen for include/exclude interaction. All four persisted settings migrate losslessly. Split from FEAT-048 so the map can ship first (Claude Code)
 
 ### FEAT-049 · Tooling: let a local preview reach the real Worker API
