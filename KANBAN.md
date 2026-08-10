@@ -145,9 +145,9 @@ The number is a bare `const` repeated in three files with no shared source, whic
 ### FIX-045 · Two headless suites are red on main: t9 (zoning/TIF) and t44-followup
 
 - **Priority:** P2-Medium
-- **Status:** todo
+- **Status:** in-progress
 - **Created:** 2026-08-07 11:31 CT
-- **Updated:** 2026-08-07 11:31 CT
+- **Updated:** 2026-08-10 11:34 CT
 - **Tags:** Chicago Permit Search Tool
 
 Found while verifying FEAT-040, **pre-existing and unrelated to it**. Two browser suites fail on `main`:
@@ -158,14 +158,17 @@ Found while verifying FEAT-040, **pre-existing and unrelated to it**. Two browse
 Confirmed pre-existing by `git stash`-ing the FEAT-040 branch and re-running both against a clean `main` — both still failed. Re-run each in isolation before believing or dismissing it, per the batch-red rule.
 
 **Checklist:**
-- [ ] Decide for each: is the PRODUCT broken, or has the suite gone stale? (a repaired stale test must keep its discriminating power — prove it with a mutant)
-- [ ] Check whether t9's zoning/TIF failure means the live overlay is missing those fields for real users
-- [ ] Diagnose t44-followup
-- [ ] Grep the rest of the suite for the same pattern before closing — a whole class may be red
-- [ ] Record how long they have been red (check git log against the suites' last edit)
+- [x] Decide for each: is the PRODUCT broken, or has the suite gone stale? (a repaired stale test must keep its discriminating power — prove it with a mutant)
+- [x] Check whether t9's zoning/TIF failure means the live overlay is missing those fields for real users
+- [x] Diagnose t44-followup
+- [x] Grep the rest of the suite for the same pattern before closing — a whole class may be red
+- [x] Record how long they have been red (check git log against the suites' last edit)
+- [ ] Still open: t44's 44px touch-target check flakes ~1 run in 5 and is NOT attributed
+- [ ] Merge to main once Divyam approves
 
 **Log:**
 - 2026-08-07 11:31 CT — created while verifying FEAT-040; not part of that change (Claude Code)
+- 2026-08-10 11:34 CT — in-progress; `27d689a`→`e42acd2` on `fix-045-red-suites`, **pushed, NOT merged**. **Both suites were right and the PRODUCT was broken — neither test had gone stale.** t9: `fillPermitGeo` gated all three fills behind one `await Promise.all`, so the Cook County parcel lookup added by **FEAT-038 (`289e834`, 2026-08-04)** held Zone and TIF at "…" long after their own answer had arrived — and the comment directly above the function already promised the opposite ("each fills independently so one slow source cannot hold the others"). On the live site that lookup is a third-party API, so real users waited on it for nothing. Instrumented rather than guessed: the network trace showed the mocked zoning/TIF responses landing at 175ms while the spans stayed "…" until 587ms. Each source now writes its own spans as it settles, rejection included. Changed in **both** pages — `fillPermitGeo` is byte-identical across index.html and list.html by design. **Red since 2026-08-04, six days.** t44 turned out to have **three** failures, not the one recorded: "the lock states its reason" fails 2/2 every run and is a real a11y defect — a move button blocked by the follow-up filter put its reason in `title` but not in its accessible name, so a screen-reader user heard "Move 101082609 up — unavailable" and nothing more while a mouse user got the tooltip; the reason string was already in scope. **Red since FIX-042 (`0501dfc`, 2026-08-07).** Both fixes carry mutation controls (`verify-tmp/_fix045-mutants.js`) and **both mutants go red**; the first mutant run reported a false "skipped" because index.html is CRLF and the anchor was written with `\n` — the runner is now ending-aware. Class check: t4 (same wait-on-one-signal-assert-another shape), t5, t52 and t62 (geo assertions) all green, so the class is contained. Worker suite 232/232. **NOT fixed and left open:** t44's 44px touch-target check, which failed 1 of 5 suite runs before the fix and 0 of 5 after — that is not evidence, since 5 clean runs happen a third of the time at a 20% rate, and nothing in this change touches it. **0 of 37 isolated reproductions** (25 warm opens, 12 cold browser launches), with three hypotheses disproved: the icon-font race (44px measured with fonts already loaded), the overlay entry animation (`permitRise` is a translate, which cannot shorten a measured height, and is mobile-only while the flake is desktop), and warm-page timing. Incidental in the diff: list.html's blob had **mixed endings** — 6 bare LF among 10,729 CRLF, left by FIX-046 — and committing normalized them; `git diff --ignore-cr-at-eol` leaves exactly the two intended hunks. Mixed endings in one file are precisely what makes a mutation anchor silently miss, which cost a run during this fix (Claude Code)
 
 ### FIX-044 · Dollar amounts wrap mid-number in the Open Permits Cost column
 
