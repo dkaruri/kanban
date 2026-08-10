@@ -1431,36 +1431,103 @@ Design: `docs/superpowers/specs/2026-08-10-permit-milestones-design.md`
 - 2026-08-10 10:41 CT — scope change on Divyam's call: closed permits get a chip too, so **six stages, not four** (`503d608`). Closed permits reach the UI by one path only — the Worker defaults every query to open statuses, so it takes a permit saved while open that has since closed, rehydrated by `ensurePermitMap` with no status filter. **The closed chip keys off `permit_status`, never `permit_milestone`:** 13,973 closed permits carry an in-progress milestone because they expired or were revoked mid-inspection, and reading milestone first would label an `EXPIRED` permit "In progress". Split into Complete (484,221) and Ended early (16,419, `EXPIRED`/`CANCELLED`/`REVOKED`) rather than one "Closed", so a job that finished and one that died do not look identical while scanning a saved list. `Ended early` takes `--warning`, deliberately not `--danger`, which stays reserved for Halted — an open permit that has stopped and can resume. Resolution order is now total over all 7 status values plus null (843,715 rows); all 12 colour pairs measured ≥4.5:1 (Claude Code)
 - 2026-08-10 10:43 CT — Divyam: **Fee due is its own stage — seven total** (`6174e54`). `PERMIT ISSUED (FEE DUE)` is 632 open permits the city has issued but is still owed money on; it is one of only two states `permit_status` cannot express (it reads plain `ACTIVE`), and folding it into a 7,209-permit "Not started" bucket is precisely what kept it invisible. Not started is now `INSPECTION ELIGIBLE` alone (6,577). Fee due takes `--teal`, already defined in both themes and used by no other chip, so still no new token; outlined rather than filled because there is no `--teal-soft` and inventing one for a 632-permit stage is not worth a palette change. All 14 pairs measured ≥4.5:1, and the three transparent-background chips re-measured against `--row-alt` as well, since permitTable stripes its rows (Fee due 5.90 light / 10.64 dark). Open stage counts still reconcile to 41,005 exactly (Claude Code)
 
-### FEAT-047 · Filter the permit map by construction stage
+### FEAT-047 · Rebuild the map filter drawer around include/exclude dropdowns
 
 - **Priority:** P2-Medium
 - **Status:** todo
 - **Created:** 2026-08-10 10:30 CT
-- **Updated:** 2026-08-10 10:30 CT
+- **Updated:** 2026-08-10 11:13 CT
 - **Tags:** Chicago Permit Search Tool, map
 
 Follow-on to FEAT-046, which puts the stage on screen but offers no way to
-filter by it. Four toggle chips — Not started / In progress / Finishing /
-Halted — in the map drawer, built on the FEAT-040 visited/called chip pattern
-rather than a new control. The map is where a user decides where to go today,
-so this is the surface where stage filtering pays off; the directory is
-deliberately excluded because it pages server-side and a client-side filter
-would desynchronise it from `total`, which is the FEAT-044 failure.
+filter by it. Adding stage as more chips does not fit: the drawer already
+holds 8 groups and 13 controls, and five more chips joins the four
+visited/called ones to make nine, four rows deep, on a drawer that already
+scrolls on a phone.
+
+Eight groups become three — **Ranges** (the typed fields, unchanged),
+**Include / exclude** (Stage, Property use, Work types as dropdowns) and
+**Your flags** (Visited and Called as two tri-state rows in place of four
+chips). Every set-valued filter uses one shared tri-state control: click to
+include (green ✓), again to exclude (red ✗), again to clear. Includes narrow,
+excludes remove, and **both always apply** — the alternative lets a control
+the user has visibly set stop doing anything, which reads as a bug.
+
+Two things beyond stage come with it. **Work types gain an include** — today
+they can only be excluded. **Property use is redefined** from three nested
+levels (All / Residential / Residential+business) to the 8 flat zoning
+categories the map already renders in its own legend, with the same swatch
+colours, which makes "manufacturing only" askable for the first time.
+
+The directory is still deliberately excluded: it pages server-side and a
+client-side filter would desynchronise it from `total`, the FEAT-044 failure.
 
 Blocked on FEAT-046 landing — there is nothing to filter until the field is
-being selected.
+being selected. The list half is FEAT-048 and reuses this card's control.
+
+Design: `docs/superpowers/specs/2026-08-10-filter-restructure-design.md`
 
 **Checklist:**
-- [ ] Add the four stage chips to the map drawer, reusing the FEAT-040 chip CSS
-- [ ] Compute counts BEFORE the stage exclusion, so ticking one never moves the others
-- [ ] Persist the selection in map settings — FIX-035 established every map control survives reload
-- [ ] State the active stage scope in the map status strip
-- [ ] Confirm 44px touch targets on the chips at iPhone 13 width
+- [ ] Build the shared tri-state control: off → include → exclude → off
+- [ ] role="button" with the state in the accessible name — NOT aria-checked="mixed", which means "partially checked" and would announce something false
+- [ ] Plain-character ✓ and ✗, never Material Symbols ligatures (FIX-027)
+- [ ] Regroup the drawer into Ranges / Include-exclude / Your flags
+- [ ] Stage, Property use and Work types as tri-state dropdowns
+- [ ] Redefine property use as the 8 zoning categories, reusing the legend's names and swatches
+- [ ] Prove parity: old `residential` and `residential_business` must return the same rows as the new includes
+- [ ] Consolidate the four visited/called chips into two tri-state rows, keeping the FEAT-040 saved-list scoping note on screen
+- [ ] Offer only options present in the result, with counts computed BEFORE that filter's own exclusions
+- [ ] Migrate the four persisted settings — FIX-035 means they are in real users' storage right now
+- [ ] Empty state with a Clear filters action, since includes and excludes can now compose to nothing
+- [ ] Status strip states DIRECTION, not just presence — "In progress, Finishing, not Halted"
+- [ ] 44px on every option row and dropdown header at iPhone 13 width
+- [ ] Keyboard: cycle by real Enter/Space, never .click()
 - [ ] Verify headless at desktop and iPhone 13, with a mutation control
 - [ ] ui-ux-pro-max pass before landing
 
 **Log:**
 - 2026-08-10 10:30 CT — created; split from FEAT-046 at Divyam's request so display ships first (Claude Code)
+- 2026-08-10 11:13 CT — **rescoped and retitled** after wireframing both filter surfaces with Divyam (`bd344cf`). Started as "four stage chips"; drawing the current drawer showed why that does not fit, and Divyam specified the replacement: dropdowns with tri-state checkboxes for Date Range, Property Use and Work types, visited/called consolidated onto the same control, GC-jobs and Value staying as typed fields. Two corrections came out of the drawing. **Date Range cannot take include/exclude** — it is a continuous range with nothing to put checkboxes on, and excluding a date range has no meaning beside an include, so it stays two date fields in the Ranges group. **Property Use could not either as it stands** — its three levels are nested, each strictly wider than the last, so including Residential while excluding Residential+business asks about a set containing the one being included; Divyam chose to redefine it as the 8 flat zoning categories, which the map's own legend already teaches. Rule B chosen for include/exclude interaction. All four persisted settings migrate losslessly. Split from FEAT-048 so the map can ship first (Claude Code)
+
+### FEAT-048 · Rebuild the permit list filter row on the same control
+
+- **Priority:** P2-Medium
+- **Status:** todo
+- **Created:** 2026-08-10 11:13 CT
+- **Updated:** 2026-08-10 11:13 CT
+- **Tags:** Chicago Permit Search Tool, list
+
+The list half of FEAT-047's design, split so the map can ship first. Reuses
+that card's tri-state control rather than building anything new.
+
+The list is where the naive chip row breaks worst. It is the only surface
+where **closed** permits appear — a permit saved while open that has since
+completed or been revoked — so its stage filter carries seven stages, not
+five. Added to the existing five chips that is twelve, six rows deep at
+iPhone 13 width, pushing the table itself below the fold. Twelve chips become
+four controls in one row: a Stage dropdown, Visited and Called as tri-state
+pills, and Follow-up only left as a plain on/off pill.
+
+**Excluding Complete is the point of this.** A saved list silently
+accumulates finished jobs and today the only ways to stop seeing them are to
+scroll past them or delete them and lose the record.
+
+Blocked on FEAT-047 — the control comes from there.
+
+Design: `docs/superpowers/specs/2026-08-10-filter-restructure-design.md`
+
+**Checklist:**
+- [ ] Stage dropdown offering only stages present in THIS list, with counts of this list
+- [ ] Visited and Called as tri-state pills, replacing the four chips
+- [ ] Leave Follow-up only as a plain on/off pill — Divyam's call, "everything except follow-ups" is not a question anyone asks
+- [ ] Empty state with a Clear filters action
+- [ ] `#list-filter-status` states direction, not just presence
+- [ ] Confirm the table is still above the fold at iPhone 13 width with filters applied
+- [ ] Verify headless at desktop and iPhone 13, with a mutation control
+- [ ] ui-ux-pro-max pass before landing
+
+**Log:**
+- 2026-08-10 11:13 CT — created; split from FEAT-047 after wireframing, so the map ships before the list and the shared control lands once (Claude Code)
 
 ### FEAT-045 · Tooling: control-style snapshot harness for blanket CSS changes
 
