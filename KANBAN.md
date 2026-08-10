@@ -1397,7 +1397,7 @@ Not fixed inside FEAT-021 on purpose: the new value-range fields were matched to
 - **Priority:** P2-Medium
 - **Status:** todo
 - **Created:** 2026-08-10 10:30 CT
-- **Updated:** 2026-08-10 10:30 CT
+- **Updated:** 2026-08-10 10:41 CT
 - **Tags:** Chicago Permit Search Tool, data
 
 `permit_status` says a permit is open; it never says what is happening on
@@ -1419,7 +1419,8 @@ Design: `docs/superpowers/specs/2026-08-10-permit-milestones-design.md`
 - [ ] Render the chip in permitTable's Status cell, below the status text
 - [ ] Render the chip in the permit overlay tag row, plus a verbatim Stage fact row
 - [ ] Render the chip on the GC / open-sub card and both map surfaces
-- [ ] Render NO chip for closed, unknown, or absent values — never a placeholder
+- [ ] Add Complete / Ended early for closed permits, keyed off permit_status not milestone
+- [ ] Render NO chip only when both status and milestone are absent — never a placeholder
 - [ ] Add `worker/test/stage-map.test.mjs` so the three copies cannot drift
 - [ ] Cover the mapping for all 11 values plus null, empty and unrecognised
 - [ ] Verify headless at desktop and iPhone 13, asserting geometry
@@ -1427,6 +1428,7 @@ Design: `docs/superpowers/specs/2026-08-10-permit-milestones-design.md`
 
 **Log:**
 - 2026-08-10 10:30 CT — created from Divyam's request; design brainstormed and committed as `979ee7c` on `feat-046-permit-stage`. Vocabulary, status-column treatment, chip colour and mapping location all decided with Divyam; contrast measured at 4.80–8.77:1 across both themes before any code (Claude Code)
+- 2026-08-10 10:41 CT — scope change on Divyam's call: closed permits get a chip too, so **six stages, not four** (`503d608`). Closed permits reach the UI by one path only — the Worker defaults every query to open statuses, so it takes a permit saved while open that has since closed, rehydrated by `ensurePermitMap` with no status filter. **The closed chip keys off `permit_status`, never `permit_milestone`:** 13,973 closed permits carry an in-progress milestone because they expired or were revoked mid-inspection, and reading milestone first would label an `EXPIRED` permit "In progress". Split into Complete (484,221) and Ended early (16,419, `EXPIRED`/`CANCELLED`/`REVOKED`) rather than one "Closed", so a job that finished and one that died do not look identical while scanning a saved list. `Ended early` takes `--warning`, deliberately not `--danger`, which stays reserved for Halted — an open permit that has stopped and can resume. Resolution order is now total over all 7 status values plus null (843,715 rows); all 12 colour pairs measured ≥4.5:1 (Claude Code)
 
 ### FEAT-047 · Filter the permit map by construction stage
 
