@@ -1400,9 +1400,9 @@ Not fixed inside FEAT-021 on purpose: the new value-range fields were matched to
 ### FEAT-046 · Show each permit's construction stage everywhere a permit is shown
 
 - **Priority:** P2-Medium
-- **Status:** todo
+- **Status:** in-progress
 - **Created:** 2026-08-10 10:30 CT
-- **Updated:** 2026-08-10 10:43 CT
+- **Updated:** 2026-08-10 14:24 CT
 - **Tags:** Chicago Permit Search Tool, data
 
 `permit_status` says a permit is open; it never says what is happening on
@@ -1419,21 +1419,22 @@ stage filter is FEAT-047.
 Design: `docs/superpowers/specs/2026-08-10-permit-milestones-design.md`
 
 **Checklist:**
-- [ ] Add `permit_milestone` to all 7 `$select` lists and the Worker result map
-- [ ] Add the frozen milestone-to-stage table to index.html, list.html and map.html
-- [ ] Render the chip in permitTable's Status cell, below the status text
-- [ ] Render the chip in the permit overlay tag row, plus a verbatim Stage fact row
-- [ ] Render the chip on the GC / open-sub card and both map surfaces
-- [ ] Add Complete / Ended early for closed permits, keyed off permit_status not milestone
-- [ ] Render NO chip only when both status and milestone are absent — never a placeholder
-- [ ] Add `worker/test/stage-map.test.mjs` so the three copies cannot drift
-- [ ] Cover the mapping for all 11 values plus null, empty and unrecognised
-- [ ] Verify headless at desktop and iPhone 13, asserting geometry
-- [ ] ui-ux-pro-max pass before landing
+- [x] Add `permit_milestone` to all 7 `$select` lists and the Worker result map
+- [x] Add the frozen milestone-to-stage table to index.html, list.html and map.html
+- [x] Render the chip in permitTable's Status cell, below the status text
+- [x] Render the chip in the permit overlay tag row, plus a verbatim Stage fact row
+- [x] Render the chip on the GC / open-sub card and both map surfaces
+- [x] Add Complete / Ended early for closed permits, keyed off permit_status not milestone
+- [x] Render NO chip only when both status and milestone are absent — never a placeholder
+- [x] Add `worker/test/stage-map.test.mjs` so the three copies cannot drift
+- [x] Cover the mapping for all 11 values plus null, empty and unrecognised
+- [x] Verify headless at desktop and iPhone 13, asserting geometry
+- [x] ui-ux-pro-max pass before landing
 
 **Log:**
 - 2026-08-10 10:30 CT — created from Divyam's request; design brainstormed and committed as `979ee7c` on `feat-046-permit-stage`. Vocabulary, status-column treatment, chip colour and mapping location all decided with Divyam; contrast measured at 4.80–8.77:1 across both themes before any code (Claude Code)
 - 2026-08-10 10:41 CT — scope change on Divyam's call: closed permits get a chip too, so **six stages, not four** (`503d608`). Closed permits reach the UI by one path only — the Worker defaults every query to open statuses, so it takes a permit saved while open that has since closed, rehydrated by `ensurePermitMap` with no status filter. **The closed chip keys off `permit_status`, never `permit_milestone`:** 13,973 closed permits carry an in-progress milestone because they expired or were revoked mid-inspection, and reading milestone first would label an `EXPIRED` permit "In progress". Split into Complete (484,221) and Ended early (16,419, `EXPIRED`/`CANCELLED`/`REVOKED`) rather than one "Closed", so a job that finished and one that died do not look identical while scanning a saved list. `Ended early` takes `--warning`, deliberately not `--danger`, which stays reserved for Halted — an open permit that has stopped and can resume. Resolution order is now total over all 7 status values plus null (843,715 rows); all 12 colour pairs measured ≥4.5:1 (Claude Code)
+- 2026-08-10 14:24 CT — **BUILT.** `979ee7c`..`c43806f` on `feat-046-permit-stage`, **pushed, NOT merged**. Executed subagent-driven from `docs/superpowers/plans/2026-08-10-permit-stage.md`: 7 tasks, fresh implementer + reviewer each, then a whole-branch review. Worker returns `permit_milestone`; the 11-value table plus `permitStage`/`permitStageChip` sit in all three pages, raw-byte identical (2,797 bytes, 54 CRLF each) and held in agreement by `worker/test/stage-map.test.mjs`; chip rendered at all six sites. Worker 243/243. **The final review earned its keep — it found two things every per-task review missed, and proved both rather than asserting them.** (1) `.map-result span` (0-1-1) outranked `.stage` (0-1-0), so the map side-list chip rendered as a full-width ~1070px block with **all seven stages in the same grey** — the **fourth** occurrence of the container-scoped-selector trap in this repo, and my own ui-ux pass missed it by measuring the table site only. Fixed with `.map-result > span` and a comment saying why the child combinator is load-bearing; new `verify-tmp/t75-mapchip.js` confirms inline-flex, narrow, one distinct colour per stage, both themes, both viewports. (2) `stage-map.test.mjs` extracted `permitStage` from **index.html only** — the reviewer reordered `list.html`'s copy to read milestone before status and the suite stayed **241/241 green**, on the one page where closed permits actually appear; the assertions now loop over all three pages. (3) Spec gap closed: `mapPermitDetails` had no Stage fact row, so on the map the verbatim city value lived only in a hover-only `title`, unreachable on touch. ui-ux-pro-max pre-landing pass green — 54 checks, **all seven stages measured for contrast in BOTH themes at BOTH viewports**, no cell overflow, no colour-only meaning, no horizontal scroll, `permit_status` retained beside every chip, no animation under reduced motion. Mutants M1–M4 caught; M5 survives by design, recorded as a known gap rather than pinning the suite to today's palette. Note for merge: `docs/list.html` will conflict with `fix-045-red-suites` in the `saveUserListCookie` comment — a lone-LF normalization both branches made independently (Claude Code)
 - 2026-08-10 10:43 CT — Divyam: **Fee due is its own stage — seven total** (`6174e54`). `PERMIT ISSUED (FEE DUE)` is 632 open permits the city has issued but is still owed money on; it is one of only two states `permit_status` cannot express (it reads plain `ACTIVE`), and folding it into a 7,209-permit "Not started" bucket is precisely what kept it invisible. Not started is now `INSPECTION ELIGIBLE` alone (6,577). Fee due takes `--teal`, already defined in both themes and used by no other chip, so still no new token; outlined rather than filled because there is no `--teal-soft` and inventing one for a 632-permit stage is not worth a palette change. All 14 pairs measured ≥4.5:1, and the three transparent-background chips re-measured against `--row-alt` as well, since permitTable stripes its rows (Fee due 5.90 light / 10.64 dark). Open stage counts still reconcile to 41,005 exactly (Claude Code)
 
 ### FEAT-047 · Rebuild the map filter drawer around include/exclude dropdowns
