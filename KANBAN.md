@@ -1397,7 +1397,7 @@ Not fixed inside FEAT-021 on purpose: the new value-range fields were matched to
 - **Priority:** P2-Medium
 - **Status:** todo
 - **Created:** 2026-08-10 10:30 CT
-- **Updated:** 2026-08-10 10:41 CT
+- **Updated:** 2026-08-10 10:43 CT
 - **Tags:** Chicago Permit Search Tool, data
 
 `permit_status` says a permit is open; it never says what is happening on
@@ -1415,7 +1415,7 @@ Design: `docs/superpowers/specs/2026-08-10-permit-milestones-design.md`
 
 **Checklist:**
 - [ ] Add `permit_milestone` to all 7 `$select` lists and the Worker result map
-- [ ] Add the frozen 11-to-4 stage table to index.html, list.html and map.html
+- [ ] Add the frozen milestone-to-stage table to index.html, list.html and map.html
 - [ ] Render the chip in permitTable's Status cell, below the status text
 - [ ] Render the chip in the permit overlay tag row, plus a verbatim Stage fact row
 - [ ] Render the chip on the GC / open-sub card and both map surfaces
@@ -1429,6 +1429,7 @@ Design: `docs/superpowers/specs/2026-08-10-permit-milestones-design.md`
 **Log:**
 - 2026-08-10 10:30 CT — created from Divyam's request; design brainstormed and committed as `979ee7c` on `feat-046-permit-stage`. Vocabulary, status-column treatment, chip colour and mapping location all decided with Divyam; contrast measured at 4.80–8.77:1 across both themes before any code (Claude Code)
 - 2026-08-10 10:41 CT — scope change on Divyam's call: closed permits get a chip too, so **six stages, not four** (`503d608`). Closed permits reach the UI by one path only — the Worker defaults every query to open statuses, so it takes a permit saved while open that has since closed, rehydrated by `ensurePermitMap` with no status filter. **The closed chip keys off `permit_status`, never `permit_milestone`:** 13,973 closed permits carry an in-progress milestone because they expired or were revoked mid-inspection, and reading milestone first would label an `EXPIRED` permit "In progress". Split into Complete (484,221) and Ended early (16,419, `EXPIRED`/`CANCELLED`/`REVOKED`) rather than one "Closed", so a job that finished and one that died do not look identical while scanning a saved list. `Ended early` takes `--warning`, deliberately not `--danger`, which stays reserved for Halted — an open permit that has stopped and can resume. Resolution order is now total over all 7 status values plus null (843,715 rows); all 12 colour pairs measured ≥4.5:1 (Claude Code)
+- 2026-08-10 10:43 CT — Divyam: **Fee due is its own stage — seven total** (`6174e54`). `PERMIT ISSUED (FEE DUE)` is 632 open permits the city has issued but is still owed money on; it is one of only two states `permit_status` cannot express (it reads plain `ACTIVE`), and folding it into a 7,209-permit "Not started" bucket is precisely what kept it invisible. Not started is now `INSPECTION ELIGIBLE` alone (6,577). Fee due takes `--teal`, already defined in both themes and used by no other chip, so still no new token; outlined rather than filled because there is no `--teal-soft` and inventing one for a 632-permit stage is not worth a palette change. All 14 pairs measured ≥4.5:1, and the three transparent-background chips re-measured against `--row-alt` as well, since permitTable stripes its rows (Fee due 5.90 light / 10.64 dark). Open stage counts still reconcile to 41,005 exactly (Claude Code)
 
 ### FEAT-047 · Filter the permit map by construction stage
 
