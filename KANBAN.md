@@ -1495,6 +1495,47 @@ Design: `docs/superpowers/specs/2026-08-10-filter-restructure-design.md`
 - 2026-08-10 10:30 CT — created; split from FEAT-046 at Divyam's request so display ships first (Claude Code)
 - 2026-08-10 11:13 CT — **rescoped and retitled** after wireframing both filter surfaces with Divyam (`bd344cf`). Started as "four stage chips"; drawing the current drawer showed why that does not fit, and Divyam specified the replacement: dropdowns with tri-state checkboxes for Date Range, Property Use and Work types, visited/called consolidated onto the same control, GC-jobs and Value staying as typed fields. Two corrections came out of the drawing. **Date Range cannot take include/exclude** — it is a continuous range with nothing to put checkboxes on, and excluding a date range has no meaning beside an include, so it stays two date fields in the Ranges group. **Property Use could not either as it stands** — its three levels are nested, each strictly wider than the last, so including Residential while excluding Residential+business asks about a set containing the one being included; Divyam chose to redefine it as the 8 flat zoning categories, which the map's own legend already teaches. Rule B chosen for include/exclude interaction. All four persisted settings migrate losslessly. Split from FEAT-048 so the map can ship first (Claude Code)
 
+### FEAT-049 · Tooling: let a local preview reach the real Worker API
+
+- **Priority:** P3-Low
+- **Status:** done
+- **Created:** 2026-08-10 14:42 CT
+- **Updated:** 2026-08-10 14:42 CT
+- **Tags:** Chicago Permit Search Tool, tooling, worker
+
+Filed after the fact — this shipped to **production** while building an integration
+branch, so it is recorded rather than planned.
+
+A test branch could not be tested honestly. GitHub Pages only ever serves
+`main` + `/docs`, so a branch is never live; and the Worker returned a single
+fixed `Access-Control-Allow-Origin`, so **every Worker call from a local preview
+was CORS-blocked**. Measured on all three pages: `/api/stats`, `/api/profiles`
+and `/api/lists` all failed, profiles silently fell back to the stale bundled
+JSON, and only the map worked because it calls Socrata directly. A local test of
+a branch looked fine and proved nothing.
+
+`ALLOWED_ORIGIN` is now comma-separated. Two things beyond just splitting it:
+the **matching origin is echoed back exactly**, because a browser compares the
+header to its own origin character-for-character — returning the list itself
+looks right in `curl` and fails in every browser; and **`Vary: Origin`** is set,
+because the response now differs by origin and without it a shared cache can
+hand one origin's response to another, a failure that looks like a Worker bug
+and never reproduces locally. An unconfigured origin gets the first entry rather
+than itself, so the allowlist still means something, and production stays first
+so any caller sending no Origin is unaffected.
+
+**Checklist:**
+- [x] Make ALLOWED_ORIGIN a list and echo back the matching origin exactly
+- [x] Add Vary: Origin so a shared cache cannot cross-serve responses
+- [x] Keep production first, so a no-Origin caller is unaffected
+- [x] Thread the request through every CORS call site (a missed one silently loses echoing)
+- [x] Cover with tests, and prove them with mutants
+- [x] Deploy and verify at the destination, not at the build
+- [ ] Merge `worker-cors-origins` to main — the deployed Worker is currently AHEAD of main
+
+**Log:**
+- 2026-08-10 14:42 CT — done; `e47a7f0` on `worker-cors-origins`, cut from main so it merges independently of the two open feature branches, and merged into `integration-fix045-feat046`. **Deployed to production**, version `6d269ace`. Verified at the destination rather than at the build: production origin unchanged, `http://localhost:8791` now allowed, `https://evil.example` NOT echoed back, no-Origin falls to production, OPTIONS preflight 204. Re-measured local parity afterwards — **0 CORS errors, every Worker call HTTP 200 on all three pages**, where before every one was blocked. 9 tests (252 total); both mutants turn them red — returning the whole list fails 4, echoing any origin fails 2. **Open item: the deployed Worker is AHEAD of main until `worker-cors-origins` is merged**, so production source and main are out of sync (Claude Code)
+
 ### FEAT-048 · Rebuild the permit list filter row on the same control
 
 - **Priority:** P2-Medium
