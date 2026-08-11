@@ -90,7 +90,7 @@ NEVER
 - **Priority:** P1-High
 - **Status:** done
 - **Created:** 2026-08-11 14:19 CT
-- **Updated:** 2026-08-11 14:42 CT
+- **Updated:** 2026-08-11 15:04 CT
 - **Tags:** Kanban board, tests
 
 Commit `68cf966` appended one log line to this file through PowerShell and rewrote the whole file as UTF-8 of its own cp1252 misreading: every `·` (U+00B7) became the two characters U+00C2 U+00B7, and every emoji expanded into four such characters. (Deliberately spelled out as code points here — a card that quotes the corrupted bytes literally would trip the very scan this task asks for.) `board.html` parses task headings with `/^###\s+([A-Z]+-\d+)\s*[·:\-]\s*(.+)$/` — the mid-dot is *inside the character class* — so **0 of 104 tasks parsed**. All three lists rendered "No matching tasks" with a count of 0. The lists themselves survived because `##` headings are pure ASCII, which is exactly why it did not look like a total failure.
@@ -116,6 +116,7 @@ Repair note for whoever hits this again: the reverse of this corruption is **cp1
 - [x] Prove it fails: run it against a mojibaked copy and assert a non-zero exit
 - [x] Wire it so it actually runs on a board edit — a `pre-commit` hook is per-clone and this repo has never had one, so prefer a GitHub Action on push, or accept the hook and write down that a re-clone loses it
 - [x] Do not use PowerShell to write any of this
+- [x] Add the pre-commit hook as well, tracked in the repo rather than left in `.git/hooks`
 
 **Log:**
 - 2026-08-11 14:19 CT — created after repairing the board with `af51484`. The encoding trap was already documented and recurred anyway; this card is about the missing verification step, not about the encoding (Claude Code)
@@ -123,6 +124,10 @@ Repair note for whoever hits this again: the reverse of this corruption is **cp1
 - 2026-08-11 14:42 CT — done. `check-board.mjs` at the repo root, no dependencies. It reads the task-heading pattern OUT of `board.html` (matching the `ln.match(/^###.../)` line in `parse()`) instead of copying it, mirrors `stripComments()`, drops Archive the way the board does, and fails if any remaining list parses to zero tasks — plus a separate scan for U+00C2 / U+00E2 / U+FFFD. Wired as a GitHub Action on push and PR (Claude Code)
 - 2026-08-11 14:42 CT — verified in both directions, and against history rather than a hand-made sample. `--selftest` re-encodes the live board through the real cp1252 table and asserts the check catches it, after asserting the clean board passes. Run against the actual culprit `68cf966` it exits 1 with all three lists at zero; against `318f14d` (the commit before) it exits 0 reporting 47/50/4. With the regex line in `board.html` moved, it raises a loud extraction error rather than silently passing. Current board: 48/50/4, matching what the deployed page renders (Claude Code)
 - 2026-08-11 14:42 CT — KNOWN CEILING: the Action runs AFTER the push, so it reports a broken board, it does not block one. A pre-commit hook would block, but hooks are per-clone and a re-clone loses them silently — which is part of why this went unnoticed. It also checks that the file PARSES, not that the page renders; a break in `board.html`'s rendering with the parse intact would still get through (Claude Code)
+- 2026-08-11 15:04 CT — pre-commit hook added on top of the Action, at Divyam's request, closing the "reports but does not block" half of the ceiling. `.githooks/pre-commit` is TRACKED (a hook in `.git/hooks` is lost by a re-clone, which is part of why the original break went unseen) and runs `check-board.mjs --staged` (Claude Code)
+- 2026-08-11 15:04 CT — `--staged` reads the INDEX via `git show :FILE`, not the working tree, so a commit is judged on what it would actually contain. Proven: with a re-encoded KANBAN.md staged and the working tree then repaired, the commit is still blocked — a working-tree check would have waved it through (Claude Code)
+- 2026-08-11 15:04 CT — verified from a real `git clone` with `core.autocrlf=true`, not a file copy: hook checks out LF (pinned by a narrow `.gitattributes`, since a CR in the shebang gives "bad interpreter"), KANBAN.md stays CRLF, exec bit 100755 survives, and a re-encoded board is blocked in that fresh clone. Four-leg hook test: valid edit commits, staged mojibake blocked, broken-index/clean-worktree blocked, repair commits (Claude Code)
+- 2026-08-11 15:04 CT — REMAINING CEILING: git will not enable a tracked hook by itself — every clone needs `git config core.hooksPath .githooks` once, and `--no-verify` still bypasses it. `node check-board.mjs` now prints a warning when hooksPath is unset or points elsewhere, so a clone without the hook says so instead of looking protected. Still a parse check, not a render check (Claude Code)
 
 ### FIX-047 · t44's 44px touch-target check flakes ~1 run in 5 and has never been attributed
 

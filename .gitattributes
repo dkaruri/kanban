@@ -1,0 +1,5 @@
+# The hook is executed by sh: a CRLF checkout puts \r in the shebang and it
+# fails with "bad interpreter". Pin it to LF regardless of core.autocrlf.
+# Deliberately narrow -- KANBAN.md is CRLF and must stay whatever git already
+# stores for it.
+/.githooks/** text eol=lf

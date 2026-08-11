@@ -58,3 +58,28 @@ Three lists (plus an Archive), each with a purpose description:
 Each task card records: **Priority** (`P0-Critical` / `P1-High` / `P2-Medium` / `P3-Low`), **Status** (`todo` / `in-progress` / `blocked` / `done`), **Created** and **Updated** timestamps (Chicago time), optional **Due**, **Assignee**, and **Tags** (project), a description, a **Checklist**, and an activity **Log**.
 
 The full editing rules live in the comment block at the top of `KANBAN.md`.
+
+## 6. Checking the board still renders
+
+`board.html` parses task headings with a regex containing a `·`. A bad write to
+`KANBAN.md` — most reliably a PowerShell read-modify-write, which re-encodes the
+whole file — stops every heading from matching, and all three lists render
+"No matching tasks" while still looking structurally fine. That happened in
+`68cf966` and stood live for a day (FIX-048).
+
+```sh
+node check-board.mjs             # fails if any list would render zero tasks
+node check-board.mjs --selftest  # proves the check can still report failure
+```
+
+**Enable the pre-commit hook once per clone** — git will not do it for you, and
+a fresh clone has no hook at all:
+
+```sh
+git config core.hooksPath .githooks
+```
+
+It blocks any commit whose *staged* `KANBAN.md` would empty the board.
+`node check-board.mjs` warns when the hook is not enabled. The same check also
+runs as a GitHub Action on push, which reports a break rather than preventing
+one. Never edit `KANBAN.md` through PowerShell.

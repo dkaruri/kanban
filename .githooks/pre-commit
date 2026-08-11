@@ -1,0 +1,10 @@
+#!/bin/sh
+# FIX-048. Blocks a commit whose STAGED KANBAN.md would render an empty board.
+#
+# Tracked in the repo rather than left in .git/hooks, which a re-clone loses
+# silently. Git still will not enable it for you -- each clone needs:
+#   git config core.hooksPath .githooks
+# `node check-board.mjs` warns when that is missing.
+#
+# Bypass with --no-verify only if you know why, and check the board after.
+exec node "$(git rev-parse --show-toplevel)/check-board.mjs" --staged

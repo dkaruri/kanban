@@ -8,6 +8,7 @@
 // asked the parser whether the file still parsed.
 //
 //   node check-board.mjs            check the board, exit 1 if it is broken
+//   node check-board.mjs --staged   check what is STAGED (used by the pre-commit hook)
 //   node check-board.mjs --selftest prove the check reports failure, then pass
 //
 // No dependencies. Do not edit KANBAN.md with PowerShell -- a read-modify-write
@@ -15,9 +16,17 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { execSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const DIR = path.dirname(fileURLToPath(import.meta.url));
+const STAGED = process.argv.includes('--staged');
+
+// --staged reads the index, not the working tree: a commit is judged on what it
+// would actually contain. Unmodified files read back identical to HEAD.
+const readSource = f => STAGED
+  ? execSync(`git show :${f}`, { cwd: DIR, maxBuffer: 1 << 28 }).toString('utf8')
+  : fs.readFileSync(path.join(DIR, f), 'utf8');
 
 // The heading pattern is read out of board.html, never copied. A copy drifts
 // from the real parser and then quietly agrees with the bug.
@@ -73,8 +82,20 @@ const CP1252_HI = '€‚ƒ„…†‡ˆ‰Š‹ŒŽ' +
 const mojibake = s => [...Buffer.from(s, 'utf8')]
   .map(b => (b >= 0x80 && b <= 0x9f ? CP1252_HI[b - 0x80] : String.fromCharCode(b))).join('');
 
-const html = fs.readFileSync(path.join(DIR, 'board.html'), 'utf8');
-const md = fs.readFileSync(path.join(DIR, 'KANBAN.md'), 'utf8');
+const html = readSource('board.html');
+const md = readSource('KANBAN.md');
+
+// The hook is opt-in per clone -- git will not enable it for you, and a fresh
+// clone silently has no hook at all. Say so rather than let it look installed.
+function hookWarning() {
+  try {
+    const p = execSync('git config core.hooksPath', { cwd: DIR, stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim();
+    if (p === '.githooks') return null;
+    return `core.hooksPath is "${p}", not ".githooks" -- the pre-commit hook is NOT running`;
+  } catch {
+    return 'core.hooksPath is unset -- the pre-commit hook is NOT running in this clone. Enable it with:\n  git config core.hooksPath .githooks';
+  }
+}
 
 if (process.argv.includes('--selftest')) {
   // A probe that reports failure is worth nothing until it has been seen to
@@ -97,9 +118,13 @@ if (process.argv.includes('--selftest')) {
 
 const { problems, lists } = check(html, md);
 if (problems.length) {
-  console.error('BOARD IS BROKEN:');
+  console.error(STAGED ? 'COMMIT BLOCKED -- the staged board is broken:' : 'BOARD IS BROKEN:');
   for (const p of problems) console.error('  - ' + p);
   console.error('\nDo not push this. See FIX-048 in KANBAN.md.');
   process.exit(1);
 }
-console.log('board ok -- ' + lists.map(l => `${l.name}: ${l.tasks}`).join(', '));
+console.log((STAGED ? 'staged board ok -- ' : 'board ok -- ') + lists.map(l => `${l.name}: ${l.tasks}`).join(', '));
+if (!STAGED && !process.env.CI) {
+  const w = hookWarning();
+  if (w) console.warn('\nwarning: ' + w);
+}
