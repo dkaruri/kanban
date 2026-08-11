@@ -1,0 +1,26 @@
+name: check board
+
+# FIX-048. The board is served straight from this repo, so a bad KANBAN.md
+# write is live the moment Pages rebuilds. This runs after the push rather
+# than before it -- it cannot block the bad commit, only make sure it is not
+# the board's owner who discovers it a day later. A pre-commit hook would
+# block, but hooks are per-clone and a re-clone silently loses them.
+
+on:
+  push:
+    paths: ['KANBAN.md', 'board.html', 'check-board.mjs', '.github/workflows/check-board.yml']
+  pull_request:
+    paths: ['KANBAN.md', 'board.html', 'check-board.mjs']
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      # Prove the check can still fail before trusting that it passed.
+      - run: node check-board.mjs --selftest
+      - run: node check-board.mjs
