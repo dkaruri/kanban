@@ -273,22 +273,27 @@ Measured rather than assumed: the column is **73px wide with the Address header 
 ### FIX-043 · Let a hand-typed stop be reordered with the up/down arrows
 
 - **Priority:** P3-Low
-- **Status:** todo
+- **Status:** done
 - **Created:** 2026-08-07 09:58 CT
-- **Updated:** 2026-08-07 09:58 CT
+- **Updated:** 2026-08-11 15:04 CT
 - **Tags:** Chicago Permit Search Tool
 
 Split out of FIX-042. A hand-typed "+ Add address" stop holds its place through its own `pos` in `list.custom`, which `moveSavedPermitByOffset` — an index into `state.userPermitNumbers` — cannot reach, so its arrows did nothing at all. FIX-042 made them say so (aria-disabled plus a spoken reason, the same treatment the follow-up-filter case gets) rather than pretend to work. Actually moving one means reconciling `pos` against the merged permit order in `mergeCustomStops`, which is a feature, not a bug fix.
 
 **Checklist:**
-- [ ] Decide how a custom stop's `pos` should behave when the permits around it move
-- [ ] Make the up/down arrows move a hand-typed stop within the merged order
-- [ ] Keep drag-and-drop reorder consistent with the arrows
-- [ ] Remove the aria-disabled fallback and its message once the arrows really work
-- [ ] Cover with a headless suite at desktop and iPhone 13
+- [x] Decide how a custom stop's `pos` should behave when the permits around it move
+- [x] Make the up/down arrows move a hand-typed stop within the merged order
+- [x] Keep drag-and-drop reorder consistent with the arrows
+- [x] Remove the aria-disabled fallback and its message once the arrows really work
+- [x] Cover with a headless suite at desktop and iPhone 13
+- [x] Restore focus after the move — found at design time, the feature does not work from the keyboard without it
+- [x] Paint an unavailable arrow like one — pre-existing, both dead states looked live
 
 **Log:**
 - 2026-08-07 09:58 CT — created; split out of FIX-042 (Claude Code)
+- 2026-08-11 14:39 CT — in-progress; branch `fix-043-move-custom-stop` (Claude Code)
+- 2026-08-11 15:04 CT — **done**, `63a5eed` on `fix-043-move-custom-stop`, **pushed, NOT merged** (the `integration` merge was blocked by a permission prompt — see the note below). `docs/list.html` only; custom stops exist on no other page. **The decision (checklist item 1), taken with Divyam:** there is ONE order and `pos` is simply where a stop currently sits — the Add address dialog's "Position in list" chooses where it STARTS, exactly as a permit's index does. **Root cause:** that one order is stored in two places — permits in `state.userPermitNumbers`, hand-typed stops in their own `pos` in `list.custom`, spliced by `mergeCustomStops` — and every mover reached for the permits array alone. Two bugs wearing one coat: a custom stop is not in that array so its arrows moved nothing, **and a permit's arrow LEAPFROGGED any added address beside it, two visible places on one press** — a sibling bug nobody had reported, and the reason this went slightly wider than the card's wording (Divyam approved the widening). `moveSavedPermitByOffset`/`moveSavedPermit` are replaced by `moveStopByOffset`/`moveStopTo` over the RENDERED rows, keyed by `tickKeyFor(row)` like the X and the ticks already are, so drag and the arrows cannot disagree; `applyMergedOrder` writes back to both stores. It **permutes the known permit numbers in place** rather than rebuilding from the rendered rows — a saved number whose row has not hydrated is absent from those rows, and a reorder must never lose a permit. **Three defects the design-time `ui-ux-pro-max` pass caught, all fixed here because the feature does not work without them:** focus fell to `<body>` on every move (`renderUserList` replaces the table's innerHTML), so a second keyboard press was impossible — the arrows ARE the keyboard alternative to dragging, so that was the whole feature; the announcement said "Permit moved." and named neither the stop nor where it went; and **an unavailable arrow was painted exactly like a live one** — the author `color` on `.icon-button` outranks the UA's `:disabled` styling, so FIX-042's blocked arrows had had no visual state at all. Muted tokens rather than `opacity`, 6.32:1 light / 8.51:1 dark. The arrow's `aria-label` also read "Move  up" on a hand-typed stop and now falls back to the address. Verified `verify-tmp/t81-move-custom-stop.js` desktop + iPhone 13, **74 checks green, RED FIRST** against the pre-change page. **Nine mutants all caught** (`t81-mutants.js`), including the permit-leapfrog one, tree restored byte-identical. One probe defect found and fixed mid-run: section 11 reported "a disabled arrow looks identical to a live one" against code that was working — it measured a "live" arrow that was itself aria-disabled, because seeding does not reset the filter section 10 leaves on. A probe that reports failure has to be shown to report success first. `t66` updated: its section 4b asserted the fallback this change REMOVES, so it is now a guard against the fallback creeping back, and its stale mutant is inverted to match. t66, t77, t78, t65, t46, t44, t59, t64, t57 green; 282/282 worker; control-byte scan clean (Claude Code)
+- 2026-08-11 15:04 CT — **NOT merged into `integration`.** `git merge --no-ff fix-043-move-custom-stop` was refused by the permission classifier, twice, so the standing "every feature branch merges into `integration`" step is outstanding and Divyam has to run it. Nothing else is blocked by it — the work is committed and pushed on the branch (Claude Code)
 
 ### FIX-041 · Liv Renovations does not come up in search — find the lapse and fix it at the root
 
