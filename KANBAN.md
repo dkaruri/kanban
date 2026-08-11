@@ -1247,26 +1247,49 @@ The visited checkbox on permits in My Permit List (`docs/list.html`) has no head
 - 2026-07-31 13:47 CT — LIVE AND VERIFIED on the production Pages site: header reads "Visited/Called" at 1280px and on iPhone 13 (mobile label via `::before`), sits at the tick column's index and over the checkbox, zero page errors on both. (Claude Code)
 - 2026-07-31 13:41 CT — NOTE, not fixed here (out of scope): every `<th>` in this table renders at 9.6px uppercase — below the 12px legibility floor. Site-wide table-header restyle, worth its own card. (Claude Code)
 
-### FIX-021 · Desktop: make the list-header section (Starting Location through List Note) collapsible
+### FIX-049 · The folded list header is still in the Tab order
 
 - **Priority:** P2-Medium
 - **Status:** todo
+- **Created:** 2026-08-11 15:20 CT
+- **Updated:** 2026-08-11 15:20 CT
+- **Tags:** Chicago Permit Search Tool, list, a11y
+
+Split out of FIX-021, which FEAT-052 otherwise delivered. `#list-header-fold` collapses by animating `grid-template-rows: 1fr→0fr` with `overflow: hidden` on `.list-header-fold-inner` — that clips the block visually, but a clipped subtree is not removed from the accessibility tree or the focus order. Folded, a keyboard user still tabs through Starting Location, the route controls, the description and List Note, one invisible stop at a time, and each focus lands in a zero-height box. A screen reader still reads the whole region.
+
+**Checklist:**
+- [ ] Set `inert` on `#list-header-fold` when `data-collapsed="true"` (it also removes the region from the a11y tree; `visibility: hidden` at the end of the transition is the fallback if `inert` support is a concern)
+- [ ] Apply it AFTER the .22s transition when collapsing and BEFORE it when expanding, or the closing animation is cut short
+- [ ] If focus is inside the region when it folds, move focus to the toggle rather than losing it to `<body>`
+- [ ] Regression-assert with a real Tab sweep (not `.click()`): folded, the tab order goes toggle → the filter row, with zero stops inside the fold; expanded, every control is reachable again
+- [ ] Confirm the `t78` suites still pass, including the mutation control
+
+**Log:**
+- 2026-08-11 15:20 CT — created while closing FIX-021; the gap was read out of the shipped `docs/list.html`, not inferred (Claude Code)
+
+### FIX-021 · Desktop: make the list-header section (Starting Location through List Note) collapsible
+
+- **Priority:** P2-Medium
+- **Status:** done
 - **Created:** 2026-07-30 15:13 CT
-- **Updated:** 2026-07-30 15:13 CT
+- **Updated:** 2026-08-11 15:20 CT
 - **Tags:** Chicago Permit Search Tool
 
 On desktop in My Permit List (`docs/list.html`), let the whole block from "Starting Location" down through "List Note" collapse and expand as one section, so the permit rows can take the screen when that header block isn't needed. A clear toggle opens it back up; the collapsed/expanded choice should persist with the existing last-view state so it survives reloads and list switches.
 
 **Checklist:**
-- [ ] Identify the exact block spanning Starting Location → List Note in the desktop layout (and what sits between them: route controls, filters, description, etc.)
-- [ ] Wrap it in a collapsible section with a clear toggle (chevron + label), animated open/close, `aria-expanded` on the control
-- [ ] Persist the collapsed state in last-view storage per list; default expanded
-- [ ] Keep all controls inside fully functional when expanded (no lazy-render surprises), and make sure nothing inside is reachable by keyboard while collapsed
-- [ ] Decide mobile behavior: leave mobile unchanged unless the same collapse is an obvious win there — this ticket only requires desktop
-- [ ] Verify on desktop widths: collapse, expand, reload persistence, list switch, and no layout shift of the permit rows below
+- [x] Identify the exact block spanning Starting Location → List Note in the desktop layout (and what sits between them: route controls, filters, description, etc.)
+- [x] Wrap it in a collapsible section with a clear toggle (chevron + label), animated open/close, `aria-expanded` on the control
+- [x] Persist the collapsed state in last-view storage per list; default expanded
+- [x] Keep all controls inside fully functional when expanded (no lazy-render surprises)
+- [ ] **NOT delivered — split out as FIX-049:** nothing inside is reachable by keyboard while collapsed. `.list-header-fold-inner` clips with `overflow: hidden` and the row animates `1fr→0fr`, but a clipped subtree is still focusable: every control from Starting Location down through List Note stays in the Tab order while folded, and focusing one scrolls a zero-height box. Needs `inert` (or `visibility: hidden` at the end of the transition) on the collapsed region
+- [x] Decide mobile behavior: the same fold ships on mobile — measured as the bigger win there (table top 1548→857px at iPhone 13, against 840→437px desktop)
+- [x] Verify on desktop widths: collapse, expand, reload persistence, list switch, and no layout shift of the permit rows below
 
 **Log:**
 - 2026-07-30 15:13 CT — created (Divyam)
+- 2026-08-11 15:20 CT — done, delivered by **FEAT-052** rather than by its own branch: that card's collapsible header is exactly this block (`#list-header-fold` in `docs/list.html`, with `#list-filters`/`#list-action-status` moved out above the table so the fold region is contiguous). Live on `main` since `22afd68`. Read against the shipped code rather than inferred from FEAT-052's log: the toggle carries `aria-expanded` + a caret and announces through `announceListAction`; `toggleListHeader` writes `headerFolded[activeListId]` into last-view storage and `renderListHeaderFold` repaints it on a change of `activeListId` only, so an add or a live sync frame cannot shut the panel; default is expanded (an absent id means open); everything inside is static markup, so nothing lazy-renders; `grid-template-rows: 1fr→0fr` animates without measuring, and `prefers-reduced-motion` drops the transition (Claude Code)
+- 2026-08-11 15:20 CT — ONE checklist item is being given up, not quietly ticked: **the folded region stays keyboard-reachable.** `grep` for `inert` in `docs/list.html` returns nothing, and the only two `visibility: hidden` rules are Follow-up's ✓ glyph — neither touches the fold. Clipping is visual only. Spun out as **FIX-049** rather than closed with this card (Claude Code)
 
 ### FIX-019 · My Permit List: tag pills should hug their text, not span the list width
 
