@@ -1397,6 +1397,62 @@ Not fixed inside FEAT-021 on purpose: the new value-range fields were matched to
 
 > **Purpose:** New features and ideas to be added to the existing Chicago Permit Search tool. Enhancements that extend the current project rather than repair it.
 
+### FEAT-052 · Permit list: collapsible header, a filter row that stays put, count under the table
+
+- **Priority:** P2-Medium
+- **Status:** todo
+- **Created:** 2026-08-11 11:53 CT
+- **Updated:** 2026-08-11 11:53 CT
+- **Tags:** Chicago Permit Search Tool, list, ui
+
+Three complaints from Divyam, all MEASURED on the working branch rather than
+inferred.
+
+**1. Everything jumps when you click a filter.** Positions snapped before and
+after each interaction: clicking Visited grows the pill 13px and shoves every
+control right of it; including a stage turns the summary `all` into `1 included`
+and shifts the whole row 45px; toggling Follow-up grows the status text 118px.
+On mobile it is worse — **the table itself drops 38px, then another 44px**, under
+your finger while you are reading it. Causes: the tick is *prepended to the
+label* instead of occupying a reserved slot, the stage summary is prose whose
+length changes, and the status line grows until it wraps and changes the bar's
+height.
+
+**2. The row has no alignment.** Status text at y=287 against controls at
+y=273-274. Stage dropdown 46px against 44px pills. Four controls, four widths
+(76/68/64/130), two shapes.
+
+**3. Half a screen of chrome before the first permit.** Table top edge is 651px
+desktop and **1330px on mobile**, in an 844px viewport.
+
+Design (chosen from four directions in an artifact review with Divyam):
+two labelled rows — `Permit` then `Your activity`; a reserved 16px mark slot so
+the label never reflows; `min-width` per control sized to its widest state; the
+stage count as a fixed-width badge with the full wording moved inside the
+dropdown header; the **filtered** count moved below the table (the unfiltered
+tally STAYS in the filter row — it is the prompt to filter at all); and a
+collapsible header, **open by default**, replacing the description's 3-line
+clamp. Collapsed: table top ~353px desktop, ~729px mobile.
+
+Design: `docs/superpowers/specs/2026-08-11-list-header-collapse-design.md`
+
+**Checklist:**
+- [ ] Reserved 16px mark slot — the tick must not be prepended to the label
+- [ ] min-width per control, sized to its widest state
+- [ ] Stage summary becomes a fixed-width count badge; full wording moves inside the dropdown
+- [ ] Split into two labelled rows: Permit / Your activity
+- [ ] Filtered count moves below the table; the unfiltered tally STAYS in the filter row
+- [ ] Collapsible header, open by default, animated, honouring prefers-reduced-motion
+- [ ] MOVE `#list-filters` + `#list-action-status` above the table so the fold region is contiguous
+- [ ] `#list-action-status` must NEVER fold — it holds the FIX-003 undo link
+- [ ] Collapse state persists per list, and does NOT reset on an add or a live frame
+- [ ] Regression-assert ZERO movement: dx/dy/dw of every control and the table's top edge
+- [ ] Verify headless at desktop and iPhone 13, with a mutation control
+- [ ] ui-ux-pro-max pass before landing
+
+**Log:**
+- 2026-08-11 11:53 CT — created; spec committed `03ff94d` on branch `feat-052-list-header`, which is cut from `integration` and already merged current. Two catches recorded while designing, both of which would have been bugs. **The fold region is not contiguous** — the filter row sits between folding blocks (toolbar above, Starting location below), so `#list-filters` moves to sit directly above the table, which is where it belongs anyway. And **`#list-action-status` must never fold**: it carries the FIX-003 undo link, so folded away "Undo" would vanish at the exact moment it is needed, reintroducing the class of bug that card existed to fix. Also recorded: `renderListDesc` runs after every add and on every live sync frame, so resetting the collapse there would shut the panel while someone is reading it — reset only on a change of `activeListId`, which the existing code already documents. One deliberate behavioural change: moving the count below the table means a screen-reader user hears the rows THEN the summary (Claude Code)
+
 ### FEAT-051 · Deal-analysis page: parse a URAR appraisal's comps + supplementals, compare its value vs. your expected ARV, and pull each comp's permit view + GC/subs
 
 - **Priority:** P1-High
