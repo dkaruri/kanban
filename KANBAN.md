@@ -85,6 +85,36 @@ NEVER
 
 > **Purpose:** Things to fix on current projects — currently the Chicago Permit Search tool. Bugs, regressions, broken behavior, and cleanup on what already exists. This is Claude Code's default work queue.
 
+### FIX-047 · t44's 44px touch-target check flakes ~1 run in 5 and has never been attributed
+
+- **Priority:** P3-Low
+- **Status:** todo
+- **Created:** 2026-08-11 13:25 CT
+- **Updated:** 2026-08-11 13:25 CT
+- **Tags:** Chicago Permit Search Tool, tests
+
+Split out of **FIX-045** when that card was closed, so it stays visible instead of dying inside a closed card. FIX-045's two real defects were found and fixed; this one was not, and closing it silently would have been the failure mode the standing rule exists to prevent.
+
+`t44-followup`'s 44px touch-target assertion on `.pm-fu` fails roughly 1 run in 5. **Not reproduced and not attributed**, after a substantial hunt:
+
+- **0 of 37 isolated reproductions** — 25 warm opens, 12 cold browser launches.
+- CPU throttling over CDP gave 2/10 sub-44 at 10× on one pass and **0/20 at the same rate** on the next; 2 in 30 combined and non-monotonic (nothing at 20×), which does not separate signal from noise.
+- Three hypotheses disproved: the icon-font race (44px measured with fonts already loaded), the overlay entry animation (`permitRise` animates opacity and translateY — neither changes a measured height), and warm-page timing.
+- A ResizeObserver recorded **19 sub-44 sizes in 20 opens and every one was exactly 0**, during card teardown on a hidden element. So there is no partial-layout state: whatever the check catches is a torn-down button, not a mis-sized one, and it recovers inside a single round trip — which is why every follow-up capture reads a healthy 44.
+
+Diagnostics were landed instead of a fix: the assertion now captures height, width, match count, `hidden`, `isConnected`, computed min-height/display/visibility, animation names, icon width and font status in **one** evaluate, and Playwright tracing saves a zip only on a failing run. The threshold is unchanged at ≥44, proved with a mutant that shrinks `.pm-fu` to 20px.
+
+**What is being given up by not fixing it:** if a real intermittent sub-44 target exists on that control, it is still in the product. What is bought: the next occurrence lands a DOM snapshot at the failing moment rather than a bare number.
+
+**Checklist:**
+- [ ] Wait for the next natural failure and read the saved trace — do not hunt it again from scratch
+- [ ] Decide from that trace whether the check is racing teardown (fix the check) or the product has a real intermittent state (fix the product)
+- [ ] If it is teardown: assert against a card that is still mounted, and prove the check still catches a genuinely small target with the 20px mutant
+- [ ] Note that `verify-tmp/` is gitignored, so none of this exists in a fresh clone — see FIX-020
+
+**Log:**
+- 2026-08-11 13:25 CT — created; split out of FIX-045 at closing time so the unattributed flake stays on the board rather than being closed with it (Claude Code)
+
 ### FIX-042 · A hand-typed "+ Add address" stop cannot be removed, and Clear list leaves it behind
 
 - **Priority:** P1-High
@@ -145,9 +175,9 @@ The number is a bare `const` repeated in three files with no shared source, whic
 ### FIX-045 · Two headless suites are red on main: t9 (zoning/TIF) and t44-followup
 
 - **Priority:** P2-Medium
-- **Status:** in-progress
+- **Status:** done
 - **Created:** 2026-08-07 11:31 CT
-- **Updated:** 2026-08-10 13:07 CT
+- **Updated:** 2026-08-11 13:25 CT
 - **Tags:** Chicago Permit Search Tool
 
 Found while verifying FEAT-040, **pre-existing and unrelated to it**. Two browser suites fail on `main`:
@@ -164,11 +194,12 @@ Confirmed pre-existing by `git stash`-ing the FEAT-040 branch and re-running bot
 - [x] Grep the rest of the suite for the same pattern before closing — a whole class may be red
 - [x] Record how long they have been red (check git log against the suites' last edit)
 - [x] Land diagnostics so the next natural occurrence of the flake explains itself
-- [ ] Still open: t44's 44px touch-target check flakes ~1 run in 5 and is NOT attributed
-- [ ] Merge to main once Divyam approves
+- [ ] **NOT done — spun off as FIX-047:** t44's 44px touch-target check flakes ~1 run in 5 and is NOT attributed
+- [x] Merge to main once Divyam approves
 
 **Log:**
-- 2026-08-11 13:05 CT — **this card's code is now LIVE**: `integration` was merged into `main` (`22afd68`) at Divyam's go-ahead while landing FEAT-052, and GitHub Pages is serving it. Status left as-is deliberately — nobody has checked this card's own acceptance criteria against the live site in this session, and "live" is not the same as "done" (Claude Code)
+- 2026-08-11 13:25 CT — **done**, closed at Divyam's direction after checking the fix at the destination. `verify-tmp/t79-live-close.js` drives the DEPLOYED site with no mocks: a real permit overlay opened from the live directory settles with **nothing left at "…"**, which is precisely the defect (the parcel lookup holding Zone and TIF behind one `await Promise.all`). **One item is left unticked and is being given up, not quietly closed:** t44's 44px touch-target flake is still unattributed — 0 of 37 isolated reproductions, three hypotheses disproved, and the assertion was rebuilt to explain itself when it next fires rather than being weakened or removed. It is now **FIX-047**, so it stays visible instead of dying inside a closed card. What that costs: if a real intermittent sub-44 target exists, it remains in the product; what is fixed is that the next occurrence lands a trace instead of a bare number. **A probe trap worth recording:** the first live run reported 0 chips over 100 rows and a null overlay — the probe had waited on `#results table tbody tr`, which the CONTRACTOR table already satisfied, so it measured the wrong table entirely. Corrected to wait on `td[data-label="Permit"]`; the product was right both times (Claude Code)
+- 2026-08-11 13:05 CT — this card's code went LIVE: `integration` was merged into `main` (`22afd68`) at Divyam's go-ahead while landing FEAT-052, and GitHub Pages is serving it. Status left as-is at the time — nobody has checked this card's own acceptance criteria against the live site in this session, and "live" is not the same as "done" (Claude Code)
 - 2026-08-07 11:31 CT — created while verifying FEAT-040; not part of that change (Claude Code)
 - 2026-08-10 11:34 CT — in-progress; `27d689a`→`e42acd2` on `fix-045-red-suites`, **pushed, NOT merged**. **Both suites were right and the PRODUCT was broken — neither test had gone stale.** t9: `fillPermitGeo` gated all three fills behind one `await Promise.all`, so the Cook County parcel lookup added by **FEAT-038 (`289e834`, 2026-08-04)** held Zone and TIF at "…" long after their own answer had arrived — and the comment directly above the function already promised the opposite ("each fills independently so one slow source cannot hold the others"). On the live site that lookup is a third-party API, so real users waited on it for nothing. Instrumented rather than guessed: the network trace showed the mocked zoning/TIF responses landing at 175ms while the spans stayed "…" until 587ms. Each source now writes its own spans as it settles, rejection included. Changed in **both** pages — `fillPermitGeo` is byte-identical across index.html and list.html by design. **Red since 2026-08-04, six days.** t44 turned out to have **three** failures, not the one recorded: "the lock states its reason" fails 2/2 every run and is a real a11y defect — a move button blocked by the follow-up filter put its reason in `title` but not in its accessible name, so a screen-reader user heard "Move 101082609 up — unavailable" and nothing more while a mouse user got the tooltip; the reason string was already in scope. **Red since FIX-042 (`0501dfc`, 2026-08-07).** Both fixes carry mutation controls (`verify-tmp/_fix045-mutants.js`) and **both mutants go red**; the first mutant run reported a false "skipped" because index.html is CRLF and the anchor was written with `\n` — the runner is now ending-aware. Class check: t4 (same wait-on-one-signal-assert-another shape), t5, t52 and t62 (geo assertions) all green, so the class is contained. Worker suite 232/232. **NOT fixed and left open:** t44's 44px touch-target check, which failed 1 of 5 suite runs before the fix and 0 of 5 after — that is not evidence, since 5 clean runs happen a third of the time at a 20% rate, and nothing in this change touches it. **0 of 37 isolated reproductions** (25 warm opens, 12 cold browser launches), with three hypotheses disproved: the icon-font race (44px measured with fonts already loaded), the overlay entry animation (`permitRise` is a translate, which cannot shorten a measured height, and is mobile-only while the flake is desktop), and warm-page timing. Incidental in the diff: list.html's blob had **mixed endings** — 6 bare LF among 10,729 CRLF, left by FIX-046 — and committing normalized them; `git diff --ignore-cr-at-eol` leaves exactly the two intended hunks. Mixed endings in one file are precisely what makes a mutation anchor silently miss, which cost a run during this fix (Claude Code)
 - 2026-08-10 13:07 CT — flake hunt continued at Divyam's direction, then **diagnostics landed instead of a fix**. CPU throttling via CDP was tried to force a reproduction: 2/10 sub-44 at 10× on the first pass, then **0/20 at the same rate** on the second — 2 in 30 combined, non-monotonic (nothing at 20×), so it does not separate "throttling induces it" from noise. **Not reproduced, not attributed.** What IS established: a ResizeObserver on the button recorded **19 sub-44 sizes in 20 opens and every one was exactly 0**, during card teardown on a hidden element — there is no partial-layout state, so whatever the check catches is a torn-down button, not a mis-sized one; the selector matches exactly one element at check time, so it is not a stale second card; and the state recovers **inside a single round trip**, which is why two separate follow-up captures both read a healthy 44 and why the failure has never been explained. So the assertion was rebuilt rather than the product: it now captures height, width, match count, `hidden`, `isConnected`, computed min-height/display/visibility, animation names, icon width and font status in **one** evaluate (a second round trip is always too late), and `page.context().tracing` records every run but **saves the zip only when that run failed** — free on green, a DOM snapshot at the failing moment on red. **The threshold is unchanged at >= 44**; proved with a mutant that shrinks `.pm-fu` to 20px — suite goes red, the failure line carries `"h":21.69`, and both traces are written. Two corrections to the earlier log: `permitRise` is inside `@media (prefers-reduced-motion: no-preference)`, **not** a width query, so it runs on desktop too and the card is mid-animation when the check fires — the earlier note dismissing it as mobile-only was wrong; the conclusion stands only because it animates opacity and translateY, neither of which changes a measured height. **Caveat on "landed":** `verify-tmp/` is gitignored and **0 of its 381 files are tracked**, so none of this is in the repo — the diagnostics exist on this machine only and a fresh clone has no browser suites at all (Claude Code)
@@ -1498,9 +1529,9 @@ This is mostly **net-new data**, not just rendering — verified against the rep
 ### FEAT-046 · Show each permit's construction stage everywhere a permit is shown
 
 - **Priority:** P2-Medium
-- **Status:** in-progress
+- **Status:** done
 - **Created:** 2026-08-10 10:30 CT
-- **Updated:** 2026-08-10 14:24 CT
+- **Updated:** 2026-08-11 13:25 CT
 - **Tags:** Chicago Permit Search Tool, data
 
 `permit_status` says a permit is open; it never says what is happening on
@@ -1530,7 +1561,8 @@ Design: `docs/superpowers/specs/2026-08-10-permit-milestones-design.md`
 - [x] ui-ux-pro-max pass before landing
 
 **Log:**
-- 2026-08-11 13:05 CT — **this card's code is now LIVE**: `integration` merged into `main` (`22afd68`) at Divyam's go-ahead while landing FEAT-052. Confirmed at the destination — the deployed Worker's `/api/permits` returns `permit_milestone`, and `PERMIT_STAGE_LABELS` is present in the served `index.html`. Status left as-is: nobody re-checked this card's own acceptance criteria in this session (Claude Code)
+- 2026-08-11 13:25 CT — **done**, closed after checking every claim against the DEPLOYED site rather than the branch. `t79-live-close.js` (no mocks: real Pages, real Worker, real Socrata) found **150 of 150 live open-permit rows carrying a chip in the Status cell**, all labels drawn from the frozen vocabulary — "Not started", "In progress", "Fee due" in that sample — each keeping the verbatim milestone in its `title`, and the live permit overlay showing both the chip in its tag row and a Stage fact row. Locally on `main`: t75-permit-stage, t75-mapchip and t75-uiux green at both viewports, and `worker/test/stage-map.test.mjs` inside the 282-test run pins the three copies against drift. Mutation control `t75-mutants` caught 4 of 5, with **M5 a documented expected survivor** (removing Finishing's colour is invisible to assertions that read the accessible name — which is the point: state is never carried by colour alone, so no assertion depends on the colour) (Claude Code)
+- 2026-08-11 13:05 CT — this card's code went LIVE: `integration` merged into `main` (`22afd68`) at Divyam's go-ahead while landing FEAT-052 (Claude Code)
 - 2026-08-10 10:30 CT — created from Divyam's request; design brainstormed and committed as `979ee7c` on `feat-046-permit-stage`. Vocabulary, status-column treatment, chip colour and mapping location all decided with Divyam; contrast measured at 4.80–8.77:1 across both themes before any code (Claude Code)
 - 2026-08-10 10:41 CT — scope change on Divyam's call: closed permits get a chip too, so **six stages, not four** (`503d608`). Closed permits reach the UI by one path only — the Worker defaults every query to open statuses, so it takes a permit saved while open that has since closed, rehydrated by `ensurePermitMap` with no status filter. **The closed chip keys off `permit_status`, never `permit_milestone`:** 13,973 closed permits carry an in-progress milestone because they expired or were revoked mid-inspection, and reading milestone first would label an `EXPIRED` permit "In progress". Split into Complete (484,221) and Ended early (16,419, `EXPIRED`/`CANCELLED`/`REVOKED`) rather than one "Closed", so a job that finished and one that died do not look identical while scanning a saved list. `Ended early` takes `--warning`, deliberately not `--danger`, which stays reserved for Halted — an open permit that has stopped and can resume. Resolution order is now total over all 7 status values plus null (843,715 rows); all 12 colour pairs measured ≥4.5:1 (Claude Code)
 - 2026-08-10 14:24 CT — **BUILT.** `979ee7c`..`c43806f` on `feat-046-permit-stage`, **pushed, NOT merged**. Executed subagent-driven from `docs/superpowers/plans/2026-08-10-permit-stage.md`: 7 tasks, fresh implementer + reviewer each, then a whole-branch review. Worker returns `permit_milestone`; the 11-value table plus `permitStage`/`permitStageChip` sit in all three pages, raw-byte identical (2,797 bytes, 54 CRLF each) and held in agreement by `worker/test/stage-map.test.mjs`; chip rendered at all six sites. Worker 243/243. **The final review earned its keep — it found two things every per-task review missed, and proved both rather than asserting them.** (1) `.map-result span` (0-1-1) outranked `.stage` (0-1-0), so the map side-list chip rendered as a full-width ~1070px block with **all seven stages in the same grey** — the **fourth** occurrence of the container-scoped-selector trap in this repo, and my own ui-ux pass missed it by measuring the table site only. Fixed with `.map-result > span` and a comment saying why the child combinator is load-bearing; new `verify-tmp/t75-mapchip.js` confirms inline-flex, narrow, one distinct colour per stage, both themes, both viewports. (2) `stage-map.test.mjs` extracted `permitStage` from **index.html only** — the reviewer reordered `list.html`'s copy to read milestone before status and the suite stayed **241/241 green**, on the one page where closed permits actually appear; the assertions now loop over all three pages. (3) Spec gap closed: `mapPermitDetails` had no Stage fact row, so on the map the verbatim city value lived only in a hover-only `title`, unreachable on touch. ui-ux-pro-max pre-landing pass green — 54 checks, **all seven stages measured for contrast in BOTH themes at BOTH viewports**, no cell overflow, no colour-only meaning, no horizontal scroll, `permit_status` retained beside every chip, no animation under reduced motion. Mutants M1–M4 caught; M5 survives by design, recorded as a known gap rather than pinning the suite to today's palette. Note for merge: `docs/list.html` will conflict with `fix-045-red-suites` in the `saveUserListCookie` comment — a lone-LF normalization both branches made independently (Claude Code)
@@ -1574,9 +1606,9 @@ Design: `docs/superpowers/specs/2026-08-10-filter-restructure-design.md`
 ### FEAT-047 · The tri-state filter control, and a Stage filter on the map
 
 - **Priority:** P2-Medium
-- **Status:** in-progress
+- **Status:** done
 - **Created:** 2026-08-10 10:30 CT
-- **Updated:** 2026-08-10 14:51 CT
+- **Updated:** 2026-08-11 13:25 CT
 - **Tags:** Chicago Permit Search Tool, map
 
 Follow-on to FEAT-046, which puts the stage on screen but offers no way to
@@ -1616,23 +1648,24 @@ being selected. The list half is FEAT-048 and reuses this card's control.
 Design: `docs/superpowers/specs/2026-08-10-filter-restructure-design.md`
 
 **Checklist:**
-- [ ] Build the shared tri-state control: off → include → exclude → off
-- [ ] role="button" with the state in the accessible name — NOT aria-checked="mixed", which means "partially checked" and would announce something false
-- [ ] Plain-character ✓ and ✗, never Material Symbols ligatures (FIX-027)
-- [ ] Stage as a tri-state dropdown, offering only stages present in the result
-- [ ] Counts computed BEFORE that filter's own exclusions, so ticking one never moves the others
-- [ ] Rule B: includes narrow, excludes remove, and BOTH always apply
-- [ ] Persist `stages` in map settings — FIX-035 means every map control survives reload
-- [ ] Empty state with a Clear filters action, since includes and excludes can compose to nothing
-- [ ] Status strip states DIRECTION, not just presence — "In progress, Finishing, not Halted"
-- [ ] 44px on every option row and dropdown header at iPhone 13 width
-- [ ] Keyboard: cycle by real Enter/Space, never .click()
-- [ ] Verify headless at desktop and iPhone 13, with a mutation control
-- [ ] ui-ux-pro-max pass before landing
+- [x] Build the shared tri-state control: off → include → exclude → off
+- [x] role="button" with the state in the accessible name — NOT aria-checked="mixed", which means "partially checked" and would announce something false
+- [x] Plain-character ✓ and ✗, never Material Symbols ligatures (FIX-027)
+- [x] Stage as a tri-state dropdown, offering only stages present in the result
+- [x] Counts computed BEFORE that filter's own exclusions, so ticking one never moves the others
+- [x] Rule B: includes narrow, excludes remove, and BOTH always apply
+- [x] Persist `stages` in map settings — FIX-035 means every map control survives reload
+- [x] Empty state with a Clear filters action, since includes and excludes can compose to nothing
+- [x] Status strip states DIRECTION, not just presence — "In progress, Finishing, not Halted"
+- [x] 44px on every option row and dropdown header at iPhone 13 width
+- [x] Keyboard: cycle by real Enter/Space, never .click()
+- [x] Verify headless at desktop and iPhone 13, with a mutation control
+- [x] ui-ux-pro-max pass before landing
 - Moved to FEAT-050: work-type include, property-use redefinition + parity test, visited/called consolidation, drawer regroup, and the migration of those four keys
 
 **Log:**
-- 2026-08-11 13:05 CT — **this card's code is now LIVE**: `integration` merged into `main` (`22afd68`) while landing FEAT-052; `triStateOptionHtml` is present in the served `map.html`. Status left as-is — not re-verified against the live site in this session (Claude Code)
+- 2026-08-11 13:25 CT — **done**, closed with every checklist item ticked against a run, not from memory. `t76-stage-filter` (29 assertions per viewport, desktop + iPhone 13) covers the card line by line: options are native buttons carrying the state and the NEXT ACTION in the accessible name; only stages PRESENT in the result are offered; **counts beside the other options do not move when one is ticked**; include narrows, exclude removes, an include and an exclude of the same stage yields nothing (Rule B); the empty state explains itself and offers a 44px way out; the status strip says "not X" for an exclusion and drops the note when nothing is set; a **real Enter press** cycles an option; and the selection survives a reload (the FIX-035 persistence — `defaultMapSettings()` carries `stages`, re-checked on the LIVE map). `t76-uiux` adds contrast ≥4.5:1 on label, count and mark in both themes, 44px on every row and the dropdown header, and no horizontal scroll. `t76-mutants`: all caught, `docs/map.html` restored byte-identical. The marks are plain `✓`/`✗` characters in `triStateOptionHtml` (map.html:7594), never a Material Symbols ligature (FIX-027), and the state is in the accessible name regardless. Live check via `t79-live-close.js`: the deployed map carries the control, the matcher and the persisted setting (Claude Code)
+- 2026-08-11 13:05 CT — this card's code went LIVE: `integration` merged into `main` (`22afd68`) while landing FEAT-052 (Claude Code)
 - 2026-08-10 10:30 CT — created; split from FEAT-046 at Divyam's request so display ships first (Claude Code)
 - 2026-08-10 14:51 CT — **rescoped again and started.** A scope check before planning found this card ran 2-3x FEAT-046: fourteen functions, all triplicated across the three pages, and five separate changes that merely share a control. Divyam split it — this card keeps the tri-state control, its settings key, the Rule B matcher and the Stage dropdown; **FEAT-050** takes the conversions. The split line is deliberate: redefining Property Use changes what a shipped filter MEANS, and it is the only piece that can silently return the wrong permits rather than merely look wrong. Branch `feat-047-map-filters` cut from `feat-046-permit-stage`, since the Stage filter needs its helpers. Reconnaissance confirmed the spec's assumptions still hold against the post-FEAT-046 code: `defaultMapSettings` carries 13 keys, and the 8 `zcat` values in `ZONE_COLORS` match the zoning data exactly (Claude Code)
 - 2026-08-10 11:13 CT — **rescoped and retitled** after wireframing both filter surfaces with Divyam (`bd344cf`). Started as "four stage chips"; drawing the current drawer showed why that does not fit, and Divyam specified the replacement: dropdowns with tri-state checkboxes for Date Range, Property Use and Work types, visited/called consolidated onto the same control, GC-jobs and Value staying as typed fields. Two corrections came out of the drawing. **Date Range cannot take include/exclude** — it is a continuous range with nothing to put checkboxes on, and excluding a date range has no meaning beside an include, so it stays two date fields in the Ranges group. **Property Use could not either as it stands** — its three levels are nested, each strictly wider than the last, so including Residential while excluding Residential+business asks about a set containing the one being included; Divyam chose to redefine it as the 8 flat zoning categories, which the map's own legend already teaches. Rule B chosen for include/exclude interaction. All four persisted settings migrate losslessly. Split from FEAT-048 so the map can ship first (Claude Code)
@@ -1681,9 +1714,9 @@ so any caller sending no Origin is unaffected.
 ### FEAT-048 · Rebuild the permit list filter row on the same control
 
 - **Priority:** P2-Medium
-- **Status:** todo
+- **Status:** done
 - **Created:** 2026-08-10 11:13 CT
-- **Updated:** 2026-08-10 11:13 CT
+- **Updated:** 2026-08-11 13:25 CT
 - **Tags:** Chicago Permit Search Tool, list
 
 The list half of FEAT-047's design, split so the map can ship first. Reuses
@@ -1706,17 +1739,17 @@ Blocked on FEAT-047 — the control comes from there.
 Design: `docs/superpowers/specs/2026-08-10-filter-restructure-design.md`
 
 **Checklist:**
-- [ ] Stage dropdown offering only stages present in THIS list, with counts of this list
-- [ ] Visited and Called as tri-state pills, replacing the four chips
-- [ ] Leave Follow-up only as a plain on/off pill — Divyam's call, "everything except follow-ups" is not a question anyone asks
-- [ ] Empty state with a Clear filters action
-- [ ] `#list-filter-status` states direction, not just presence
-- [ ] Confirm the table is still above the fold at iPhone 13 width with filters applied
-- [ ] Verify headless at desktop and iPhone 13, with a mutation control
-- [ ] ui-ux-pro-max pass before landing
+- [x] Stage dropdown offering only stages present in THIS list, with counts of this list
+- [x] Visited and Called as tri-state pills, replacing the four chips
+- [x] Leave Follow-up only as a plain on/off pill — Divyam's call, "everything except follow-ups" is not a question anyone asks
+- [x] Empty state with a Clear filters action
+- [x] `#list-filter-status` states direction, not just presence
+- [ ] **Never held, and not delivered by this card:** "the table is still above the fold at iPhone 13 width" — measured, it was at ~1234px BEFORE this card touched anything. FEAT-052 is what addressed it (folded: 811px in an 844px viewport)
+- [x] Verify headless at desktop and iPhone 13, with a mutation control
+- [x] ui-ux-pro-max pass before landing
 
 **Log:**
-- 2026-08-11 13:05 CT — **this card's code is now LIVE**: `integration` merged into `main` (`22afd68`) while landing FEAT-052, which builds directly on this card's filter row. Status still says `todo`, which is now certainly wrong — it needs Divyam's call, not mine (Claude Code)
+- 2026-08-11 13:25 CT — **done**, closed at Divyam's direction. `t77-list-filters` at both viewports covers the row: only stages present in THIS list are offered (including the CLOSED ones no other surface shows), counts are of the whole list so ticking one never moves the others, include/exclude/clear cycles, **Follow-up stays a boolean at every step** (sampled after each of four clicks, because a tri-state mutant ends in the right place after three), the empty view explains itself and offers exactly one way out, and a real Enter operates a pill. `t77-uiux` covers contrast in both themes and 44px targets; `t77-mutants` — all caught, `docs/list.html` restored byte-identical. Live check: the deployed `list.html` carries the Stage control and both tri-state pills, with Follow-up still a plain `aria-pressed` toggle. **One item is left unticked because it was never true:** "the table is still above the fold at iPhone 13 width" — this card's own verification MEASURED it at ~1234px before any of this work, so the box could not have been honestly ticked then either. **FEAT-052** is what actually delivered it: folded, the table's top edge is 811px in an 844px viewport. Recorded rather than ticked, so the board does not claim this card solved something it did not (Claude Code)
 - 2026-08-10 11:13 CT — created; split from FEAT-047 after wireframing, so the map ships before the list and the shared control lands once (Claude Code)
 
 ### FEAT-045 · Tooling: control-style snapshot harness for blanket CSS changes
