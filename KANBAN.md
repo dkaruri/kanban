@@ -274,9 +274,9 @@ Do not fix the symptom by special-casing this name. A contractor that exists in 
 ### FIX-040 · Search result count and "add to list" total don't update when work types are included/excluded
 
 - **Priority:** P3-Low
-- **Status:** todo
+- **Status:** done
 - **Created:** 2026-08-05 11:30 CT
-- **Updated:** 2026-08-05 11:30 CT
+- **Updated:** 2026-08-11 13:55 CT
 - **Tags:** Chicago Permit Search Tool
 
 Reported by Divyam: when a search is narrowed by including or excluding work types, the "how many found" count does not update to reflect the filtered set, and the count on the add-to-list action is likewise stale. The filter changes which permits show, but the two counts keep reporting the pre-filter total — so the numbers disagree with what's actually on screen and with what an "add all" would add.
@@ -284,14 +284,19 @@ Reported by Divyam: when a search is narrowed by including or excluding work typ
 Pairs with FIX-038 (tri-state include/exclude): whatever recomputes the visible result set on an include/exclude change must also drive both counts from that same set, so they can't drift. Find the single place the filtered result set is produced and derive the "found" count and the add-to-list count from it rather than from the unfiltered list.
 
 **Checklist:**
-- [ ] Reproduce: exclude (and, per FIX-038, include) a work type and confirm both the results-found count and the add-to-list count stay at the pre-filter number; note where each count is computed today
-- [ ] Drive both counts from the same filtered result set the map/list actually renders, recomputed on every filter change (include, exclude, and the other filters too — check whether date/value/neighborhood filters have the same stale-count bug while you're here)
-- [ ] Make "add to list" add exactly the counted set — the number shown and the number added must match
-- [ ] Root-cause, not per-symptom: fix it where the count is derived so every filter path stays honest, rather than patching the work-type path alone
-- [ ] Verify on desktop and mobile: the count updates live as work types are included/excluded and matches both the visible pins/rows and what add-to-list adds
+- [x] Reproduce: exclude (and, per FIX-038, include) a work type and confirm both the results-found count and the add-to-list count stay at the pre-filter number; note where each count is computed today
+- [x] Drive both counts from the same filtered result set the map/list actually renders, recomputed on every filter change (include, exclude, and the other filters too — check whether date/value/neighborhood filters have the same stale-count bug while you're here)
+- [x] Make "add to list" add exactly the counted set — the number shown and the number added must match
+- [x] Root-cause, not per-symptom: fix it where the count is derived so every filter path stays honest, rather than patching the work-type path alone
+- [x] Verify on desktop and mobile: the count updates live as work types are included/excluded and matches both the visible pins/rows and what add-to-list adds
 
 **Log:**
 - 2026-08-05 11:30 CT — created (Divyam)
+- 2026-08-11 13:32 CT — in-progress; started by reading every count surface rather than assuming the page (Claude Code)
+- 2026-08-11 13:40 CT — reproduced, and NOT where the report suggested. The Permit Map is already honest: `verify-tmp/t80b-map-count.js` (new) drives a work-type exclusion and a value range and asserts `#result-count`, the count pill, the visible summary, the "Add all N to list" label, the painted source features and what add-all actually hands the list all equal `state.map.filteredRows` — 72 assertions, desktop + iPhone 13, green on unmodified code. The stale counts live on the **contractor card** (`index.html` / `list.html`), whose Work type / Permit type / Contract role / text filters narrow the table while `contactDetailHtml` counted `desc.permits` and `addAllFromCard()` added `desc.permits`. Measured on the untouched build: filter 60 permits down to 30 and the button still read "Add all 60 to list" and added 60 (Claude Code)
+- 2026-08-11 13:46 CT — fixed at the single derivation point: both the button's number and `addAllFromCard()` now come from `cardFilteredPermits(desc)`, the same set the table lists — so every card filter path stays honest, not just work type. Button keeps its box at zero matches (`aria-disabled`, not `disabled`). Changed in both `docs/index.html` and `docs/list.html`, which carry the card markup by design (Claude Code)
+- 2026-08-11 13:47 CT — verified: `verify-tmp/t80-card-count.js` (new) covers index + list at desktop and iPhone 13 — unfiltered says 60 and adds 60 (the control that proves the probe can report success), work-type-filtered says 30 and adds 30, text-filtered says 6 and adds 6. It FAILED on the pre-fix build and passes now. Regression: t24-contact-overlay, t25-uiux-card, t4, t5 pass; `node --test worker/test/*.test.mjs` 282/282 including the control-bytes scan; both files stay all-CRLF with zero 0x08/NUL bytes. `verify-tmp/*.mjs` has 12 failures (`feat031-impl` extraction drift) that are identical with the change stashed — pre-existing, unrelated (Claude Code)
+- 2026-08-11 13:55 CT — done. Commit `cdcd88f` on branch `fix-040-card-counts`, pushed. The merge into `integration` was blocked by a permission prompt in this session, so the branch is NOT yet on `integration` and nothing has reached `main` — Divyam approves the ship (Claude Code)
 
 ### FIX-038 · Permit Map work-type filter: make each work type include-only, exclude, or neutral via a tri-state checkbox
 
