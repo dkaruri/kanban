@@ -85,6 +85,41 @@ NEVER
 
 > **Purpose:** Things to fix on current projects — currently the Chicago Permit Search tool. Bugs, regressions, broken behavior, and cleanup on what already exists. This is Claude Code's default work queue.
 
+### FIX-048 · Nothing checks that the board still renders — a bad KANBAN.md write blanked it for a day
+
+- **Priority:** P1-High
+- **Status:** todo
+- **Created:** 2026-08-11 14:19 CT
+- **Updated:** 2026-08-11 14:19 CT
+- **Tags:** Kanban board, tests
+
+Commit `68cf966` appended one log line to this file through PowerShell and rewrote the whole file as UTF-8 of its own cp1252 misreading: every `·` (U+00B7) became the two characters U+00C2 U+00B7, and every emoji expanded into four such characters. (Deliberately spelled out as code points here — a card that quotes the corrupted bytes literally would trip the very scan this task asks for.) `board.html` parses task headings with `/^###\s+([A-Z]+-\d+)\s*[·:\-]\s*(.+)$/` — the mid-dot is *inside the character class* — so **0 of 104 tasks parsed**. All three lists rendered "No matching tasks" with a count of 0. The lists themselves survived because `##` headings are pure ASCII, which is exactly why it did not look like a total failure.
+
+It sat live for 24 hours and was found by Divyam, not by anything automated. Repaired in `af51484`. Three board-editing commits landed in that window without anyone loading the board.
+
+**The gap is not the encoding — that trap is already written down and was hit anyway. The gap is that no step between "edit KANBAN.md" and "push" ever asks the parser whether the file still parses.**
+
+A check that would have caught it, kept deliberately small:
+
+- Read `board.html` and **extract the heading regex out of it** rather than copying it. A copied regex drifts from the real parser and then agrees with the bug. Fail loudly if the extraction matches nothing.
+- Strip HTML comments the same way `parse()` does, then for each `## ` list (skipping Archive) count headings that match. **Fail if any list has zero.**
+- Separately fail on a stray U+00C2, U+00E2 or U+FFFD anywhere in the file — the mojibake signature, independent of whether it happens to break the regex this time.
+- Show the check can report failure as well as success: run it against a deliberately mojibaked copy and assert it exits non-zero. A probe only trusted after it has been seen to fail.
+
+Repair note for whoever hits this again: the reverse of this corruption is **cp1252, not latin1**. 2852 of the mangled characters sit in 0x80–0x9F where the two differ, so `Buffer.from(s,'latin1')` drops them silently. Decode as UTF-8, re-encode through the 32-entry cp1252 high table, and assert zero unmappable characters before writing. Then `git diff` the result against the last good commit and confirm the *only* difference is the edit that was intended.
+
+**Checklist:**
+- [ ] Add `check-board.mjs` at the repo root — no dependencies, node only, exits non-zero with the offending list names
+- [ ] Extract the heading regex from `board.html` at runtime; error out if it cannot be found
+- [ ] Assert every non-Archive list has at least one parsed task
+- [ ] Assert no U+00C2, U+00E2 or U+FFFD anywhere in `KANBAN.md` — note this card spells those out as code points precisely so the scan does not flag itself
+- [ ] Prove it fails: run it against a mojibaked copy and assert a non-zero exit
+- [ ] Wire it so it actually runs on a board edit — a `pre-commit` hook is per-clone and this repo has never had one, so prefer a GitHub Action on push, or accept the hook and write down that a re-clone loses it
+- [ ] Do not use PowerShell to write any of this
+
+**Log:**
+- 2026-08-11 14:19 CT — created after repairing the board with `af51484`. The encoding trap was already documented and recurred anyway; this card is about the missing verification step, not about the encoding (Claude Code)
+
 ### FIX-047 · t44's 44px touch-target check flakes ~1 run in 5 and has never been attributed
 
 - **Priority:** P3-Low
