@@ -1397,6 +1397,40 @@ Not fixed inside FEAT-021 on purpose: the new value-range fields were matched to
 
 > **Purpose:** New features and ideas to be added to the existing Chicago Permit Search tool. Enhancements that extend the current project rather than repair it.
 
+### FEAT-051 · Deal-analysis page: parse a URAR appraisal's comps + supplementals, compare its value vs. your expected ARV, and pull each comp's permit view + GC/subs
+
+- **Priority:** P1-High
+- **Status:** todo
+- **Created:** 2026-08-11 13:20 CT
+- **Updated:** 2026-08-11 13:20 CT
+- **Tags:** Chicago Permit Search Tool
+
+Requested by Divyam. A new **private** deal-analysis surface (its own page, e.g. `docs/deals.html`, vanilla-JS and self-contained like the other three) that ties an appraisal to the permit tool's contractor intelligence. Flow: upload a URAR/1004 appraisal → extract its comparable + supplemental sales and its "Indicated Value by Sales Comparison Approach" → record your **expected ARV** → compare the two → and for each comp / recently-sold address in the area, resolve its permit view, general contractor, and open subs via the existing profile engine.
+
+This is mostly **net-new data**, not just rendering — verified against the repo and against a real appraisal (a Fannie Mae Form 1004 / URAR). The Socrata permits dataset carries `reported_cost` (applicant-reported construction cost) only, **never a sale price**; nothing today ingests appraisals, sales, ARV, or comps. Four pieces, one of which reuses the existing engine:
+
+1. **Appraisal parse (new, highest risk).** Target the 1004 grids: the Sales Comparison Approach grid (subject + 3 comps) and the separate Supplemental Value Addendum grid (3 more). Per comp the form exposes address, sale price, proximity, sale/contract dates (`s05/26;c03/26`), GLA, adjustments + Net Adj %, `Data Source(s)` (MRED MLS# + DOM), and `Verification Source(s)` (Assessor); the report's opinion of value is the "Indicated Value by Sales Comparison Approach" line. `pdftotext -layout` cleanly extracts all of this on a text-layer PDF like the sample — but scanned/flattened appraisals exist, so an **OCR fallback + a manual-correction UI** are required, not optional.
+2. **Sold-sales source (new).** Use **Cook County Assessor Parcel Sales** (free, Socrata) as the recent-sales feed for area comps/supplementals — it is exactly what the appraiser verifies against — with the report's MLS# as a cross-reference key. Paid APIs (ATTOM etc.) only if the free source proves insufficient. Document freshness, coverage, and ToS; degrade if unavailable.
+3. **ARV comparison (small).** The report's indicated value vs. your entered expected ARV → show the delta and a clear "matches well / off" flag on a chosen threshold.
+4. **Comp → permit view + GC/subs (reuses `profiles.js`).** Normalize/geocode each comp/sold address to permit rows, then the existing profile engine yields the permit view, GC, and open subs. **Best-effort: many sold houses have no recent permit** — the UI must render "no permit on record" cleanly rather than looking broken.
+
+**Privacy.** Expected ARV and the deal itself are private and must **never** appear on a shared list link. The app has no user accounts, so "private to me" means client-side/local or a private key — decide and document the mechanism explicitly.
+
+**Checklist:**
+- [ ] Record scope/phasing in the Log before building — this is large; comp→permit resolution is shippable on its own without the parser or the sales feed, so sequence deliberately
+- [ ] `docs/deals.html`: self-contained vanilla JS matching the other three surfaces; shared `chi_permit_theme`; accessibility bar (≥44px targets, labels on every control, 4.5:1 both themes, no sub-16px inputs, reduced-motion); verify headless at desktop + iPhone 13
+- [ ] Parse the 1004 Sales-Comparison and Supplemental grids: per comp extract address, sale price, sale/contract dates, GLA, MLS#/DOM, verification source, and the indicated value; handle 3 comps + 3 supplementals
+- [ ] OCR fallback for scanned appraisals, plus a manual-correction UI so a misread field can be fixed before it drives anything
+- [ ] Store the uploaded appraisal privately (R2 is permit-photo-scoped today — decide where appraisal files live and who can read them)
+- [ ] Integrate Cook County Assessor Parcel Sales for area recent-sales/supplementals; cross-reference on MLS# where present; document freshness/coverage; degrade on outage rather than showing an empty result
+- [ ] Address→permit resolution reusing `profiles.js`; handle no-match, multi-permit-per-address, and non-Chicago comps gracefully
+- [ ] ARV comparison UI: indicated value vs. expected ARV, the delta, and a match/off signal on the user's threshold
+- [ ] Privacy: ARV/deal data never leaks onto a shared list; document the no-accounts storage choice
+- [ ] Verify on desktop and mobile, both themes: an appraisal whose comps have permits, comps with none, a scanned PDF via the OCR path, and a sales-source outage
+
+**Log:**
+- 2026-08-11 13:20 CT — created (Divyam). Scope decided with Divyam before filing: input = parse the appraisal PDF (URAR/1004; sample confirmed as a text-layer PDF, `pdftotext -layout` extracts the comp grids); sold-sales = add a data source (Cook County Assessor Parcel Sales, free Socrata, matching the appraiser's Assessor verification, MLS# as cross-ref); surface = new dedicated page; visibility = private, never on shared lists (Claude Code)
+
 ### FEAT-046 · Show each permit's construction stage everywhere a permit is shown
 
 - **Priority:** P2-Medium
