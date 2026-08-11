@@ -1400,9 +1400,9 @@ Not fixed inside FEAT-021 on purpose: the new value-range fields were matched to
 ### FEAT-052 · Permit list: collapsible header, a filter row that stays put, count under the table
 
 - **Priority:** P2-Medium
-- **Status:** todo
+- **Status:** done
 - **Created:** 2026-08-11 11:53 CT
-- **Updated:** 2026-08-11 11:53 CT
+- **Updated:** 2026-08-11 12:26 CT
 - **Tags:** Chicago Permit Search Tool, list, ui
 
 Three complaints from Divyam, all MEASURED on the working branch rather than
@@ -1437,20 +1437,23 @@ clamp. Collapsed: table top ~353px desktop, ~729px mobile.
 Design: `docs/superpowers/specs/2026-08-11-list-header-collapse-design.md`
 
 **Checklist:**
-- [ ] Reserved 16px mark slot — the tick must not be prepended to the label
-- [ ] min-width per control, sized to its widest state
-- [ ] Stage summary becomes a fixed-width count badge; full wording moves inside the dropdown
-- [ ] Split into two labelled rows: Permit / Your activity
-- [ ] Filtered count moves below the table; the unfiltered tally STAYS in the filter row
-- [ ] Collapsible header, open by default, animated, honouring prefers-reduced-motion
-- [ ] MOVE `#list-filters` + `#list-action-status` above the table so the fold region is contiguous
-- [ ] `#list-action-status` must NEVER fold — it holds the FIX-003 undo link
-- [ ] Collapse state persists per list, and does NOT reset on an add or a live frame
-- [ ] Regression-assert ZERO movement: dx/dy/dw of every control and the table's top edge
-- [ ] Verify headless at desktop and iPhone 13, with a mutation control
-- [ ] ui-ux-pro-max pass before landing
+- [x] Reserved 16px mark slot — the tick must not be prepended to the label
+- [x] min-width per control, sized to its widest state
+- [x] Stage summary becomes a fixed-width count badge; full wording moves inside the dropdown
+- [x] Split into two labelled rows: Permit / Your activity
+- [x] Filtered count moves below the table; the unfiltered tally STAYS in the filter row
+- [x] Collapsible header, open by default, animated, honouring prefers-reduced-motion
+- [x] MOVE `#list-filters` + `#list-action-status` above the table so the fold region is contiguous
+- [x] `#list-action-status` must NEVER fold — it holds the FIX-003 undo link
+- [x] Collapse state persists per list, and does NOT reset on an add or a live frame
+- [x] Regression-assert ZERO movement: dx/dy/dw of every control and the table's top edge
+- [x] Verify headless at desktop and iPhone 13, with a mutation control
+- [x] ui-ux-pro-max pass before landing
+- [x] Two further shifts found only by measuring: Follow-up's pressed ✓ and `#list-action-status`'s collapsing box both get reserved space
 
 **Log:**
+- 2026-08-11 12:26 CT — done; implemented in `fba447b` (+ `d0fd62f` recording it in the spec), pushed on `feat-052-list-header`. **Merge into `integration` is still pending — the merge command was blocked and needs Divyam's go-ahead.** Verified headless at 1280×900 and iPhone 13: `t78-list-header` (dx/dy/dw = 0 across every filter interaction, the fold, undo reachable while folded, persistence across a reload AND across repaints, reduced motion), `t78-uiux` (contrast in both themes, a real Tab focus ring, disclosure semantics, named groups), `t78-mutants` (6/6 caught, tree restored byte-identical), 282 worker unit tests, and t44/t45/t46/t54/t57/t58/t59/t64/t65/t66/t76/t77 green. **Measuring found two shifts the design missed**, both the same shape as the reported bug: the shared `button.tag[aria-pressed="true"]::before` adds Follow-up's ✓ only when pressed (+12.9px), and `#list-action-status` — now that it sits above the table — collapsed to 0 and expanded to 46px every time a filter announced itself. Both now hold reserved space. Also: `.route-source` had to join the fold (the design's list omitted it, and the region would not have been contiguous), and the fold animates `grid-template-rows: 1fr→0fr` so no height is ever measured. Table top edge: desktop 840→437px, iPhone 13 1548→857px. **The filter row costs height it did not before** (125px desktop, 177px at 390px, against 96px) — two labelled lines, a reserved tally slot and min-widths are not free; the fold is what pays for it, and `t77`'s growth guard now pins that new baseline. Two suites had to be corrected rather than repaired away: `t64`'s "the toolbar stays on the first screen" is no longer true with the clamp gone, so it now asserts that FOLDING brings the filters onto the first screen, and `t44`/`t45` follow the tally to its new element (Claude Code)
+- 2026-08-11 12:01 CT — in-progress; implementing on `feat-052-list-header` from the committed spec (Claude Code)
 - 2026-08-11 11:53 CT — created; spec committed `03ff94d` on branch `feat-052-list-header`, which is cut from `integration` and already merged current. Two catches recorded while designing, both of which would have been bugs. **The fold region is not contiguous** — the filter row sits between folding blocks (toolbar above, Starting location below), so `#list-filters` moves to sit directly above the table, which is where it belongs anyway. And **`#list-action-status` must never fold**: it carries the FIX-003 undo link, so folded away "Undo" would vanish at the exact moment it is needed, reintroducing the class of bug that card existed to fix. Also recorded: `renderListDesc` runs after every add and on every live sync frame, so resetting the collapse there would shut the panel while someone is reading it — reset only on a change of `activeListId`, which the existing code already documents. One deliberate behavioural change: moving the count below the table means a screen-reader user hears the rows THEN the summary (Claude Code)
 
 ### FEAT-051 · Deal-analysis page: parse a URAR appraisal's comps + supplementals, compare its value vs. your expected ARV, and pull each comp's permit view + GC/subs
