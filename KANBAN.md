@@ -88,9 +88,9 @@ NEVER
 ### FIX-053 · GC & Open Sub permit table: fixed column widths on wide screens, stacked cards on phones
 
 - **Priority:** P2-Medium
-- **Status:** todo
+- **Status:** in-progress
 - **Created:** 2026-08-11 14:05 CT
-- **Updated:** 2026-08-11 14:05 CT
+- **Updated:** 2026-08-12 15:10 CT
 - **Tags:** Chicago Permit Search Tool
 
 Requested by Divyam. The permit table inside the **General Contractor** and **Open Sub** views (`docs/index.html`, the `results-table permits-table` built in `renderPermitsTable`/`buildContactCard` with `options.select` true; column widths at `.permits-table th:nth-child(n)` around lines 832–850) currently mixes fixed pixels and percentages — `56px, 18%, 15%, 88px, 31%, 14%`. The percentage columns shift with the viewport and let permit numbers and dates wrap mid-figure (the class of bug behind FIX-044). Make the six columns steady on wide screens and, on phones, stop the horizontal scroll by stacking each permit into a card rather than forcing figures to wrap.
@@ -121,6 +121,7 @@ Phone layout (≤ 640px): **stack each permit into a card** — reuse the existi
 
 **Log:**
 - 2026-08-11 14:05 CT — created (Divyam). Column widths and the phone=stacked-cards decision settled in an interactive mockup walkthrough; the mockup measured that wrapping text alone can't fit a phone because the figure columns can't wrap, which is why phones stack rather than wrap-in-table (Claude Code)
+- 2026-08-12 15:10 CT — in-progress on `fix-053-permit-table-widths` (Claude Code)
 
 ### FIX-052 · Let the user type a page number in the "Page X of Y" pager to jump directly
 
