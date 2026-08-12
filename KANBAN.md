@@ -85,6 +85,29 @@ NEVER
 
 > **Purpose:** Things to fix on current projects — currently the Chicago Permit Search tool. Bugs, regressions, broken behavior, and cleanup on what already exists. This is Claude Code's default work queue.
 
+### FIX-052 · Let the user type a page number in the "Page X of Y" pager to jump directly
+
+- **Priority:** P2-Medium
+- **Status:** todo
+- **Created:** 2026-08-11 13:35 CT
+- **Updated:** 2026-08-11 13:35 CT
+- **Tags:** Chicago Permit Search Tool
+
+Requested by Divyam: the directory pager (`docs/index.html`, `renderPager()` near line 6051) only shows Previous / Next and a static `Page X of Y · Z per page` label. With a large result set — e.g. "Page 1 of 275" — reaching a middle or last page means clicking Next hundreds of times. Make the current-page number a **text input** so a page can be typed and jumped to directly.
+
+The pieces are already there: `state.pageIndex`, `pageCount()`, and `changePage()`. This adds a "go to page" path alongside `changePage(±1)`, not a new pagination model.
+
+**Checklist:**
+- [ ] Turn the current-page figure in `Page X of Y` into a small number input (default value = current page) that jumps on Enter and on blur; keep "of Y" and the per-page text as context
+- [ ] Set the page from the input via the same clamp/refresh path `changePage()` uses, so out-of-range input can't desync the pager from the rendered slice
+- [ ] Clamp and sanitize: values below 1 or above Y snap to the nearest valid page; non-numeric/empty input reverts to the current page rather than erroring or blanking the results
+- [ ] Keep Previous/Next working and the input in sync after they, a new search, a sort, or a page-size change move the page
+- [ ] Accessibility: a real `<label>`/`aria-label` (e.g. "Go to page"), ≥44px touch target, ≥16px font (no iOS zoom), visible focus, 4.5:1 contrast in both themes
+- [ ] Verify on desktop and mobile, both themes: typing a valid page, 0, a number past the end, and gibberish; confirm the shown slice matches the typed page
+
+**Log:**
+- 2026-08-11 13:35 CT — created (Divyam)
+
 ### FIX-051 · At 660px the result count label pushes the whole page sideways
 
 - **Priority:** P3-Low
