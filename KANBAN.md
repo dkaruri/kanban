@@ -85,6 +85,43 @@ NEVER
 
 > **Purpose:** Things to fix on current projects — currently the Chicago Permit Search tool. Bugs, regressions, broken behavior, and cleanup on what already exists. This is Claude Code's default work queue.
 
+### FIX-053 · GC & Open Sub permit table: fixed column widths on wide screens, stacked cards on phones
+
+- **Priority:** P2-Medium
+- **Status:** todo
+- **Created:** 2026-08-11 14:05 CT
+- **Updated:** 2026-08-11 14:05 CT
+- **Tags:** Chicago Permit Search Tool
+
+Requested by Divyam. The permit table inside the **General Contractor** and **Open Sub** views (`docs/index.html`, the `results-table permits-table` built in `renderPermitsTable`/`buildContactCard` with `options.select` true; column widths at `.permits-table th:nth-child(n)` around lines 832–850) currently mixes fixed pixels and percentages — `56px, 18%, 15%, 88px, 31%, 14%`. The percentage columns shift with the viewport and let permit numbers and dates wrap mid-figure (the class of bug behind FIX-044). Make the six columns steady on wide screens and, on phones, stop the horizontal scroll by stacking each permit into a card rather than forcing figures to wrap.
+
+**Design walkthrough done with Divyam (interactive mockup) — build to this spec exactly:**
+
+Wide layout (desktop/tablet, `table-layout: fixed`, total **778px**):
+
+| # | Column | Width | Wrap |
+|---|--------|-------|------|
+| 1 | Select (checkbox) | 56px | — |
+| 2 | Permit | 96px | never (figure, one line) |
+| 3 | Status | 148px | one line |
+| 4 | Issued | 104px | never (figure, one line) |
+| 5 | Address | 262px | **may wrap** to multiple lines |
+| 6 | Cost | 112px | never (figure, one line) |
+
+Phone layout (≤ 640px): **stack each permit into a card** — reuse the existing `.results-table` responsive stacked-card treatment (the `td::before` label pattern already in the sheet). No horizontal scrollbar; Address gets the full card width and wraps; Permit / Issued / Cost each sit on their own line so no figure ever breaks mid-number. This was the decision after confirming in the mockup that letting text wrap alone does NOT fit a 390px phone — the un-wrappable figure columns (checkbox + Permit + Issued + Cost) already exceed the screen, so wrapping had to be paired with stacking.
+
+**Checklist:**
+- [ ] Replace the mixed px/% `.permits-table` column rules with the fixed pixel widths above (56 / 96 / 148 / 104 / 262 / 112); keep `table-layout: fixed` so the widths are honored
+- [ ] Permit, Issued, Cost cells: `white-space: nowrap` (never wrap a figure); Cost stays right-aligned + `tabular-nums`. Guard against FIX-044 — a permit number or date must never split across lines
+- [ ] Address cell: allow wrapping (`white-space: normal`, `overflow-wrap` so long streets like "DR MARTIN LUTHER KING JR DR" break cleanly); Status one line
+- [ ] Phone ≤640px: confirm the existing `.results-table` stacked-card layout applies to this table and renders every field with its label; Address full-width and wrapping; each figure on its own line; verify NO horizontal scroll at 390px
+- [ ] Do the same on the Open Sub view (same table/component) — verify both, not just the GC view
+- [ ] Beware the byte/CRLF hazards editing `docs/index.html` (CLAUDE.md): use the Edit tool, not a heredoc; the file is CRLF
+- [ ] a11y bar: ≥44px targets, labels, 4.5:1 both themes, no meaning by color alone, reduced-motion; verify headless at desktop AND iPhone 13, asserting geometry (column widths + no sideways scroll), not just DOM presence
+
+**Log:**
+- 2026-08-11 14:05 CT — created (Divyam). Column widths and the phone=stacked-cards decision settled in an interactive mockup walkthrough; the mockup measured that wrapping text alone can't fit a phone because the figure columns can't wrap, which is why phones stack rather than wrap-in-table (Claude Code)
+
 ### FIX-052 · Let the user type a page number in the "Page X of Y" pager to jump directly
 
 - **Priority:** P2-Medium
