@@ -145,12 +145,37 @@ The pieces are already there: `state.pageIndex`, `pageCount()`, and `changePage(
 **Log:**
 - 2026-08-11 13:35 CT — created (Divyam)
 
+### FIX-053 · Selecting a permit grows the results header and shoves the table down 12px
+
+- **Priority:** P3-Low
+- **Status:** todo
+- **Created:** 2026-08-12 11:14 CT
+- **Updated:** 2026-08-12 11:14 CT
+- **Tags:** Chicago Permit Search Tool
+
+Split out of **FIX-051**, which its new suite caught. `#result-count` carries a 280px reservation so the "N selected · Add to list" button appearing inside it cannot shift the row — but the reservation is **width only**. The button is 44px tall against a 20px bare label, so ticking the first permit grows the panel head 20px → 44px and pushes the whole results table down 12px.
+
+Measured on `index.html` at 1280px, and measured **identically with FIX-051's change stashed**, so it is pre-existing and not caused by it: `20 -> 44`, title `y 207 -> 219`.
+
+The fix is a design decision, not a mechanical one, which is why it is its own card: reserving 44px permanently means every results header carries 24px of empty space when nothing is selected. Decide whether that trade is worth it, or whether the shift is acceptable, or whether the button belongs somewhere that does not share the row.
+
+`verify-tmp/t83-count-overflow.js` already measures this and prints it as a `note FIX-053:` line rather than asserting on it, so the suite stays green on a green tree (the FIX-050 trap). Turn that note into a real assertion as part of this card.
+
+**Checklist:**
+- [ ] Decide the trade explicitly and write the reasoning in the Log: reserve 44px always, accept the shift, or move the button out of the head
+- [ ] Check the same head on `list.html` and `map.html` — the block is byte-identical across all three
+- [ ] Confirm whatever is chosen still reads well at 641px and on an iPhone 13, where the label already wraps onto its own line
+- [ ] Promote the `note FIX-053:` line in `t83-count-overflow.js` to an assertion, and prove it fails on the current build first
+
+**Log:**
+- 2026-08-12 11:14 CT — created; split out of FIX-051 rather than quietly widening that card's scope (Claude Code)
+
 ### FIX-051 · At 660px the result count label pushes the whole page sideways
 
 - **Priority:** P3-Low
-- **Status:** in-progress
+- **Status:** done
 - **Created:** 2026-08-12 10:04 CT
-- **Updated:** 2026-08-12 11:00 CT
+- **Updated:** 2026-08-12 11:14 CT
 - **Tags:** Chicago Permit Search Tool
 
 Found while verifying FIX-044, **pre-existing and not caused by it**. At a 660px viewport on `index.html` the document scrolls horizontally: `document.scrollWidth` is 683 against a 645px client width. The overflow is the `1-20 of 40,868 shown` count label — a `span.small` measuring 280px — overrunning `.panel`, whose own `scrollWidth` (358) already exceeds its `clientWidth` (305).
@@ -160,14 +185,18 @@ Measured rather than assumed: the same 683/645 was recorded **with and without**
 660px is an awkward band: it is above the 640px stacked-layout breakpoint, so the desktop layout is still in force, but the panel is too narrow for a full-width count label.
 
 **Checklist:**
-- [ ] Reproduce at 660px and find the exact band where it starts and stops
-- [ ] Let the count label wrap or shrink rather than setting the panel's width
-- [ ] Confirm no horizontal page scroll from 641px up to 1120px, not just at 660
-- [ ] Check the same label on `list.html` and `map.html` — the panel markup is shared
+- [x] Reproduce at 660px and find the exact band where it starts and stops
+- [x] Let the count label wrap or shrink rather than setting the panel's width
+- [x] Confirm no horizontal page scroll from 641px up to 1120px, not just at 660
+- [x] Check the same label on `list.html` and `map.html` — the panel markup is shared
 
 **Log:**
 - 2026-08-12 10:04 CT — created while verifying FIX-044; not part of that change (Claude Code)
 - 2026-08-12 11:00 CT — in-progress (Claude Code)
+- 2026-08-12 11:05 CT — reproduced, and the band is **641px to 714px** exactly. The document's minimum content width is a CONSTANT 715px right across the band — a constant overshoot is a fixed floor, never a proportional overrun — so it fails while the viewport is under 715 and stops the moment it is not: 714 red, 715 and 716 green, and 600/630 green because a media query already releases the floor below the 640px stacked breakpoint. The culprit is `#result-count { min-width: 280px }`, present byte-identically on all three pages. `list.html` and `map.html` do not overflow today only because their panel is wider — the same floor is sitting there waiting (`verify-tmp/t83-count-overflow.js`, new: 15 widths × 3 pages) (Claude Code)
+- 2026-08-12 11:08 CT — fixed at the floor, not at the symptom: `min-width: min(280px, 100%)` plus `flex-wrap: wrap` on the label, and `.panel-head:has(#result-count) { flex-wrap: wrap }` so the count drops onto its own line rather than truncating — a count that reads "1-100 of 5,805" is useless truncated. The 280px exists to reserve the box so the "N selected · Add to list" button appearing there cannot shift the row, so the reservation is KEPT wherever there is room and dropped only where there is not. `:has()` scopes the wrap to this one head; the other 3-5 `.panel-head` uses per page keep the layout they were written for, rather than taking a blanket change. Applied to all three pages (Claude Code)
+- 2026-08-12 11:10 CT — verified, control first: t83 gives **9 failures on the untouched build and 0 with the change**, across 15 widths on all three pages, measured twice — once with the plain count and once with a selection active, which puts the nowrap button in the box and is the genuinely widest content. The reservation still holds (selecting does not move the title sideways) and the button still measures ≥44px. Regression: t48-second-scrollbar, t82-money-wrap, t54-toolbar-widths, t44-followup, t25-uiux-card, t21-uiux, t24-contact-overlay, t80-card-count all pass; worker units 282/282. All three files stay all-CRLF (7978 / 11457 / 7874) with zero bare LF and zero 0x08/NUL bytes (Claude Code)
+- 2026-08-12 11:14 CT — done. Commit `88a4e6b` on `fix-051-count-overflow`, merged into `integration` as `6089205` and pushed; re-verified ON `integration` rather than trusting the clean merge (t83, t48, t82 all green). **NOT on `main`** — GitHub Pages serves `main`, so the live site does not have this yet and it needs Divyam's approval. Split out: **FIX-053**, a pre-existing vertical shift the new suite caught — the box reserves width but not height, so the 44px button still grows the head 20px→44px and shoves the table down 12px. Measured identically with this change stashed, so it is not part of this one, and its fix is a design call rather than a bug fix (Claude Code)
 
 ### FIX-050 · `node --test verify-tmp/*.mjs` is red on a clean tree — the audit cleanup deleted data a test still reads
 
