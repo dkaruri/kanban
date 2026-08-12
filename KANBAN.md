@@ -1411,9 +1411,9 @@ The visited checkbox on permits in My Permit List (`docs/list.html`) has no head
 ### FIX-049 · The folded list header is still in the Tab order
 
 - **Priority:** P2-Medium
-- **Status:** todo
+- **Status:** in-progress
 - **Created:** 2026-08-11 15:20 CT
-- **Updated:** 2026-08-11 15:20 CT
+- **Updated:** 2026-08-12 11:59 CT
 - **Tags:** Chicago Permit Search Tool, list, a11y
 
 Split out of FIX-021, which FEAT-052 otherwise delivered. `#list-header-fold` collapses by animating `grid-template-rows: 1fr→0fr` with `overflow: hidden` on `.list-header-fold-inner` — that clips the block visually, but a clipped subtree is not removed from the accessibility tree or the focus order. Folded, a keyboard user still tabs through Starting Location, the route controls, the description and List Note, one invisible stop at a time, and each focus lands in a zero-height box. A screen reader still reads the whole region.
@@ -1427,6 +1427,7 @@ Split out of FIX-021, which FEAT-052 otherwise delivered. `#list-header-fold` co
 
 **Log:**
 - 2026-08-11 15:20 CT — created while closing FIX-021; the gap was read out of the shipped `docs/list.html`, not inferred (Claude Code)
+- 2026-08-12 11:59 CT — in-progress (Claude Code)
 
 ### FIX-021 · Desktop: make the list-header section (Starting Location through List Note) collapsible
 
