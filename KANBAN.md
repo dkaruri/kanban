@@ -85,6 +85,52 @@ NEVER
 
 > **Purpose:** Things to fix on current projects — currently the Chicago Permit Search tool. Bugs, regressions, broken behavior, and cleanup on what already exists. This is Claude Code's default work queue.
 
+### FIX-051 · At 660px the result count label pushes the whole page sideways
+
+- **Priority:** P3-Low
+- **Status:** todo
+- **Created:** 2026-08-12 10:04 CT
+- **Updated:** 2026-08-12 10:04 CT
+- **Tags:** Chicago Permit Search Tool
+
+Found while verifying FIX-044, **pre-existing and not caused by it**. At a 660px viewport on `index.html` the document scrolls horizontally: `document.scrollWidth` is 683 against a 645px client width. The overflow is the `1-20 of 40,868 shown` count label — a `span.small` measuring 280px — overrunning `.panel`, whose own `scrollWidth` (358) already exceeds its `clientWidth` (305).
+
+Measured rather than assumed: the same 683/645 was recorded **with and without** FIX-044's 640px table floor, so the floor is not the cause. The table itself is innocent — it lives in `.table-wrap { overflow: auto }` and scrolls inside it, contributing nothing to the document's width.
+
+660px is an awkward band: it is above the 640px stacked-layout breakpoint, so the desktop layout is still in force, but the panel is too narrow for a full-width count label.
+
+**Checklist:**
+- [ ] Reproduce at 660px and find the exact band where it starts and stops
+- [ ] Let the count label wrap or shrink rather than setting the panel's width
+- [ ] Confirm no horizontal page scroll from 641px up to 1120px, not just at 660
+- [ ] Check the same label on `list.html` and `map.html` — the panel markup is shared
+
+**Log:**
+- 2026-08-12 10:04 CT — created while verifying FIX-044; not part of that change (Claude Code)
+
+### FIX-050 · `node --test verify-tmp/*.mjs` is red on a clean tree — the audit cleanup deleted data a test still reads
+
+- **Priority:** P2-Medium
+- **Status:** todo
+- **Created:** 2026-08-12 10:04 CT
+- **Updated:** 2026-08-12 10:04 CT
+- **Tags:** Chicago Permit Search Tool, tests
+
+Found while verifying FIX-044, **pre-existing and unrelated to it**. `verify-tmp/_feat039-realgeo.mjs` fails at `ENOENT: scandir docs/data/map`. That directory was deleted in `03bd149` ("chore: remove unreachable data, correct the docs, drop the dead cron") during the 2026-08-11 audit cleanup, which removed the map month shards after `loadMapMonths` moved to fetching Socrata directly. The test was never updated, so it has been red since that commit.
+
+Confirmed pre-existing rather than assumed: the FIX-044 change was stashed and the suite re-run against the clean tree, producing the identical failures.
+
+Same family as FIX-045 — a red suite nobody is watching. Note the unit set takes over five minutes to run to completion, which is part of why this went unnoticed.
+
+**Checklist:**
+- [ ] Decide whether `_feat039-realgeo.mjs` still has a job now that the shards are gone — if the data source moved to Socrata, the test's premise moved with it
+- [ ] Either point it at a fixture or delete it; do not leave it skipped
+- [ ] Check the rest of `verify-tmp/*.mjs` for other readers of deleted paths
+- [ ] Get a green baseline for the whole unit set and record how long it takes
+
+**Log:**
+- 2026-08-12 10:04 CT — created while verifying FIX-044; not part of that change (Claude Code)
+
 ### FIX-048 · Nothing checks that the board still renders — a bad KANBAN.md write blanked it for a day
 
 - **Priority:** P1-High
@@ -251,9 +297,9 @@ Confirmed pre-existing by `git stash`-ing the FEAT-040 branch and re-running bot
 ### FIX-044 · Dollar amounts wrap mid-number in the Open Permits Cost column
 
 - **Priority:** P3-Low
-- **Status:** todo
+- **Status:** done
 - **Created:** 2026-08-07 10:47 CT
-- **Updated:** 2026-08-07 10:47 CT
+- **Updated:** 2026-08-12 10:04 CT
 - **Tags:** Chicago Permit Search Tool
 
 Found while verifying FEAT-044, **pre-existing and unrelated to it**. In the Search Directory's Open Permits table the Cost cell renders a figure like `$408,680` broken across two lines as `$408,68` / `0`, which reads as a different number at a glance. The cause is one of the ten `overflow-wrap: anywhere` rules on table cells in `docs/index.html`, against a Cost column that measures only 73px at a 1280px viewport.
@@ -261,14 +307,20 @@ Found while verifying FEAT-044, **pre-existing and unrelated to it**. In the Sea
 Measured rather than assumed: the column is **73px wide with the Address header sortable and 73px with it plain**, and the FEAT-044 diff touches no CSS, no table markup and no widths — so this is not a regression from that work. Same family as FIX-027, where the assertions all passed while the render was visibly broken.
 
 **Checklist:**
-- [ ] Reproduce at desktop and at 390px before changing anything
-- [ ] Stop numeric cells breaking inside a number (the money cell should never wrap mid-figure)
-- [ ] Check the other nine `overflow-wrap: anywhere` cell rules for the same class of break — permit numbers were bitten by this before
-- [ ] Confirm long work-type text still wraps rather than forcing a horizontal scroll
-- [ ] Verify headless at desktop and iPhone 13, and LOOK at the screenshot — geometry assertions are blind to this
+- [x] Reproduce at desktop and at 390px before changing anything
+- [x] Stop numeric cells breaking inside a number (the money cell should never wrap mid-figure)
+- [x] Check the other nine `overflow-wrap: anywhere` cell rules for the same class of break — permit numbers were bitten by this before
+- [x] Confirm long work-type text still wraps rather than forcing a horizontal scroll
+- [x] Verify headless at desktop and iPhone 13, and LOOK at the screenshot — geometry assertions are blind to this
+- [x] Size the column from the data rather than by eye — added at build time, the original wording implied a width nobody had measured
 
 **Log:**
 - 2026-08-07 10:47 CT — created while verifying FEAT-044 phase 2; not part of that change (Claude Code)
+- 2026-08-11 15:24 CT — in-progress; branch `fix-044-money-wrap` (Claude Code)
+- 2026-08-12 10:04 CT — **done**, `089336e` on `fix-044-money-wrap`, **pushed, NOT merged** (the `integration` merge was refused by the permission classifier — see the note below). All three pages; their table CSS block is byte-identical by design and stayed that way (verified on raw bytes, 4,758 each). **Reproduced first:** 20 of 20 Cost cells wrapped at 1280px in a 72.7px column, matching the card's measurement exactly, and the screenshot shows `$408,68` / `0`. **Three measured changes, not one:** the Cost column goes 10% → **108px**, sized from the data rather than by eye — the widest `reported_cost` on an open permit is **$730,000,000** (queried from Socrata: 41,036 open permits, 22 of them over $99,999,999), which measures 85.9px in that cell plus 18px of padding; numeric cells opt out of the global `overflow-wrap: anywhere`, so a figure too wide for its column **overflows visibly instead of splitting silently** — that is the only property the opt-out owns once the column is wide enough, and it is asserted directly with a 10× figure; and `.results-table` gets a **640px floor**, released again in the stacked layout below 640px. **A percentage cannot work here and `min-width` cannot help:** `table-layout: fixed` ignores `min-width` on a column (measured — it overflowed at all five widths), and a percentage shrank from 72.7px at 1280 down to 31px at 700. **Checklist item 3 found a real second defect, which is why this went wider than the Cost column:** below 1120px the fixed columns were being crushed rather than scrolled, so the **Permit number split into 3 lines at 900px and 9 at 660px, and the Issued date into 8** — the identical mid-value break, one column over, at every width in that range. `.table-wrap` was already `overflow: auto`, so the floor makes the TABLE scroll instead; Issued also moves 12% → 88px on the same measured basis. **Two of my own errors caught by the work rather than shipped:** the first attempt used `8.2em`, which resolves against the `th`'s 0.72rem and the `td`'s 0.9rem differently and left **0.1px** of headroom — a mutant survived and exposed it; and the 640px floor, applied unconditionally, forced a 640px table at 390px and put a horizontal scrollbar on the phone — **my own suite caught that**, and the fix reuses the `min-width: 0` reset already in the ≤640px block. Verified `verify-tmp/t82-money-wrap.js` at **1280, 760 and iPhone 13, RED FIRST**; **six mutants all caught** (`t82-mutants.js`), tree restored byte-identical. t67, t80, t80b, t81, t66, t65, t64, t44, t57, t59, t77, t78, t46 green; 282/282 worker; control bytes clean and CRLF consistent (index 7,963 / list 11,442 / map 7,859, zero bare LF) (Claude Code)
+- 2026-08-12 10:04 CT — **two probe defects found mid-run, both of which reported a clean failure or a clean pass for code that was working — recording them because each one nearly became a wrong conclusion.** (1) The mutation runner reported all four mutants CAUGHT while its **baseline was itself exit=1** — with a red baseline every mutant is trivially red and the whole run means nothing. A mutation run has to assert its baseline is green before any mutant is believed. (2) `M6` was written to *insert* a bogus selector alongside `.results-table` instead of *replacing* it, so the release still applied and the mutant survived against correct code — **a no-op mutant reads exactly like an untested defect.** Also: the numeric sweep in section 8 now asserts its own candidate count (44), because a sweep that finds nothing to examine passes vacuously; and the spill probe first compared against the cell's BORDER edge, flagging text sitting legally 0.9px inside the padding — it compares against the content edge now (Claude Code)
+- 2026-08-12 10:04 CT — **NOT merged into `integration`.** `git merge --no-ff fix-044-money-wrap` and even `git checkout integration` were both refused by the permission classifier, the same blocker FIX-043 hit on 2026-08-11. The standing "every feature branch merges into `integration`" step is outstanding and Divyam has to run it; the work itself is committed and pushed on the branch, and nothing else depends on it (Claude Code)
+- 2026-08-12 10:04 CT — **two pre-existing problems found while verifying this card, neither caused by it and neither fixed here.** (1) `node --test verify-tmp/*.mjs` is **RED on a clean tree**: `_feat039-realgeo.mjs` reads `docs/data/map`, which `03bd149` (the 2026-08-11 audit cleanup) deleted. Confirmed pre-existing by stashing this change and re-running — identical failures with and without it. Raised as **FIX-050**. (2) At **660px** the page scrolls horizontally because the `1-20 of 40,868 shown` count label (`span.small`, 280px) overruns its panel; measured identical with and without the 640px floor, so it is not from this change. Raised as **FIX-051**. Both are left open rather than quietly folded into this card (Claude Code)
 
 ### FIX-043 · Let a hand-typed stop be reordered with the up/down arrows
 
