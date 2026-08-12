@@ -1177,9 +1177,9 @@ On the Map Search zoning layer (`docs/map.html`, `docs/data/zoning.geojson`), wh
 ### FIX-034 · Attach permit notes to the permit's General Contractors and Open Subs as well
 
 - **Priority:** P2-Medium
-- **Status:** todo
+- **Status:** in-progress
 - **Created:** 2026-08-05 09:50 CT
-- **Updated:** 2026-08-05 09:50 CT
+- **Updated:** 2026-08-12 12:52 CT
 - **Tags:** Chicago Permit Search Tool
 
 Every note attached to a permit should also attach to that permit's General Contractors and Open Subs, so the note is reachable from the contractor side, not just the permit side. Builds directly on FEAT-034's notes infrastructure (`GET /api/notes/bulk`, note timestamps) and overlaps with FEAT-037's roll-up model (a GC's notes = notes on their permits + notes written directly on the GC) — extend that association to Open Subs too, and coordinate the two rather than building parallel plumbing. The association should ride the same normalized contractor-name key the rest of the app uses.
@@ -1195,6 +1195,7 @@ Every note attached to a permit should also attach to that permit's General Cont
 
 **Log:**
 - 2026-08-05 09:50 CT — created (Divyam)
+- 2026-08-12 12:52 CT — in-progress (Claude Code)
 
 ### FIX-006 · Shared permit-list link should layer over the directory with a back button
 
