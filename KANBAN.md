@@ -1411,23 +1411,30 @@ The visited checkbox on permits in My Permit List (`docs/list.html`) has no head
 ### FIX-049 · The folded list header is still in the Tab order
 
 - **Priority:** P2-Medium
-- **Status:** in-progress
+- **Status:** done
 - **Created:** 2026-08-11 15:20 CT
-- **Updated:** 2026-08-12 11:59 CT
+- **Updated:** 2026-08-12 12:30 CT
 - **Tags:** Chicago Permit Search Tool, list, a11y
 
 Split out of FIX-021, which FEAT-052 otherwise delivered. `#list-header-fold` collapses by animating `grid-template-rows: 1fr→0fr` with `overflow: hidden` on `.list-header-fold-inner` — that clips the block visually, but a clipped subtree is not removed from the accessibility tree or the focus order. Folded, a keyboard user still tabs through Starting Location, the route controls, the description and List Note, one invisible stop at a time, and each focus lands in a zero-height box. A screen reader still reads the whole region.
 
 **Checklist:**
-- [ ] Set `inert` on `#list-header-fold` when `data-collapsed="true"` (it also removes the region from the a11y tree; `visibility: hidden` at the end of the transition is the fallback if `inert` support is a concern)
-- [ ] Apply it AFTER the .22s transition when collapsing and BEFORE it when expanding, or the closing animation is cut short
-- [ ] If focus is inside the region when it folds, move focus to the toggle rather than losing it to `<body>`
-- [ ] Regression-assert with a real Tab sweep (not `.click()`): folded, the tab order goes toggle → the filter row, with zero stops inside the fold; expanded, every control is reachable again
-- [ ] Confirm the `t78` suites still pass, including the mutation control
+- [x] Set `inert` on `#list-header-fold` when `data-collapsed="true"` (it also removes the region from the a11y tree; `visibility: hidden` at the end of the transition is the fallback if `inert` support is a concern)
+- [x] Apply it AFTER the .22s transition when collapsing and BEFORE it when expanding, or the closing animation is cut short — **deviated deliberately, see the Log: applied immediately, and the close is measured mid-flight to prove it is not cut short**
+- [x] If focus is inside the region when it folds, move focus to the toggle rather than losing it to `<body>`
+- [x] Regression-assert with a real Tab sweep (not `.click()`): folded, the tab order goes toggle → the filter row, with zero stops inside the fold; expanded, every control is reachable again
+- [x] Confirm the `t78` suites still pass, including the mutation control
+- [x] Fix the same defect in the map filter drawer — 48 focusable controls, found by grepping the clipping pattern rather than the reported symptom
 
 **Log:**
 - 2026-08-11 15:20 CT — created while closing FIX-021; the gap was read out of the shipped `docs/list.html`, not inferred (Claude Code)
 - 2026-08-12 11:59 CT — in-progress (Claude Code)
+- 2026-08-12 12:10 CT — reproduced with real Tab keys before changing anything (`verify-tmp/t84-fold-inert.js`, new — `.click()` and `.focus()` would prove nothing about a tab order). Folded, the sweep lands **13 times inside the fold**: Edit, Publish, Optimize route, Notes, Share, Starting Location, List Note and the rest, each reporting a 44px box inside a container clipped to 0. The card said "one invisible stop at a time"; it is thirteen. A control inside was also still in the accessibility tree, which is the screen-reader half. RED first on both viewports, 8 failures (Claude Code)
+- 2026-08-12 12:14 CT — fixed with `inert`, which removes focusability and the a11y entry together. **Deviated from checklist item 2 on purpose.** `inert` has no layout or paint effect, so it cannot cut the closing animation short — deferring it to the end of the .22s transition would only leave a 220ms window in which the invisible region is still tabbable, which IS the defect. The timing caveat belongs to the `visibility: hidden` fallback, and that fallback is not needed: `inert` is supported everywhere this site already requires `:has()`. Rather than assert that, t84 samples the fold **mid-flight at 110ms** and requires a height strictly between 0 and full — the close still animates. Focus is moved to the toggle before the region goes inert, or making an ancestor inert drops the user at `<body>` (Claude Code)
+- 2026-08-12 12:20 CT — **the reported instance was not the biggest one.** Grepped the clipping pattern rather than the symptom (`grid-template-rows: 0fr`, `max-height: 0`) across all three pages: `.map-drawer.hidden` closes with max-height + opacity + `pointer-events: none` and never sets `visibility`, and `pointer-events` does nothing for a keyboard. Measured on the untouched build — `visibility: visible`, `inert: false`, **48 focusable controls, and the first one took focus**. It ships closed, so those 48 were in the tab order from first paint. Fixed in `toggleMapDrawer` and in the markup, both needed. `.map-result-list` and `.map-detail-sheet` were checked the same way and are already safe (both set `visibility: hidden`) (Claude Code)
+- 2026-08-12 12:24 CT — **two of my own mistakes, caught by the work rather than shipped.** (1) The comment I first wrote claimed the order of "move focus" and "set inert" was load-bearing; a mutant that swapped them **survived**, because the toggle sits OUTSIDE the fold so focusing it works either way. The comment was promising something the code never did — rewritten to say the order is not load-bearing and to warn against re-adding the claim. (2) The `inert` attribute in `map.html` sits inside a **JS template literal**, and the backticks in my comment ended the string and took the whole page down with `SyntaxError: Unexpected identifier 'inert'`. t84 now watches for page errors on `map.html` so that class cannot come back silently (Claude Code)
+- 2026-08-12 12:28 CT — **`t52-worktype-residential` went red, and it was mine — but the test was wrong, not the fix.** Checked against the untouched build first rather than assuming: green there, red with the change. Its focus-ring assertion ran against the **closed** drawer and passed only because a closed drawer left all 48 controls focusable — its own comment claimed it "proves the summary is genuinely in the tab order", of a region the user cannot see. Repaired to open the drawer first (and close it again, so the rest of the suite starts from the shipped state), then **proved the repair did not gut it**: against a mutant that leaves an open drawer inert, t52 fails. Same family as FIX-033 (Claude Code)
+- 2026-08-12 12:30 CT — done. `9611c77` on `fix-049-fold-inert`, merged into `integration` as `806ac5f`, pushed, and re-verified ON `integration` rather than trusting the clean merge. **7 mutants, all caught** — inert never applied, focus not rescued, inert never cleared, drawer not made inert on toggle, `inert` missing from the shipped-closed markup, open drawer left inert. Regression: t84, t78-list-header, t78-uiux, t78-mutants (all its own mutants still caught), t52, t80b, t40, t55, t83, t44, t46, t23 pass; `node --test verify-tmp/*.mjs` 251/251; worker 282/282; all three pages all-CRLF (7991 / 11497 / 7906) with zero bare LF and zero 0x08/NUL. **NOT on `main`** — needs Divyam's approval (Claude Code)
 
 ### FIX-021 · Desktop: make the list-header section (Starting Location through List Note) collapsible
 
