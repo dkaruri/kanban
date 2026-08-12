@@ -238,9 +238,9 @@ Repair note for whoever hits this again: the reverse of this corruption is **cp1
 ### FIX-047 · t44's 44px touch-target check flakes ~1 run in 5 and has never been attributed
 
 - **Priority:** P3-Low
-- **Status:** todo
+- **Status:** done
 - **Created:** 2026-08-11 13:25 CT
-- **Updated:** 2026-08-11 13:25 CT
+- **Updated:** 2026-08-12 10:56 CT
 - **Tags:** Chicago Permit Search Tool, tests
 
 Split out of **FIX-045** when that card was closed, so it stays visible instead of dying inside a closed card. FIX-045's two real defects were found and fixed; this one was not, and closing it silently would have been the failure mode the standing rule exists to prevent.
@@ -257,13 +257,18 @@ Diagnostics were landed instead of a fix: the assertion now captures height, wid
 **What is being given up by not fixing it:** if a real intermittent sub-44 target exists on that control, it is still in the product. What is bought: the next occurrence lands a DOM snapshot at the failing moment rather than a bare number.
 
 **Checklist:**
-- [ ] Wait for the next natural failure and read the saved trace — do not hunt it again from scratch
-- [ ] Decide from that trace whether the check is racing teardown (fix the check) or the product has a real intermittent state (fix the product)
-- [ ] If it is teardown: assert against a card that is still mounted, and prove the check still catches a genuinely small target with the 20px mutant
-- [ ] Note that `verify-tmp/` is gitignored, so none of this exists in a fresh clone — see FIX-020
+- [x] Wait for the next natural failure and read the saved trace — do not hunt it again from scratch
+- [x] Decide from that trace whether the check is racing teardown (fix the check) or the product has a real intermittent state (fix the product)
+- [x] If it is teardown: assert against a card that is still mounted, and prove the check still catches a genuinely small target with the 20px mutant
+- [x] Note that `verify-tmp/` is gitignored, so none of this exists in a fresh clone — see FIX-020
 
 **Log:**
 - 2026-08-11 13:25 CT — created; split out of FIX-045 at closing time so the unattributed flake stays on the board rather than being closed with it (Claude Code)
+- 2026-08-12 10:44 CT — in-progress. Read the two saved traces first, as the checklist asks. Neither holds a 44px failure: `_t44-trace-desktop-1280x900.zip` records the diagnostic evaluate returning `h:44, minH:"44px", matches:1, hidden:false, connected:true` — that run was saved because a DIFFERENT check was red, and both traces predate this card. So there is no natural failure on file to read, and the hunt had to continue (Claude Code)
+- 2026-08-12 10:52 CT — attributed, and it is the CHECK, not the product. `.pm-fu` carries `min-height: 44px`, so a button that is actually rendered can never measure under 44 — the only sub-44 values physically reachable are the unmeasurable ones, 0 (in a hidden subtree) and -1 (no match). That is why 37 isolated reproductions, CPU throttling and a ResizeObserver all came back empty: there was never a mis-sized button to find. The window was structural — `waitForSelector` resolved in one round trip and the measurement read the DOM again in a SECOND, so anything that unmounted the card in between was measured as a small button. Driving that state deliberately reproduces the recorded signature exactly, `h:0, hidden:true, connected:true` — the same reading the ResizeObserver hunt captured and could not place (`verify-tmp/_fix047-states.js`, new) (Claude Code)
+- 2026-08-12 10:52 CT — evidence before the fix, so the probe was shown to report success as well as failure: 240 measurements replaying the check's exact two-round-trip shape (120 warm opens, 120 open/close cycles) all read exactly 44 — and the same probe reports 5/5 at 21.69 against a `.pm-fu` shrunk to 20px. Plus 6 concurrent full t44 runs, 12 viewport passes, green. Contention was the one variable the earlier hunt never varied; it is not the cause either (`verify-tmp/_fix047-probe.js`, new) (Claude Code)
+- 2026-08-12 10:53 CT — fixed in `verify-tmp/t44-followup.js`: the wait itself now returns the measurement, so the wait and the read happen in one page task and the window is gone. The condition is "mounted and painted", NEVER `h >= 44` — waiting on the threshold would mask the very defect the assertion exists to catch. Proof against the same injected transient unmount: the old shape FAILS with `h:0, hidden:true`, the new shape reads a healthy 44. The threshold is unchanged and still catches a genuinely small target — the 20px mutant fails it on BOTH viewports (`h:21.69` desktop, `h:23.61` iPhone 13) with the full diagnostic attached. `docs/list.html` restored byte-identical after the mutant (`cmp` against a snapshot) (Claude Code)
+- 2026-08-12 10:56 CT — done. Verified: t44 green, and 6 concurrent runs green with zero retries. NO product change — `git status` clean, the whole fix is in `verify-tmp/`, which is gitignored, so none of it exists in a fresh clone (FIX-020). **What is still not known, and it is deliberately not hidden:** no natural failure was ever caught, so what unmounts the card for a beat in a real run is still unnamed. Riding past it must not swallow it, so the wait counts its polls and prints `note the card was NOT mounted on first look — N polls` whenever N > 1, reported and never asserted on (asserting would just rebuild the flake). That line is the trip-wire: if it ever prints, the trigger is real and gets its own card. It has not printed once in 289 measurements (Claude Code)
 
 ### FIX-042 · A hand-typed "+ Add address" stop cannot be removed, and Clear list leaves it behind
 
