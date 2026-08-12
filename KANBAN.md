@@ -1177,25 +1177,30 @@ On the Map Search zoning layer (`docs/map.html`, `docs/data/zoning.geojson`), wh
 ### FIX-034 · Attach permit notes to the permit's General Contractors and Open Subs as well
 
 - **Priority:** P2-Medium
-- **Status:** in-progress
+- **Status:** done
 - **Created:** 2026-08-05 09:50 CT
-- **Updated:** 2026-08-12 12:39 CT
+- **Updated:** 2026-08-12 12:56 CT
 - **Tags:** Chicago Permit Search Tool
 
 Every note attached to a permit should also attach to that permit's General Contractors and Open Subs, so the note is reachable from the contractor side, not just the permit side. Builds directly on FEAT-034's notes infrastructure (`GET /api/notes/bulk`, note timestamps) and overlaps with FEAT-037's roll-up model (a GC's notes = notes on their permits + notes written directly on the GC) — extend that association to Open Subs too, and coordinate the two rather than building parallel plumbing. The association should ride the same normalized contractor-name key the rest of the app uses.
 
 **Checklist:**
-- [ ] Decide the association mechanics with FEAT-034/FEAT-037's data layer: when a note is created (or already exists) on a permit, make it queryable by each GC and each Open Sub named on that permit — roll-up by contractor key, not a copied/duplicated note
-- [ ] Backfill: existing permit notes become visible from their permits' GCs and Open Subs, not just notes written from now on
-- [ ] Surface them in the GC View and the Open Sub View (Notes section per FEAT-037: text, timestamp, author, and which permit each note came from, newest first)
-- [ ] Respect FEAT-034's visibility rules (public thread posts vs. private notes; on shared lists show public + your own private ones) — attaching to a contractor must never widen who can see a note
-- [ ] Handle multi-contractor permits: a note on a permit with 2 GCs and 3 Open Subs appears under all 5, clearly attributed to the one permit
-- [ ] Keep it consistent on both index.html and list.html card stacks
-- [ ] Verify on desktop and mobile: a contractor with notes across several permits, a contractor with none (no empty section/zero badge), and both themes
+- [x] Decide the association mechanics with FEAT-034/FEAT-037's data layer: when a note is created (or already exists) on a permit, make it queryable by each GC and each Open Sub named on that permit — roll-up by contractor key, not a copied/duplicated note
+- [x] Backfill: existing permit notes become visible from their permits' GCs and Open Subs, not just notes written from now on
+- [x] Surface them in the GC View and the Open Sub View (Notes section per FEAT-037: text, timestamp, author, and which permit each note came from, newest first)
+- [x] Respect FEAT-034's visibility rules (public thread posts vs. private notes; on shared lists show public + your own private ones) — attaching to a contractor must never widen who can see a note
+- [x] Handle multi-contractor permits: a note on a permit with 2 GCs and 3 Open Subs appears under all 5, clearly attributed to the one permit
+- [x] Keep it consistent on both index.html and list.html card stacks
+- [x] Verify on desktop and mobile: a contractor with notes across several permits, a contractor with none (no empty section/zero badge), and both themes
+- [x] Raise `.tp-act button` to the 44px touch target it was 4px short of (folded in, not split out)
 
 **Log:**
 - 2026-08-05 09:50 CT — created (Divyam)
 - 2026-08-12 12:39 CT — in-progress (Claude Code)
+- 2026-08-12 12:44 CT — **the association is a read-time ROLL-UP, and that decision retires two checklist items on its own.** FEAT-037, whose roll-up model this card says to extend, is still `todo` — so there was nothing to extend and the model had to be chosen here. A note is stored once, on its permit (KV `note:<permit>`); a contractor's notes are computed as the notes on the permits that name them, gathered through the existing `GET /api/notes/bulk`. **No new endpoint, no second store, no copied notes.** Backfill therefore does not exist as a step — every note that already existed appears the moment the card opens — and a note can never drift between two stored copies. Multi-contractor permits fall out for free: a note on a permit with 2 GCs and 3 open subs shows under all five cards without being written five times, each attributed to the one permit. Open Subs come free too, because the roll-up keys off the card's own permit set rather than a role (Claude Code)
+- 2026-08-12 12:46 CT — **visibility, checked rather than assumed.** Public thread posts are already public, so surfacing them on a contractor cannot widen them. Private notes are a different store — `state.userPermitNotes`, local to one browser, never sent anywhere — so the reader's own note is merged in for DISPLAY only and the outbound request carries permit numbers and nothing else. t85 asserts that directly: it fails if the private text ever appears in a request URL. The roll-up covers ALL of the contractor's permits rather than the card's filtered subset, deliberately — these are the contractor's notes, not a description of the table above them, which is the opposite of FIX-040 where the count DID claim to describe that table (Claude Code)
+- 2026-08-12 12:50 CT — **a 4px a11y shortfall found and folded in rather than split out.** The new "On permit N" button measured **40px**, because the shared `.tp-act button` rule sets `min-height: 40px` — under the 44px this repo requires, and it has been short for the thread's Edit/Delete buttons all along. Raised on the shared rule, not with a private class: two identical-looking buttons at different heights would be worse. Baselined the four thread suites first (all green before and after). Contrast measured in both themes at both viewports: button 6.09:1 light / 8.85:1 dark, text 15.76:1 / 16.76:1 — all clear of 4.5:1 (Claude Code)
+- 2026-08-12 12:56 CT — done. `3e04713` on `fix-034-contractor-notes`, merged into `integration` as `5577581`, pushed, re-verified ON `integration` rather than trusting the clean merge. `verify-tmp/t85-contractor-notes.js` (new) is **RED first — 68 failures** — then green: 17 assertions across index.html AND list.html at desktop and iPhone 13, covering a GC with notes on several permits, an open sub sharing one of them, a contractor whose notes must not leak in, newest-first order, per-permit attribution, author, timestamp, the private note's label, a walkthrough summarised rather than blank, and a contractor with none getting **no section at all**. Hardened the probe first: five assertions were `[].every(...)`, which is true, so they passed on an empty block — they now require the expected count. **7 mutants, all caught** (roll-up leaking, private note dropped, oldest-first, empty section shown, attribution dropped, walkthrough blank, target back to 40px); both files restored byte-identical. Regression: t24, t25, t80, t41, t42, t44, t45, t83, t84, t78, t23, t46 pass; 251/251 units; 282/282 worker; both pages all-CRLF (8108 / 11614) with zero bare LF and zero 0x08/NUL, and the eight touched functions stayed byte-identical across the two pages. **NOT on `main`** — needs Divyam's approval. **FEAT-037 is now mostly built by this**: its roll-up, its Open-Sub-less half and its GC View notes section all exist; what remains there is notes written directly ON a contractor and the has-notes indicator in Permit View (Claude Code)
 
 ### FIX-006 · Shared permit-list link should layer over the directory with a back button
 
