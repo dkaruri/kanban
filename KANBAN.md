@@ -148,9 +148,9 @@ The pieces are already there: `state.pageIndex`, `pageCount()`, and `changePage(
 ### FIX-051 · At 660px the result count label pushes the whole page sideways
 
 - **Priority:** P3-Low
-- **Status:** todo
+- **Status:** in-progress
 - **Created:** 2026-08-12 10:04 CT
-- **Updated:** 2026-08-12 10:04 CT
+- **Updated:** 2026-08-12 11:00 CT
 - **Tags:** Chicago Permit Search Tool
 
 Found while verifying FIX-044, **pre-existing and not caused by it**. At a 660px viewport on `index.html` the document scrolls horizontally: `document.scrollWidth` is 683 against a 645px client width. The overflow is the `1-20 of 40,868 shown` count label — a `span.small` measuring 280px — overrunning `.panel`, whose own `scrollWidth` (358) already exceeds its `clientWidth` (305).
@@ -167,6 +167,7 @@ Measured rather than assumed: the same 683/645 was recorded **with and without**
 
 **Log:**
 - 2026-08-12 10:04 CT — created while verifying FIX-044; not part of that change (Claude Code)
+- 2026-08-12 11:00 CT — in-progress (Claude Code)
 
 ### FIX-050 · `node --test verify-tmp/*.mjs` is red on a clean tree — the audit cleanup deleted data a test still reads
 
