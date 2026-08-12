@@ -148,10 +148,12 @@ The pieces are already there: `state.pageIndex`, `pageCount()`, and `changePage(
 ### FIX-053 · Selecting a permit grows the results header and shoves the table down 12px
 
 - **Priority:** P3-Low
-- **Status:** todo
+- **Status:** done
 - **Created:** 2026-08-12 11:14 CT
-- **Updated:** 2026-08-12 11:14 CT
+- **Updated:** 2026-08-12 11:23 CT
 - **Tags:** Chicago Permit Search Tool
+
+> **This card should never have existed.** It was split out of FIX-051 and, at Divyam's instruction on 2026-08-12, folded straight back into it and fixed there. Kept only because the board never deletes tasks or reuses IDs. The work is done — see FIX-051's Log for the fix, the cost accepted and the verification. **A defect found while working a card belongs to that card.**
 
 Split out of **FIX-051**, which its new suite caught. `#result-count` carries a 280px reservation so the "N selected · Add to list" button appearing inside it cannot shift the row — but the reservation is **width only**. The button is 44px tall against a 20px bare label, so ticking the first permit grows the panel head 20px → 44px and pushes the whole results table down 12px.
 
@@ -162,13 +164,14 @@ The fix is a design decision, not a mechanical one, which is why it is its own c
 `verify-tmp/t83-count-overflow.js` already measures this and prints it as a `note FIX-053:` line rather than asserting on it, so the suite stays green on a green tree (the FIX-050 trap). Turn that note into a real assertion as part of this card.
 
 **Checklist:**
-- [ ] Decide the trade explicitly and write the reasoning in the Log: reserve 44px always, accept the shift, or move the button out of the head
-- [ ] Check the same head on `list.html` and `map.html` — the block is byte-identical across all three
-- [ ] Confirm whatever is chosen still reads well at 641px and on an iPhone 13, where the label already wraps onto its own line
-- [ ] Promote the `note FIX-053:` line in `t83-count-overflow.js` to an assertion, and prove it fails on the current build first
+- [x] Decide the trade explicitly and write the reasoning in the Log: reserve 44px always, accept the shift, or move the button out of the head
+- [x] Check the same head on `list.html` and `map.html` — the block is byte-identical across all three
+- [x] Confirm whatever is chosen still reads well at 641px and on an iPhone 13, where the label already wraps onto its own line
+- [x] Promote the `note FIX-053:` line in `t83-count-overflow.js` to an assertion, and prove it fails on the current build first
 
 **Log:**
 - 2026-08-12 11:14 CT — created; split out of FIX-051 rather than quietly widening that card's scope (Claude Code)
+- 2026-08-12 11:23 CT — done, IN FIX-051, not here. Divyam: "I'm tired of Fixes being split off from Feats or Fixes, they should always be included in the work of their original Fix/Feat." Reserved the head's height (`min-height: 44px` on `#result-count`), accepting 24px of empty header when nothing is selected, and centred the head so the title stops taking its position from the count's baseline. Full reasoning, the specificity trap it exposed and the verification are in FIX-051's Log; commit `a55792e`. **No further split-offs — the practice stops here** (Claude Code)
 
 ### FIX-051 · At 660px the result count label pushes the whole page sideways
 
@@ -189,6 +192,7 @@ Measured rather than assumed: the same 683/645 was recorded **with and without**
 - [x] Let the count label wrap or shrink rather than setting the panel's width
 - [x] Confirm no horizontal page scroll from 641px up to 1120px, not just at 660
 - [x] Check the same label on `list.html` and `map.html` — the panel markup is shared
+- [x] Reserve the head's HEIGHT as well as its width, so selecting a permit stops shoving the results table down (folded back in from FIX-053)
 
 **Log:**
 - 2026-08-12 10:04 CT — created while verifying FIX-044; not part of that change (Claude Code)
@@ -197,6 +201,7 @@ Measured rather than assumed: the same 683/645 was recorded **with and without**
 - 2026-08-12 11:08 CT — fixed at the floor, not at the symptom: `min-width: min(280px, 100%)` plus `flex-wrap: wrap` on the label, and `.panel-head:has(#result-count) { flex-wrap: wrap }` so the count drops onto its own line rather than truncating — a count that reads "1-100 of 5,805" is useless truncated. The 280px exists to reserve the box so the "N selected · Add to list" button appearing there cannot shift the row, so the reservation is KEPT wherever there is room and dropped only where there is not. `:has()` scopes the wrap to this one head; the other 3-5 `.panel-head` uses per page keep the layout they were written for, rather than taking a blanket change. Applied to all three pages (Claude Code)
 - 2026-08-12 11:10 CT — verified, control first: t83 gives **9 failures on the untouched build and 0 with the change**, across 15 widths on all three pages, measured twice — once with the plain count and once with a selection active, which puts the nowrap button in the box and is the genuinely widest content. The reservation still holds (selecting does not move the title sideways) and the button still measures ≥44px. Regression: t48-second-scrollbar, t82-money-wrap, t54-toolbar-widths, t44-followup, t25-uiux-card, t21-uiux, t24-contact-overlay, t80-card-count all pass; worker units 282/282. All three files stay all-CRLF (7978 / 11457 / 7874) with zero bare LF and zero 0x08/NUL bytes (Claude Code)
 - 2026-08-12 11:14 CT — done. Commit `88a4e6b` on `fix-051-count-overflow`, merged into `integration` as `6089205` and pushed; re-verified ON `integration` rather than trusting the clean merge (t83, t48, t82 all green). **NOT on `main`** — GitHub Pages serves `main`, so the live site does not have this yet and it needs Divyam's approval. Split out: **FIX-053**, a pre-existing vertical shift the new suite caught — the box reserves width but not height, so the 44px button still grows the head 20px→44px and shoves the table down 12px. Measured identically with this change stashed, so it is not part of this one, and its fix is a design call rather than a bug fix (Claude Code)
+- 2026-08-12 11:23 CT — **FIX-053 folded back in and fixed here.** Divyam: "I'm tired of Fixes being split off from Feats or Fixes, they should always be included in the work of their original Fix/Feat." Splitting it was the wrong call — a defect found while working a card belongs to that card, and a design decision to be made is not a reason for a new card. Decided inline: `min-height: 44px` on `#result-count` reserves the other axis. **The cost, stated rather than hidden: 24px of empty header whenever nothing is selected.** A results table that does not jump is worth more than that. Centring the head goes with it — under `align-items: baseline` the title takes its position from the count's first baseline, which drops 2px the moment a 44px button stands where a 20px span was, so the head that holds the count is centred in its reserved row. The stacked override had to be scoped the SAME way: `.panel-head` (0-1-0) loses to `.panel-head:has(#result-count)` (0-2-0) even from inside a media query, which would have silently centred the mobile layout. Verified computed, not assumed: `flex-start`/`column` at 390px and 600px, `center`/`row` at 1280px. t83's `note` line is now two real assertions, proved RED on the previous build first (`20 -> 44`, title `y 207 -> 219`) and green after. Regression re-run on all three pages: t83, t48, t82, t54, t25, t21, t24, t80, t44 pass; worker units 282/282; still all-CRLF (7991 / 11470 / 7887), zero bare LF, zero 0x08/NUL. Commit `a55792e` on `fix-051-count-overflow`, also on `integration` as `97b7933`. Still NOT on `main` (Claude Code)
 
 ### FIX-050 · `node --test verify-tmp/*.mjs` is red on a clean tree — the audit cleanup deleted data a test still reads
 
