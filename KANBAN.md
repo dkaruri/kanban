@@ -550,9 +550,9 @@ A third click returns to neutral. When any work type is set to Include, the resu
 ### FIX-039 · Make the tagging system more discoverable — creating a second tag is not intuitive
 
 - **Priority:** P2-Medium
-- **Status:** todo
+- **Status:** in-progress
 - **Created:** 2026-08-05 11:20 CT
-- **Updated:** 2026-08-05 11:20 CT
+- **Updated:** 2026-08-14 12:21 CT
 - **Tags:** Chicago Permit Search Tool
 
 Reported by Divyam: the current tagging system relies on comma separators and colors, and adding a **second** tag is not intuitive — nothing signals that a comma is how you start a new tag, and the color-only distinction does little to help. Rework the tag input so making multiple tags is obvious without instructions.
@@ -560,7 +560,7 @@ Reported by Divyam: the current tagging system relies on comma separators and co
 Reproduce and inventory first: find where tags are entered and rendered today (which pages, which control), and record what the current comma/color affordance actually is before changing it — the fix is a UX change to an existing control, not a new tagging model.
 
 **Checklist:**
-- [ ] Reproduce: locate the tag input(s) and note exactly why adding a second tag is unclear (no visible "add" affordance? comma-as-separator undiscoverable? tags not shown as distinct chips?) — write it in the Log
+- [x] Reproduce: locate the tag input(s) and note exactly why adding a second tag is unclear (no visible "add" affordance? comma-as-separator undiscoverable? tags not shown as distinct chips?) — write it in the Log
 - [ ] Replace the bare comma-separated text field with a chip/pill input: each committed tag becomes a removable chip, and Enter (and comma) commits the current tag — the standard, discoverable pattern
 - [ ] Show clearly how to add another tag (placeholder text, an explicit add affordance, or the chip pattern making it self-evident) so a second tag needs no explanation
 - [ ] Don't rely on color alone to distinguish tags — give each chip a shape/label/remove control so it reads without color (accessibility)
@@ -568,6 +568,7 @@ Reproduce and inventory first: find where tags are entered and rendered today (w
 - [ ] Verify on desktop and mobile in both themes: adding the first tag, adding a second and third, removing one, and editing an item that already has several tags
 
 **Log:**
+- 2026-08-14 12:21 CT — in-progress. **Inventory: there is exactly ONE tag input in the whole product** — `#ld-tags` in the "List details" dialog (`docs/list.html`, `openListDetails`, ~line 7574). `index.html` and `map.html` match "tag" only in the `--tag-border`/`.tag` display tokens and the zoning/TIF chips; neither page can create a tag, so this is a one-page fix. **Why a second tag is unclear, precisely:** the control is a bare `<input>` whose entire affordance is a placeholder (`roofing, north side`) and a hint below it (`Separate with commas. Up to 8.`) — the comma rule is stated in prose and nowhere in the interaction, and while you are editing, the tags are raw text in one field, not objects. The chip renderer `tagChipHtml()` already exists but is used ONLY in the directory listing, so a tag looks like a pill everywhere EXCEPT the place you make one. There is no per-tag remove: deleting the second of three means text-editing a comma list. The colour picker (`#ld-newtag`) appears for unregistered names and applies one slot to all of them. **Also found: `TAG_SLOT_NAMES` (the ten colour words) is declared at line 4656 and never read** — dead code, and exactly the text label the colour-only affordance is missing, so it is being wired rather than deleted ([[dead-code-is-an-unfinished-wiring]]) (Claude Code)
 - 2026-08-05 11:20 CT — created (Divyam)
 
 ### FIX-037 · Adding to a full list from Search or the Permit Map silently deletes the oldest saved permits
